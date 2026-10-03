@@ -2597,16 +2597,33 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
             </div>
             <div className="p-4 overflow-auto flex-1 flex items-center justify-center bg-[#18223A]">
               {previewModalUrl.startsWith('data:application/pdf') ? (
-                <iframe
-                  src={previewModalUrl}
-                  title="PDF Preview"
-                  className="w-full h-[70vh] border-0 rounded-xl"
-                />
+                <>
+                  <div className="hidden md:flex w-full h-[70vh] items-center justify-center">
+                    <iframe
+                      src={previewModalUrl}
+                      title="PDF Preview"
+                      className="w-full h-full border-0 rounded-xl bg-white"
+                    />
+                  </div>
+                  <div className="md:hidden w-full rounded-2xl border border-[#2E3A59] bg-[#121824] p-6 text-center">
+                    <FileText className="w-12 h-12 text-red-400 mx-auto mb-3" />
+                    <h5 className="text-base font-black text-white">PDF listo para visualizar</h5>
+                    <p className="text-xs text-slate-400 mt-2 mb-5">Ábrelo directamente en el visor del celular para verlo completo.</p>
+                    <div className="grid grid-cols-1 gap-2">
+                      <a href={previewModalUrl} target="_blank" rel="noopener noreferrer" className="py-3 px-4 bg-red-600 text-white rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2">
+                        <ExternalLink className="w-4 h-4" /> Abrir PDF
+                      </a>
+                      <a href={previewModalUrl} download={previewModalTitle || 'documento.pdf'} className="py-3 px-4 bg-[#1C2541] border border-[#2E3A59] text-white rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2">
+                        <Download className="w-4 h-4" /> Descargar PDF
+                      </a>
+                    </div>
+                  </div>
+                </>
               ) : (
                 <img
                   src={previewModalUrl}
                   alt="Vista previa"
-                  className="max-h-[70vh] object-contain rounded-xl shadow-xs"
+                  className="max-h-[70vh] max-w-full object-contain rounded-xl shadow-xs"
                 />
               )}
             </div>
