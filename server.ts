@@ -333,7 +333,7 @@ function writeJson(filePath: string, data: any) {
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const DOCUMENT_TTL_SECONDS = 24 * 60 * 60;
 const SESSION_SECRET = (process.env.CREDIMOVIL_SESSION_SECRET || process.env.GEMINI_API_KEY || '').trim();
-const sessions = new Map<string, { username: string; role: 'admin' | 'asesor'; nombre: string; expiresAt: number }>();
+const sessions = new Map<string, { username: string; role: 'admin' | 'asesor' | 'lote'; nombre: string; loteId?: string; expiresAt: number }>();
 
 function normalizeUsername(value: string = '') { return value.trim().toLowerCase(); }
 function hashPassword(password: string, salt = randomBytes(16).toString('hex')) {
@@ -381,6 +381,99 @@ function requireAdmin(req: any, res: any) {
 }
 function advisorRecords() { return readJson(ASESORES_FILE, []); }
 function writeAdvisorRecords(records: any[]) { writeJson(ASESORES_FILE, records); }
+
+async function findLoteUser(username: string) {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('lote_usuarios')
+    .select('id,nombre,username,password_hash,activo,lote_id')
+    .eq('username', username)
+    .maybeSingle();
+
+  if (error) throw new Error(`Supabase usuarios de lote: ${error.message}`);
+  return data || null;
+}
+
+function requireLote(req: any, res: any) {
+  const session = requireAuth(req, res);
+  if (!session) return null;
+  if (session.role !== 'lote' || !session.loteId) {
+    res.status(403).json({ success: false, message: 'Esta función es exclusiva del portal del lote.' });
+    return null;
+  }
+  return session;
+}
+
+async function supabaseLoteUserList() {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('lote_usuarios')
+    .select('id,nombre,username,activo,lote_id,created_at')
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(`Supabase usuarios de lote: ${error.message}`);
+  return data || [];
+}
+
+function expedienteToSupabasePayload(exp: any) {
+  const ine = exp?.ine || {};
+  return {
+    folio: String(exp?.folio || ''),
+    pin_fondeo: String(exp?.pinFondeo || ''),
+    estatus: String(exp?.estatus || 'NUEVO'),
+    lote_id: exp?.loteId || null,
+    asesor_id: null,
+    cliente_nombre: String(ine?.nombreCompleto || ine?.nombre || ''),
+    cliente_curp: String(ine?.curp || ''),
+    cliente_rfc: String(ine?.rfc || ''),
+    telefono: String(exp?.telefono || ''),
+    correo: String(exp?.correo || ''),
+    auto_marca: String(exp?.autoMarca || ''),
+    auto_modelo: String(exp?.autoModelo || ''),
+    auto_ano: Number(exp?.autoAno) || null,
+    monto_financiar: Number(exp?.montoFinanciar) || 0,
+    data: exp || {},
+  };
+}
+
+async function upsertExpedienteSupabase(exp: any) {
+  if (!supabase || !exp?.folio) return;
+
+  let payload = expedienteToSupabasePayload(exp);
+
+  // Legacy/manual lots may only have the lot name. Resolve it to the Supabase UUID.
+  if (!payload.lote_id && exp?.loteNombre) {
+    const { data: lote, error: loteError } = await supabase
+      .from('lotes')
+      .select('id')
+      .ilike('nombre', String(exp.loteNombre).trim())
+      .limit(1)
+      .maybeSingle();
+    if (loteError) throw new Error(`Supabase lote para expediente: ${loteError.message}`);
+    if (lote?.id) {
+      payload = { ...payload, lote_id: lote.id };
+    }
+  }
+
+  const { error } = await supabase
+    .from('expedientes')
+    .upsert(payload, { onConflict: 'folio' });
+
+  if (error) throw new Error(`Supabase expediente ${exp.folio}: ${error.message}`);
+}
+
+async function ensureLegacyExpedientesMigrated() {
+  if (!supabase) return;
+  const localExpedientes = readJson(EXPEDIENTES_FILE, []);
+  if (!Array.isArray(localExpedientes) || localExpedientes.length === 0) return;
+
+  for (const exp of localExpedientes) {
+    try {
+      await upsertExpedienteSupabase(exp);
+    } catch (error: any) {
+      console.error(`Supabase: no se pudo migrar expediente ${exp?.folio || exp?.id}:`, error?.message || error);
+    }
+  }
+}
 function signDocumentAccessToken(expedienteId: string) {
   if (!SESSION_SECRET) return '';
   const payload = Buffer.from(JSON.stringify({
@@ -533,7 +626,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // 2. Authentication and Advisor Management
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const username = normalizeUsername(req.body?.username);
   const password = String(req.body?.password || '');
 
@@ -551,7 +644,7 @@ app.post('/api/auth/login', (req, res) => {
     });
   }
 
-  let account: { role: 'admin' | 'asesor'; nombre: string } | null = null;
+  let account: { role: 'admin' | 'asesor' | 'lote'; nombre: string; loteId?: string } | null = null;
 
   if (username === adminUsername && safeEqualText(password, adminPassword)) {
     account = { role: 'admin', nombre: 'Administrador CrediMóvil' };
@@ -559,6 +652,15 @@ app.post('/api/auth/login', (req, res) => {
     const user = advisorRecords().find((item: any) => item.username === username && item.active !== false);
     if (user && verifyPassword(password, user.passwordHash)) {
       account = { role: 'asesor', nombre: user.nombre || username };
+    } else if (supabase) {
+      const loteUser = await findLoteUser(username);
+      if (loteUser && loteUser.activo !== false && verifyPassword(password, loteUser.password_hash)) {
+        account = {
+          role: 'lote',
+          nombre: loteUser.nombre || username,
+          loteId: loteUser.lote_id,
+        };
+      }
     }
   }
 
@@ -571,20 +673,21 @@ app.post('/api/auth/login', (req, res) => {
     username,
     role: account.role,
     nombre: account.nombre,
+    loteId: account.loteId,
     expiresAt: Date.now() + SESSION_TTL_MS,
   });
 
   res.json({
     success: true,
     token,
-    user: { username, role: account.role, nombre: account.nombre },
+    user: { username, role: account.role, nombre: account.nombre, loteId: account.loteId || null },
   });
 });
 
 app.get('/api/auth/me', (req, res) => {
   const session = requireAuth(req, res);
   if (!session) return;
-  res.json({ success: true, user: { username: session.username, role: session.role, nombre: session.nombre } });
+  res.json({ success: true, user: { username: session.username, role: session.role, nombre: session.nombre, loteId: session.loteId || null } });
 });
 
 app.post('/api/auth/logout', (req, res) => {
@@ -651,6 +754,87 @@ app.delete('/api/asesores/:id', (req, res) => {
   records.splice(index, 1);
   writeAdvisorRecords(records);
   res.json({ success: true, message: 'Usuario de asesor eliminado.' });
+});
+
+app.get('/api/lote-usuarios', async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  try {
+    const users = await supabaseLoteUserList();
+    res.json({ success: true, usuarios: users });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || 'No se pudieron consultar los usuarios de lotes.' });
+  }
+});
+
+app.post('/api/lote-usuarios', async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+
+  const loteId = String(req.body?.loteId || '').trim();
+  const username = normalizeUsername(req.body?.username);
+  const password = String(req.body?.password || '');
+  const nombre = String(req.body?.nombre || '').trim();
+
+  if (!supabase) return res.status(503).json({ success: false, message: 'Supabase no está configurado en el servidor.' });
+  if (!loteId) return res.status(400).json({ success: false, message: 'Selecciona un lote.' });
+  if (!/^[a-z0-9._-]{3,30}$/.test(username)) {
+    return res.status(400).json({ success: false, message: 'El usuario debe tener entre 3 y 30 caracteres y solo usar letras, números, punto, guion o guion bajo.' });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ success: false, message: 'La contraseña debe tener al menos 8 caracteres.' });
+  }
+  if (nombre.length < 2) {
+    return res.status(400).json({ success: false, message: 'El nombre del usuario del lote es obligatorio.' });
+  }
+
+  try {
+    const { data: lote, error: loteError } = await supabase
+      .from('lotes')
+      .select('id,nombre')
+      .eq('id', loteId)
+      .maybeSingle();
+
+    if (loteError) throw new Error(`Supabase lote: ${loteError.message}`);
+    if (!lote) return res.status(404).json({ success: false, message: 'El lote seleccionado no existe.' });
+
+    const existing = await findLoteUser(username);
+    if (existing) return res.status(409).json({ success: false, message: 'Ese usuario ya existe.' });
+
+    const { data, error } = await supabase
+      .from('lote_usuarios')
+      .insert({
+        lote_id: loteId,
+        nombre,
+        username,
+        password_hash: hashPassword(password),
+        activo: true,
+      })
+      .select('id,nombre,username,activo,lote_id,created_at')
+      .single();
+
+    if (error) throw new Error(`Supabase usuario de lote: ${error.message}`);
+
+    res.status(201).json({
+      success: true,
+      usuario: data,
+      loteNombre: lote.nombre,
+      message: 'Usuario de lote creado correctamente.',
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo crear el usuario del lote.' });
+  }
+});
+
+app.delete('/api/lote-usuarios/:id', async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  if (!supabase) return res.status(503).json({ success: false, message: 'Supabase no está configurado en el servidor.' });
+
+  try {
+    const { error } = await supabase.from('lote_usuarios').delete().eq('id', req.params.id);
+    if (error) throw new Error(`Supabase usuario de lote: ${error.message}`);
+    res.json({ success: true, message: 'Usuario de lote eliminado correctamente.' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo eliminar el usuario del lote.' });
+  }
 });
 
 // Helper: Sleep utility for exponential backoff
@@ -929,6 +1113,72 @@ Reglas:
         ? 'Los servidores de IA están experimentando alta demanda momentánea. Por favor haz clic en "Reintentar Escaneo de Comprobante".'
         : (error?.message || 'Error al procesar el comprobante de domicilio con OCR.'),
     });
+  }
+});
+
+// Portal seguro de usuarios de lote: solo ve los créditos asociados a su propio lote.
+app.get('/api/lote/expedientes', async (req, res) => {
+  const session = requireLote(req, res);
+  if (!session) return;
+
+  try {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('expedientes')
+        .select('id,folio,estatus,cliente_nombre,telefono,auto_marca,auto_modelo,auto_ano,monto_financiar,created_at,updated_at,data')
+        .eq('lote_id', session.loteId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw new Error(`Supabase expedientes del lote: ${error.message}`);
+
+      const expedientes = (data || []).map((row: any) => {
+        const source = row.data || {};
+        const docs = source.documentosFondeo || [];
+        const requiredDocs = docs.filter((d: any) => d.requerido);
+        const uploadedRequired = requiredDocs.filter((d: any) => d.estatus === 'SUBIDO' || d.estatus === 'APROBADO');
+        return {
+          id: row.id,
+          folio: row.folio,
+          estatus: row.estatus,
+          clienteNombre: row.cliente_nombre || source.ine?.nombreCompleto || source.ine?.nombre || '',
+          telefono: row.telefono || source.telefono || '',
+          autoMarca: row.auto_marca || source.autoMarca || '',
+          autoModelo: row.auto_modelo || source.autoModelo || '',
+          autoAno: row.auto_ano || source.autoAno || null,
+          montoFinanciar: Number(row.monto_financiar) || Number(source.montoFinanciar) || 0,
+          fechaCreacion: source.fechaCreacion || row.created_at,
+          fechaActualizacion: source.fechaActualizacion || row.updated_at,
+          docsSubidos: uploadedRequired.length,
+          docsRequeridos: requiredDocs.length,
+        };
+      });
+
+      return res.json({ success: true, expedientes });
+    }
+
+    const local = readJson(EXPEDIENTES_FILE, []);
+    const expedientes = local
+      .filter((e: any) => e.loteId === session.loteId)
+      .map((e: any) => ({
+        id: e.id,
+        folio: e.folio,
+        estatus: e.estatus,
+        clienteNombre: e.ine?.nombreCompleto || e.ine?.nombre || '',
+        telefono: e.telefono || '',
+        autoMarca: e.autoMarca || '',
+        autoModelo: e.autoModelo || '',
+        autoAno: e.autoAno || null,
+        montoFinanciar: Number(e.montoFinanciar) || 0,
+        fechaCreacion: e.fechaCreacion,
+        fechaActualizacion: e.fechaActualizacion,
+        docsSubidos: (e.documentosFondeo || []).filter((d: any) => d.requerido && (d.estatus === 'SUBIDO' || d.estatus === 'APROBADO')).length,
+        docsRequeridos: (e.documentosFondeo || []).filter((d: any) => d.requerido).length,
+      }));
+
+    res.json({ success: true, expedientes });
+  } catch (error: any) {
+    console.error('GET /api/lote/expedientes error:', error);
+    res.status(500).json({ success: false, message: error?.message || 'No se pudieron cargar tus créditos.' });
   }
 });
 
@@ -1310,6 +1560,14 @@ app.post('/api/expedientes', (req, res) => {
 
   expedientes.unshift(newExpediente);
   writeJson(EXPEDIENTES_FILE, expedientes);
+  if (supabase) {
+    try {
+      await upsertExpedienteSupabase(newExpediente);
+    } catch (syncError: any) {
+      console.error('Supabase: error al guardar expediente nuevo:', syncError?.message || syncError);
+      return res.status(500).json({ success: false, message: 'El expediente se guardó localmente, pero no pudo sincronizarse con Supabase.' });
+    }
+  }
 
   res.status(201).json({
     success: true,
@@ -1345,6 +1603,13 @@ app.put('/api/expedientes/:id', (req, res) => {
 
   expedientes[index] = updated;
   writeJson(EXPEDIENTES_FILE, expedientes);
+  if (supabase) {
+    try {
+      await upsertExpedienteSupabase(updated);
+    } catch (syncError: any) {
+      console.error('Supabase: error al sincronizar expediente actualizado:', syncError?.message || syncError);
+    }
+  }
 
   res.json({ success: true, expediente: decorateExpedienteDocumentUrls(updated), message: 'Expediente actualizado exitosamente.' });
 });
@@ -1360,6 +1625,16 @@ app.delete('/api/expedientes/:id', (req, res) => {
   }
 
   writeJson(EXPEDIENTES_FILE, expedientes);
+  if (supabase) {
+    const original = readJson(EXPEDIENTES_FILE, []).find((e: any) => e.id === req.params.id);
+    if (original?.folio) {
+      try {
+        await supabase.from('expedientes').delete().eq('folio', original.folio);
+      } catch (syncError: any) {
+        console.error('Supabase: error al eliminar expediente:', syncError?.message || syncError);
+      }
+    }
+  }
   const uploadDir = path.join(UPLOADS_DIR, sanitizeFileName(req.params.id));
   if (fs.existsSync(uploadDir)) fs.rmSync(uploadDir, { recursive: true, force: true });
   res.json({ success: true, message: 'Expediente eliminado con éxito.' });
@@ -1507,6 +1782,7 @@ async function startServer() {
   if (supabaseConfigured()) {
     console.log('Supabase configurado. Sincronizando lotes locales...');
     await ensureLegacyLotesMigrated();
+    await ensureLegacyExpedientesMigrated();
   } else {
     console.warn('Supabase no configurado: usando persistencia local de lotes.');
   }
