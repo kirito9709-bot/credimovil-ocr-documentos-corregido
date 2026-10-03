@@ -163,7 +163,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const [autoModelo, setAutoModelo] = useState('');
   const [autoAno, setAutoAno] = useState<number>(new Date().getFullYear());
   const [autoPrecio, setAutoPrecio] = useState<number | ''>('');
-  const [enganche, setEnganche] = useState<number | ''>('');
+  const [enganchePorcentaje, setEnganchePorcentaje] = useState<number>(20);
   const [plazoMeses, setPlazoMeses] = useState<number>(48);
   const [esVehiculoLegalizado, setEsVehiculoLegalizado] = useState(false);
 
@@ -177,6 +177,22 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
       setSelectedLoteId(lotes[0].id);
     }
   }, [lotes]);
+
+  useEffect(() => {
+    const curp = (ineData.curp || '').trim().toUpperCase();
+    if (curp.length < 10) return;
+    const base = curp.substring(0, 10);
+    setIneData((prev) => {
+      const current = (prev.rfc || '').trim().toUpperCase();
+      if (
+        (current.length === 10 && current === base) ||
+        (current.length === 13 && current.substring(0, 10) === base)
+      ) {
+        return prev;
+      }
+      return { ...prev, rfc: base };
+    });
+  }, [ineData.curp]);
 
   // Handle Photo Capture from modal
   const handleCapture = (base64: string) => {
@@ -363,9 +379,12 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   if (hasDomicilioCompleto) docsCompletadosCount++;
   if (hasEstadosCuenta) docsCompletadosCount++;
 
-  // Calculations
-  const calcMontoFinanciar = Math.max(0, (Number(autoPrecio) || 0) - (Number(enganche) || 0));
-  const tasaMensual = 0.145 / 12;
+  // Calculations: enganche expressed as a percentage, minimum 20%.
+  const enganchePorcentajeSeguro = Math.min(100, Math.max(20, Number(enganchePorcentaje) || 20));
+  const calcEnganche = Math.round((Number(autoPrecio) || 0) * enganchePorcentajeSeguro / 100);
+  const calcMontoFinanciar = Math.max(0, (Number(autoPrecio) || 0) - calcEnganche);
+  const tasaInteresFija = 28;
+  const tasaMensual = (tasaInteresFija / 100) / 12;
   const mensualidadEstimada =
     calcMontoFinanciar > 0 && plazoMeses > 0
       ? Math.round(
@@ -446,10 +465,10 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         autoModelo,
         autoAno,
         autoPrecio: Number(autoPrecio) || 0,
-        enganche: Number(enganche) || 0,
+        enganche: calcEnganche,
         montoFinanciar: calcMontoFinanciar,
         plazoMeses,
-        tasaInteresAnual: 14.5,
+        tasaInteresAnual: 28,
         mensualidadEstimada,
         esVehiculoLegalizado,
         cuentaClabeLote: selectedLote?.cuentaClabeDefault || '',
@@ -548,7 +567,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     setAutoMarca('');
     setAutoModelo('');
     setAutoPrecio('');
-    setEnganche('');
+    setEnganchePorcentaje(20);
     setReferencias([
       { nombre: '', telefono: '', relacion: 'Familiar (otro domicilio)', esFamiliar: true },
       { nombre: '', telefono: '', relacion: 'Conocido 1', esFamiliar: false },
@@ -1701,7 +1720,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-sm uppercase font-bold tracking-wider focus:border-slate-900 focus:outline-none"
                 />
                 <p className="text-[10px] text-slate-500 mt-1">
-                  Editable para agregar la homoclave del SAT.
+                  Se genera automáticamente con los primeros 10 caracteres del CURP. Puedes agregar manualmente la homoclave SAT.
                 </p>
               </div>
 
@@ -2140,15 +2159,28 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Enganche Aportado ($MXN)
+                Enganche (% del valor) <span className="text-red-500">*</span>
               </label>
-              <input
-                type="number"
-                value={enganche}
-                onChange={(e) => setEnganche(e.target.value === '' ? '' : Number(e.target.value))}
-                placeholder="ej. 70000"
-                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min={20}
+                  max={100}
+                  step={1}
+                  value={enganchePorcentajeSeguro}
+                  onChange={(e) => {
+                    const value = Number(e.target.value) || 20;
+                    setEnganchePorcentaje(Math.min(100, Math.max(20, value)));
+                  }}
+                  className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm font-semibold focus:border-slate-900 focus:outline-none"
+                />
+                <div className="py-2 px-3 bg-slate-100 border border-slate-300 rounded-xl text-slate-700 text-sm font-bold">
+                  %
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-1">
+                Mínimo requerido: 20% • Enganche calculado: $ {calcEnganche.toLocaleString('es-MX')} MXN
+              </p>
             </div>
 
             <div>
