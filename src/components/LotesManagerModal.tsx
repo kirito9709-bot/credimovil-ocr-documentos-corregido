@@ -9,6 +9,7 @@ interface LotesManagerModalProps {
   lotes: LoteAuto[];
   onLoteCreated: (lote: LoteAuto) => void;
   onLoteDeleted: (id: string) => void;
+  canManage?: boolean;
 }
 
 export const LotesManagerModal: React.FC<LotesManagerModalProps> = ({
@@ -17,6 +18,7 @@ export const LotesManagerModal: React.FC<LotesManagerModalProps> = ({
   lotes,
   onLoteCreated,
   onLoteDeleted,
+  canManage = false,
 }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [nombre, setNombre] = useState('');
@@ -89,7 +91,7 @@ export const LotesManagerModal: React.FC<LotesManagerModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {!showAddForm && (
+            {canManage && !showAddForm && (
               <button
                 onClick={() => setShowAddForm(true)}
                 className="py-1.5 px-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition flex items-center gap-1.5"
@@ -267,6 +269,7 @@ export const LotesManagerModal: React.FC<LotesManagerModalProps> = ({
                   )}
                 </div>
 
+{canManage && (
                 <div className="flex items-center justify-end pt-2">
                   <button
                     type="button"
@@ -277,6 +280,7 @@ export const LotesManagerModal: React.FC<LotesManagerModalProps> = ({
                   </button>
                 </div>
 
+                )}
                 {/* Stats badge */}
                 <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-800/60">
                   <span className="text-slate-400">
