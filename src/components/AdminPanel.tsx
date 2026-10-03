@@ -72,6 +72,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [newAdvisorPassword, setNewAdvisorPassword] = useState('');
   const [advisorMessage, setAdvisorMessage] = useState<string | null>(null);
 
+  const [showLoteUsersModal, setShowLoteUsersModal] = useState(false);
+  const [loteUsuarios, setLoteUsuarios] = useState<any[]>([]);
+  const [newLoteUserLoteId, setNewLoteUserLoteId] = useState('');
+  const [newLoteUserName, setNewLoteUserName] = useState('');
+  const [newLoteUsername, setNewLoteUsername] = useState('');
+  const [newLotePassword, setNewLotePassword] = useState('');
+  const [loteUserMessage, setLoteUserMessage] = useState<string | null>(null);
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -118,6 +126,54 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       if (res.success) setAsesores(res.asesores || []);
     } catch (err: any) {
       setAdvisorMessage(err.message || 'No se pudieron cargar los asesores.');
+    }
+  };
+
+  const loadLoteUsuarios = async () => {
+    if (authUser?.role !== 'admin') return;
+    try {
+      const res = await api.getLoteUsuarios();
+      if (res.success) setLoteUsuarios(res.usuarios || []);
+    } catch (err: any) {
+      setLoteUserMessage(err.message || 'No se pudieron cargar los usuarios de lotes.');
+    }
+  };
+
+  useEffect(() => {
+    if (authUser?.role === 'admin' && showLoteUsersModal) {
+      loadLoteUsuarios();
+    }
+  }, [authUser?.role, showLoteUsersModal]);
+
+  const handleCreateLoteUsuario = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoteUserMessage(null);
+    try {
+      const res = await api.createLoteUsuario({
+        loteId: newLoteUserLoteId,
+        nombre: newLoteUserName.trim(),
+        username: newLoteUsername.trim(),
+        password: newLotePassword,
+      });
+      if (res.success) {
+        setLoteUserMessage(`Usuario creado para ${res.loteNombre || 'el lote'}. Entrégale el usuario y contraseña de forma segura.`);
+        setNewLoteUserName('');
+        setNewLoteUsername('');
+        setNewLotePassword('');
+        loadLoteUsuarios();
+      }
+    } catch (err: any) {
+      setLoteUserMessage(err.message || 'No se pudo crear el usuario del lote.');
+    }
+  };
+
+  const handleDeleteLoteUsuario = async (id: string, nombre: string) => {
+    if (!confirm(`¿Eliminar el acceso de ${nombre}?`)) return;
+    try {
+      await api.deleteLoteUsuario(id);
+      loadLoteUsuarios();
+    } catch (err: any) {
+      alert(err.message || 'No se pudo eliminar el usuario del lote.');
     }
   };
 
@@ -275,13 +331,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </button>
 
           {authUser?.role === 'admin' && (
-            <button
-              onClick={() => setShowAdvisorModal(true)}
-              className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-medium transition flex items-center gap-1.5"
-            >
-              <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-              <span>Asesores</span>
-            </button>
+            <>
+              <button
+                onClick={() => setShowAdvisorModal(true)}
+                className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-medium transition flex items-center gap-1.5"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                <span>Asesores</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowLoteUsersModal(true);
+                  if (!newLoteUserLoteId && lotes[0]) setNewLoteUserLoteId(lotes[0].id);
+                }}
+                className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-medium transition flex items-center gap-1.5"
+              >
+                <Building2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Accesos Lote</span>
+              </button>
+            </>
           )}
 
           <button
@@ -655,6 +724,94 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             </div>
           </div>
         </div>
-      )}    </div>
+      )}
+
+      {showLoteUsersModal && authUser?.role === 'admin' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="text-lg font-bold text-white">Accesos para Lotes Aliados</h3>
+                <p className="text-xs text-slate-400">
+                  Cada usuario queda vinculado a un lote y solo podrá consultar los créditos enviados por ese lote.
+                </p>
+              </div>
+              <button onClick={() => setShowLoteUsersModal(false)} className="py-1.5 px-3 text-slate-400 hover:text-white">Cerrar</button>
+            </div>
+
+            <form onSubmit={handleCreateLoteUsuario} className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs mb-6">
+              <select
+                required
+                value={newLoteUserLoteId}
+                onChange={(e) => setNewLoteUserLoteId(e.target.value)}
+                className="py-2.5 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white"
+              >
+                <option value="">Selecciona el lote...</option>
+                {lotes.map((lote) => <option key={lote.id} value={lote.id}>{lote.nombre}</option>)}
+              </select>
+
+              <input
+                required
+                value={newLoteUserName}
+                onChange={(e) => setNewLoteUserName(e.target.value)}
+                placeholder="Nombre del contacto"
+                className="py-2.5 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white"
+              />
+
+              <input
+                required
+                value={newLoteUsername}
+                onChange={(e) => setNewLoteUsername(e.target.value)}
+                placeholder="Usuario (ej. credimotors)"
+                autoComplete="off"
+                className="py-2.5 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white"
+              />
+
+              <input
+                required
+                minLength={8}
+                type="password"
+                value={newLotePassword}
+                onChange={(e) => setNewLotePassword(e.target.value)}
+                placeholder="Contraseña (8+)"
+                autoComplete="new-password"
+                className="py-2.5 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white"
+              />
+
+              <button type="submit" className="sm:col-span-2 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl">
+                Crear Acceso del Lote
+              </button>
+            </form>
+
+            {loteUserMessage && (
+              <div className="mb-4 p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300">
+                {loteUserMessage}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {loteUsuarios.length === 0 ? (
+                <div className="text-xs text-slate-500 py-5 text-center">Aún no hay accesos de lotes.</div>
+              ) : loteUsuarios.map((usuario) => (
+                <div key={usuario.id} className="flex items-center justify-between gap-3 p-3 bg-slate-950 border border-slate-800 rounded-xl">
+                  <div>
+                    <div className="text-sm font-bold text-white">{usuario.nombre}</div>
+                    <div className="text-[11px] text-slate-400">
+                      @{usuario.username} • {lotes.find((l) => l.id === usuario.lote_id)?.nombre || 'Lote'}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteLoteUsuario(usuario.id, usuario.nombre)}
+                    className="py-1.5 px-3 bg-rose-950/40 border border-rose-800/50 text-rose-300 rounded-lg text-xs"
+                  >
+                    Eliminar acceso
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
