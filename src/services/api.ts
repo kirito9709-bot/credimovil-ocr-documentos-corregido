@@ -20,7 +20,7 @@ export const api = {
       body: JSON.stringify({ username, password }),
     });
     if (!res.ok) await parseError(res, 'Usuario o contraseña incorrectos.');
-    return res.json() as Promise<{ success: boolean; token: string; user: { username: string; role: 'admin' | 'asesor'; nombre: string } }>;
+    return res.json() as Promise<{ success: boolean; token: string; user: { username: string; role: 'admin' | 'asesor' | 'lote'; nombre: string; loteId?: string | null } }>;
   },
 
   async getMe() {
@@ -57,6 +57,37 @@ export const api = {
       headers: authHeaders(),
     });
     if (!res.ok) await parseError(res, 'No se pudo eliminar el asesor.');
+    return res.json();
+  },
+
+  async getLoteUsuarios() {
+    const res = await fetch('/api/lote-usuarios', { headers: authHeaders() });
+    if (!res.ok) await parseError(res, 'No se pudieron consultar los usuarios de lotes.');
+    return res.json();
+  },
+
+  async createLoteUsuario(data: { loteId: string; nombre: string; username: string; password: string }) {
+    const res = await fetch('/api/lote-usuarios', {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await parseError(res, 'No se pudo crear el usuario del lote.');
+    return res.json();
+  },
+
+  async deleteLoteUsuario(id: string) {
+    const res = await fetch(`/api/lote-usuarios/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    if (!res.ok) await parseError(res, 'No se pudo eliminar el usuario del lote.');
+    return res.json();
+  },
+
+  async getLoteExpedientes() {
+    const res = await fetch('/api/lote/expedientes', { headers: authHeaders() });
+    if (!res.ok) await parseError(res, 'No se pudieron consultar tus créditos.');
     return res.json();
   },
 
