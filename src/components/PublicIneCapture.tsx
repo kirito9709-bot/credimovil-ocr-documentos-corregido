@@ -150,6 +150,22 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   // Obligado solidario: misma documentación inicial que el solicitante, adjunta al mismo expediente.
   const [requiereObligadoSolidario, setRequiereObligadoSolidario] = useState(false);
   const [obligadoNombre, setObligadoNombre] = useState('');
+  const [obligadoTelefono, setObligadoTelefono] = useState('');
+  const [obligadoCorreo, setObligadoCorreo] = useState('');
+  const [obligadoIngresoMensual, setObligadoIngresoMensual] = useState<number | ''>('');
+  const [obligadoTiempoViviendoDomicilio, setObligadoTiempoViviendoDomicilio] = useState('');
+  const [obligadoCasaPropiaORentada, setObligadoCasaPropiaORentada] = useState<'PROPIA' | 'RENTADA' | 'FAMILIAR' | ''>('');
+  const [obligadoTiempoEnTrabajo, setObligadoTiempoEnTrabajo] = useState('');
+  const [obligadoNombreUbicacionEmpleo, setObligadoNombreUbicacionEmpleo] = useState('');
+  const [obligadoDireccionEmpleo, setObligadoDireccionEmpleo] = useState('');
+  const [obligadoGiroActividadEmpresa, setObligadoGiroActividadEmpresa] = useState('');
+  const [obligadoDependientesEconomicos, setObligadoDependientesEconomicos] = useState<number>(0);
+  const [obligadoEstadoCivil, setObligadoEstadoCivil] = useState<'SOLTERO' | 'CASADO' | 'UNION_LIBRE' | 'DIVORCIADO' | 'VIUDO' | ''>('');
+  const [obligadoReferencias, setObligadoReferencias] = useState<ReferenciaPersonal[]>([
+    { nombre: '', telefono: '', relacion: 'Familiar (otro domicilio)', esFamiliar: true },
+    { nombre: '', telefono: '', relacion: 'Conocido 1', esFamiliar: false },
+    { nombre: '', telefono: '', relacion: 'Conocido 2', esFamiliar: false },
+  ]);
   const [obligadoIneFrente, setObligadoIneFrente] = useState<string | null>(null);
   const [obligadoIneFrenteNombre, setObligadoIneFrenteNombre] = useState('');
   const [obligadoIneReverso, setObligadoIneReverso] = useState<string | null>(null);
@@ -424,7 +440,26 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const hasObligadoEstados = modoEstadosCuenta === 'consolidado'
     ? Boolean(obligadoConsolidado)
     : Boolean(obligadoMes1 && obligadoMes2 && obligadoMes3);
-  const obligadoSolidarioCompleto = !requiereObligadoSolidario || Boolean(obligadoNombre.trim() && hasObligadoIne && hasObligadoComprobante && hasObligadoEstados);
+  const obligadoReferenciasIncompletas = obligadoReferencias.some((r) => !r.nombre.trim() || !r.telefono.trim());
+  const obligadoSolidarioCompleto =
+    !requiereObligadoSolidario ||
+    Boolean(
+      obligadoNombre.trim() &&
+      obligadoTelefono.replace(/\D/g, '').length >= 10 &&
+      obligadoIngresoMensual !== '' &&
+      obligadoTiempoViviendoDomicilio.trim() &&
+      obligadoCasaPropiaORentada &&
+      obligadoTiempoEnTrabajo.trim() &&
+      obligadoNombreUbicacionEmpleo.trim() &&
+      obligadoDireccionEmpleo.trim() &&
+      obligadoGiroActividadEmpresa.trim() &&
+      obligadoEstadoCivil &&
+      !obligadoReferenciasIncompletas &&
+      new Set(obligadoReferencias.map((r) => r.telefono.replace(/\D/g, ''))).size === 3 &&
+      hasObligadoIne &&
+      hasObligadoComprobante &&
+      hasObligadoEstados
+    );
 
   let docsCompletadosCount = 0;
   if (hasIneCompleta) docsCompletadosCount++;
@@ -473,7 +508,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     }
 
     if (requiereObligadoSolidario && !obligadoSolidarioCompleto) {
-      setScanError('El obligado solidario requiere nombre, INE por ambos lados, comprobante de domicilio y los últimos 3 meses de estados de cuenta (o PDF consolidado).');
+      setScanError('El obligado solidario debe capturar los mismos datos socioeconómicos y de contacto del titular, las 3 referencias, INE ambos lados, comprobante de domicilio y estados de cuenta.');
       return;
     }
 
@@ -526,6 +561,20 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         estadoCivil,
         referenciasPersonales: referencias,
         obligadoSolidario: requiereObligadoSolidario ? {
+
+          telefono: obligadoTelefono.trim(),
+          correo: obligadoCorreo.trim(),
+          ingresoMensualAprox: Number(obligadoIngresoMensual) || 0,
+          tiempoViviendoDomicilio: obligadoTiempoViviendoDomicilio.trim(),
+          casaPropiaORentada: obligadoCasaPropiaORentada,
+          tiempoEnTrabajo: obligadoTiempoEnTrabajo.trim(),
+          nombreUbicacionEmpleo: obligadoNombreUbicacionEmpleo.trim(),
+          direccionEmpleo: obligadoDireccionEmpleo.trim(),
+          giroActividadEmpresa: obligadoGiroActividadEmpresa.trim(),
+          dependientesEconomicos: Number(obligadoDependientesEconomicos) || 0,
+          estadoCivil: obligadoEstadoCivil,
+          referenciasPersonales: obligadoReferencias,
+
           requerido: true,
           nombre: obligadoNombre.trim(),
           fotoIneFrente: obligadoIneFrente || '',
@@ -667,6 +716,22 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     setEngancheMonto('');
     setRequiereObligadoSolidario(false);
     setObligadoNombre('');
+    setObligadoTelefono('');
+    setObligadoCorreo('');
+    setObligadoIngresoMensual('');
+    setObligadoTiempoViviendoDomicilio('');
+    setObligadoCasaPropiaORentada('');
+    setObligadoTiempoEnTrabajo('');
+    setObligadoNombreUbicacionEmpleo('');
+    setObligadoDireccionEmpleo('');
+    setObligadoGiroActividadEmpresa('');
+    setObligadoDependientesEconomicos(0);
+    setObligadoEstadoCivil('');
+    setObligadoReferencias([
+      { nombre: '', telefono: '', relacion: 'Familiar (otro domicilio)', esFamiliar: true },
+      { nombre: '', telefono: '', relacion: 'Conocido 1', esFamiliar: false },
+      { nombre: '', telefono: '', relacion: 'Conocido 2', esFamiliar: false },
+    ]);
     setObligadoIneFrente(null);
     setObligadoIneFrenteNombre('');
     setObligadoIneReverso(null);
@@ -1700,632 +1765,6 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
           </div>
         </div>
 
-        {/* ======================================================== */}
-        {/* OBLIGADO SOLIDARIO */}
-        {/* ======================================================== */}
-        <div className="bg-white border-2 border-amber-200 rounded-2xl shadow-xs overflow-hidden">
-          <div className="px-6 py-5 bg-amber-50 flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                <Users className="w-5 h-5 text-amber-600" />
-                Obligado Solidario
-              </h2>
-              <p className="text-xs text-slate-600 mt-1">
-                Actívalo únicamente cuando la financiera solicite un obligado solidario. Se adjuntará al mismo expediente.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setRequiereObligadoSolidario((value) => !value)}
-              className={`relative w-14 h-7 rounded-full transition ${requiereObligadoSolidario ? 'bg-amber-500' : 'bg-slate-300'}`}
-              aria-pressed={requiereObligadoSolidario}
-            >
-              <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition ${requiereObligadoSolidario ? 'left-8' : 'left-1'}`} />
-            </button>
-          </div>
-
-          {requiereObligadoSolidario && (
-            <div className="p-6 sm:p-8 space-y-6">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Nombre completo del obligado solidario <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={obligadoNombre}
-                  onChange={(e) => setObligadoNombre(e.target.value)}
-                  placeholder="Nombre completo"
-                  className="w-full md:max-w-xl py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200">
-                <p className="text-xs font-bold text-slate-900">Documentación obligatoria del obligado solidario</p>
-                <p className="text-[11px] text-slate-600 mt-1">
-                  Se requieren los mismos documentos del solicitante: INE ambos lados, comprobante de domicilio y 3 meses de estados de cuenta, o un PDF consolidado.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  {label:'INE Frente', value:obligadoIneFrente, input:obligadoIneFrenteInput, setter:setObligadoIneFrente, name:setObligadoIneFrenteNombre, nameValue:obligadoIneFrenteNombre},
-                  {label:'INE Reverso', value:obligadoIneReverso, input:obligadoIneReversoInput, setter:setObligadoIneReverso, name:setObligadoIneReversoNombre, nameValue:obligadoIneReversoNombre},
-                ].map((doc:any, index:number) => (
-                  <div key={doc.label} className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold text-slate-800">{doc.label} <span className="text-red-500">*</span></span>
-                      {doc.value && <Check className="w-4 h-4 text-emerald-600" />}
-                    </div>
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => doc.input.current?.click()} className="flex-1 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
-                        <Upload className="w-3.5 h-3.5" /> Subir
-                      </button>
-                      {doc.value && <button type="button" onClick={() => { doc.setter(null); doc.name(''); }} className="px-3 py-2 bg-rose-50 text-rose-600 rounded-xl"><Trash2 className="w-3.5 h-3.5" /></button>}
-                    </div>
-                    <input
-                      ref={doc.input}
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp,application/pdf"
-                      className="hidden"
-                      onChange={(e) => handleObligadoFile(e, doc.setter, doc.name)}
-                    />
-                    {doc.nameValue && <p className="text-[11px] text-slate-500 mt-2 truncate">{doc.nameValue}</p>}
-                  </div>
-                ))}
-              </div>
-
-              <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800">Comprobante de domicilio <span className="text-red-500">*</span></span>
-                  {obligadoComprobante && <Check className="w-4 h-4 text-emerald-600" />}
-                </div>
-                <div className="flex gap-2 mt-3">
-                  <button type="button" onClick={() => obligadoComprobanteInput.current?.click()} className="flex-1 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
-                    <Upload className="w-3.5 h-3.5" /> Subir comprobante
-                  </button>
-                  {obligadoComprobante && <button type="button" onClick={() => {setObligadoComprobante(null);setObligadoComprobanteNombre('')}} className="px-3 py-2 bg-rose-50 text-rose-600 rounded-xl"><Trash2 className="w-3.5 h-3.5" /></button>}
-                </div>
-                <input ref={obligadoComprobanteInput} type="file" accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden" onChange={(e)=>handleObligadoFile(e,setObligadoComprobante,setObligadoComprobanteNombre)} />
-                {obligadoComprobanteNombre && <p className="text-[11px] text-slate-500 mt-2 truncate">{obligadoComprobanteNombre}</p>}
-              </div>
-
-              <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60">
-                <p className="text-xs font-bold text-slate-800 mb-3">Estados de cuenta del obligado solidario <span className="text-red-500">*</span></p>
-                {modoEstadosCuenta === 'individual' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {[
-                      {label:'Mes 1', value:obligadoMes1, ref:obligadoMes1Input, setter:setObligadoMes1, name:setObligadoMes1Nombre, nameValue:obligadoMes1Nombre},
-                      {label:'Mes 2', value:obligadoMes2, ref:obligadoMes2Input, setter:setObligadoMes2, name:setObligadoMes2Nombre, nameValue:obligadoMes2Nombre},
-                      {label:'Mes 3', value:obligadoMes3, ref:obligadoMes3Input, setter:setObligadoMes3, name:setObligadoMes3Nombre, nameValue:obligadoMes3Nombre},
-                    ].map((doc:any)=>(
-                      <div key={doc.label} className="border border-slate-200 rounded-xl p-3 bg-white">
-                        <div className="flex items-center justify-between mb-2"><span className="text-xs font-bold text-slate-800">{doc.label}</span>{doc.value && <Check className="w-4 h-4 text-emerald-600" />}</div>
-                        <button type="button" onClick={()=>doc.ref.current?.click()} className="w-full py-2 bg-slate-900 text-white rounded-lg text-xs font-bold"><Upload className="w-3 h-3 inline mr-1" />Subir</button>
-                        <input ref={doc.ref} type="file" accept="application/pdf,image/png,image/jpeg" className="hidden" onChange={(e)=>handleObligadoFile(e,doc.setter,doc.name)} />
-                        {doc.nameValue && <p className="text-[10px] text-slate-500 mt-2 truncate">{doc.nameValue}</p>}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div>
-                    <button type="button" onClick={()=>obligadoConsolidadoInput.current?.click()} className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl bg-white text-xs font-bold text-slate-700">
-                      <Upload className="w-4 h-4 inline mr-1.5" /> Subir PDF consolidado (3 meses)
-                    </button>
-                    <input ref={obligadoConsolidadoInput} type="file" accept="application/pdf,image/png,image/jpeg" className="hidden" onChange={(e)=>handleObligadoFile(e,setObligadoConsolidado,setObligadoConsolidadoNombre)} />
-                    {obligadoConsolidadoNombre && <p className="text-[11px] text-slate-500 mt-2 truncate">{obligadoConsolidadoNombre}</p>}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 text-xs">
-                <span className={obligadoSolidarioCompleto ? 'text-emerald-700 font-bold' : 'text-amber-700 font-semibold'}>
-                  {obligadoSolidarioCompleto ? '✓ Documentación del obligado completa' : 'Pendiente: faltan documentos del obligado'}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ======================================================== */}
-        {/* SECCIÓN 2: DATOS DEL CLIENTE (OCR Y EDICIÓN DIRECTA)   */}
-        {/* ======================================================== */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-6 sm:p-8 space-y-6">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-200">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-md bg-slate-900 text-white text-xs font-black flex items-center justify-center">
-                  2
-                </span>
-                <h3 className="text-base font-bold text-slate-900">
-                  Datos Oficiales del Solicitante (Cotejo INE y RFC)
-                </h3>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Validados mediante el OCR de CrediMóvil. Puedes editarlos directamente si requieres corregir algún dato.
-              </p>
-            </div>
-            {ocrCompleted && (
-              <span className="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
-                ✓ OCR Validado
-              </span>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            {/* Nombres y Apellidos */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Nombre(s) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={ineData.nombre}
-                  onChange={(e) => setIneData({ ...ineData, nombre: e.target.value })}
-                  placeholder="ej. CARLOS"
-                  className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Primer Apellido (Paterno) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={ineData.primerApellido}
-                  onChange={(e) => setIneData({ ...ineData, primerApellido: e.target.value })}
-                  placeholder="ej. GONZALEZ"
-                  className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Segundo Apellido (Materno)
-                </label>
-                <input
-                  type="text"
-                  value={ineData.segundoApellido}
-                  onChange={(e) => setIneData({ ...ineData, segundoApellido: e.target.value })}
-                  placeholder="ej. TREVIÑO"
-                  className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* CURP, RFC del Cliente, Fecha Nacimiento, Sexo */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  CURP (18 Dígitos) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  maxLength={18}
-                  value={ineData.curp}
-                  onChange={(e) => {
-                    const newCurp = e.target.value.toUpperCase();
-                    const prevBase = ineData.curp ? ineData.curp.substring(0, 10) : '';
-                    const shouldAutoUpdate = !ineData.rfc || ineData.rfc === prevBase;
-                    const nextRfc = shouldAutoUpdate && newCurp.length >= 10 ? newCurp.substring(0, 10) : (ineData.rfc || (newCurp.length >= 10 ? newCurp.substring(0, 10) : ''));
-                    setIneData({ ...ineData, curp: newCurp, rfc: nextRfc });
-                  }}
-                  placeholder="GOTC850412HNL..."
-                  className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-sm uppercase font-semibold focus:border-slate-900 focus:outline-none"
-                />
-              </div>
-
-              {/* RFC del Cliente */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    RFC del Cliente <span className="text-red-500">*</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const autoRfc = calcularRfcBase(
-                        ineData.curp,
-                        ineData.nombre,
-                        ineData.primerApellido,
-                        ineData.segundoApellido,
-                        ineData.fechaNacimiento
-                      );
-                      setIneData({ ...ineData, rfc: autoRfc });
-                    }}
-                    className="text-[10px] text-amber-700 font-bold hover:underline cursor-pointer flex items-center gap-1"
-                    title="Calcular con base en el CURP"
-                  >
-                    <Sparkles className="w-3 h-3" /> Auto-generar
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  required
-                  maxLength={13}
-                  value={ineData.rfc || ''}
-                  onChange={(e) => setIneData({ ...ineData, rfc: e.target.value.toUpperCase() })}
-                  placeholder="ej. GOTC850412XXX"
-                  className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-sm uppercase font-bold tracking-wider focus:border-slate-900 focus:outline-none"
-                />
-                <p className="text-[10px] text-slate-500 mt-1">
-                  Se genera automáticamente con los primeros 10 caracteres del CURP. Puedes agregar manualmente la homoclave SAT.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Fecha de Nacimiento
-                </label>
-                <input
-                  type="text"
-                  value={ineData.fechaNacimiento}
-                  onChange={(e) => setIneData({ ...ineData, fechaNacimiento: e.target.value })}
-                  placeholder="YYYY-MM-DD"
-                  className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Sexo
-                </label>
-                <select
-                  value={ineData.sexo || ''}
-                  onChange={(e) => setIneData({ ...ineData, sexo: e.target.value as any })}
-                  className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-                >
-                  <option value="">Seleccionar...</option>
-                  <option value="H">Hombre (H)</option>
-                  <option value="M">Mujer (M)</option>
-                  <option value="X">No Binario (X)</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Domicilio editable */}
-            <div className="pt-2">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  {domicilioCoincideConIne
-                    ? 'Domicilio Oficial (Registrado en INE)'
-                    : 'Domicilio Actual (del Comprobante de Agua o Luz)'}
-                </label>
-                <span className="text-[11px] text-slate-500">
-                  Puedes editar directamente cualquier campo abajo
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Calle</label>
-                  <input
-                    type="text"
-                    value={ineData.domicilio?.calle || ''}
-                    onChange={(e) =>
-                      setIneData({
-                        ...ineData,
-                        domicilio: { ...ineData.domicilio, calle: e.target.value },
-                      })
-                    }
-                    placeholder="ej. AV. BENITO JUAREZ"
-                    className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">No. Ext.</label>
-                    <input
-                      type="text"
-                      value={ineData.domicilio?.numExterior || ''}
-                      onChange={(e) =>
-                        setIneData({
-                          ...ineData,
-                          domicilio: { ...ineData.domicilio, numExterior: e.target.value },
-                        })
-                      }
-                      placeholder="100"
-                      className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">No. Int.</label>
-                    <input
-                      type="text"
-                      value={ineData.domicilio?.numInterior || ''}
-                      onChange={(e) =>
-                        setIneData({
-                          ...ineData,
-                          domicilio: { ...ineData.domicilio, numInterior: e.target.value },
-                        })
-                      }
-                      placeholder="Sin número"
-                      className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Colonia</label>
-                  <input
-                    type="text"
-                    value={ineData.domicilio?.colonia || ''}
-                    onChange={(e) =>
-                      setIneData({
-                        ...ineData,
-                        domicilio: { ...ineData.domicilio, colonia: e.target.value },
-                      })
-                    }
-                    placeholder="CENTRO"
-                    className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Código Postal</label>
-                  <input
-                    type="text"
-                    maxLength={5}
-                    value={ineData.domicilio?.codigoPostal || ''}
-                    onChange={(e) =>
-                      setIneData({
-                        ...ineData,
-                        domicilio: { ...ineData.domicilio, codigoPostal: e.target.value },
-                      })
-                    }
-                    placeholder="64000"
-                    className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Municipio</label>
-                  <input
-                    type="text"
-                    value={ineData.domicilio?.municipio || ''}
-                    onChange={(e) =>
-                      setIneData({
-                        ...ineData,
-                        domicilio: { ...ineData.domicilio, municipio: e.target.value },
-                      })
-                    }
-                    placeholder="MONTERREY"
-                    className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Estado</label>
-                  <input
-                    type="text"
-                    value={ineData.domicilio?.estado || ''}
-                    onChange={(e) =>
-                      setIneData({
-                        ...ineData,
-                        domicilio: { ...ineData.domicilio, estado: e.target.value },
-                      })
-                    }
-                    placeholder="NUEVO LEON"
-                    className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ======================================================== */}
-        {/* SECCIÓN 3: PERFIL SOCIOECONÓMICO Y LABORAL (CREDIMÓVIL)  */}
-        {/* ======================================================== */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-6 sm:p-8 space-y-6">
-          <div className="flex items-center gap-2 pb-4 border-b border-slate-200">
-            <span className="w-6 h-6 rounded-md bg-slate-900 text-white text-xs font-black flex items-center justify-center">
-              3
-            </span>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">
-                Perfil Socioeconómico y Laboral
-              </h3>
-              <p className="text-xs text-slate-500">
-                Información de contacto, empleo y referencias personales para el dictamen
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Teléfono de Contacto <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                required
-                value={telefono}
-                onChange={(e) => setTelefono(e.target.value)}
-                placeholder="81 1234 5678"
-                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Correo Electrónico
-              </label>
-              <input
-                type="email"
-                value={correo}
-                onChange={(e) => setCorreo(e.target.value)}
-                placeholder="cliente@ejemplo.com"
-                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Ingreso Mensual Comprobable ($MXN)
-              </label>
-              <input
-                type="number"
-                value={ingresoMensual}
-                onChange={(e) => setIngresoMensual(e.target.value === '' ? '' : Number(e.target.value))}
-                placeholder="ej. 35000"
-                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Vivienda
-              </label>
-              <select
-                value={casaPropiaORentada}
-                onChange={(e) => setCasaPropiaORentada(e.target.value as any)}
-                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-              >
-                <option value="">Seleccionar condición...</option>
-                <option value="PROPIA">Casa Propia</option>
-                <option value="RENTADA">Rentada</option>
-                <option value="FAMILIAR">Casa Familiar</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Antigüedad en domicilio
-              </label>
-              <input
-                type="text"
-                value={tiempoViviendoDomicilio}
-                onChange={(e) => setTiempoViviendoDomicilio(e.target.value)}
-                placeholder="ej. 5 años"
-                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Empresa / Lugar de Trabajo
-              </label>
-              <input
-                type="text"
-                value={nombreUbicacionEmpleo}
-                onChange={(e) => setNombreUbicacionEmpleo(e.target.value)}
-                placeholder="ej. Nemak México"
-                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Dirección del empleo
-              </label>
-              <input
-                type="text"
-                value={direccionEmpleo}
-                onChange={(e) => setDireccionEmpleo(e.target.value)}
-                placeholder="Calle, número, colonia, municipio, estado"
-                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Antigüedad en Empleo
-              </label>
-              <input
-                type="text"
-                value={tiempoEnTrabajo}
-                onChange={(e) => setTiempoEnTrabajo(e.target.value)}
-                placeholder="ej. 3 años"
-                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* ======================================================== */}
-        {/* Referencias personales obligatorias */}
-          <div className="pt-2 border-t border-slate-200 space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-red-600" />
-                  3 Referencias Personales <span className="text-red-500">*</span>
-                </h4>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  1 familiar que viva en otro domicilio y 2 conocidos. Solo se solicita nombre y teléfono.
-                </p>
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded-lg">
-                Obligatorio
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {referencias.map((ref, index) => (
-                <div key={index} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-700">
-                      Referencia {index + 1}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                      ref.esFamiliar
-                        ? 'bg-amber-50 text-amber-700 border-amber-200'
-                        : 'bg-blue-50 text-blue-700 border-blue-200'
-                    }`}>
-                      {ref.esFamiliar ? 'Familiar • otro domicilio' : ref.relacion}
-                    </span>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                      Nombre completo *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={ref.nombre}
-                      onChange={(e) =>
-                        setReferencias((prev) =>
-                          prev.map((item, i) => (i === index ? { ...item, nombre: e.target.value } : item))
-                        )
-                      }
-                      placeholder="Nombre de la referencia"
-                      className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                      Teléfono *
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      value={ref.telefono}
-                      onChange={(e) =>
-                        setReferencias((prev) =>
-                          prev.map((item, i) => (i === index ? { ...item, telefono: e.target.value } : item))
-                        )
-                      }
-                      placeholder="81 1234 5678"
-                      className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-                    />
-                  </div>
-
-
-                </div>
-              ))}
-            </div>
-          </div>
-
         {/* SECCIÓN 4: DATOS DEL VEHÍCULO Y LOTE ASOCIADO           */}
         {/* ======================================================== */}
         <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-6 sm:p-8 space-y-6">
@@ -2546,6 +1985,188 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
             </label>
           </div>
+        </div>
+
+        {/* ======================================================== */}
+        {/* OBLIGADO SOLIDARIO - AL FINAL DEL EXPEDIENTE */}
+        {/* ======================================================== */}
+        <div className="bg-white border-2 border-amber-200 rounded-2xl shadow-xs overflow-hidden">
+          <div className="px-5 sm:px-6 py-5 bg-amber-50 flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <Users className="w-5 h-5 text-amber-600" />
+                Obligado Solidario
+              </h2>
+              <p className="text-xs text-slate-600 mt-1">
+                Actívalo solo cuando la financiera lo solicite. Al activarlo, se deberán capturar los mismos datos y documentación del titular.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRequiereObligadoSolidario((value) => !value)}
+              className={`relative w-14 h-7 rounded-full transition ${requiereObligadoSolidario ? 'bg-amber-500' : 'bg-slate-300'}`}
+              aria-pressed={requiereObligadoSolidario}
+            >
+              <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition ${requiereObligadoSolidario ? 'left-8' : 'left-1'}`} />
+            </button>
+          </div>
+
+          {requiereObligadoSolidario && (
+            <div className="p-5 sm:p-8 space-y-7">
+              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200">
+                <p className="text-xs font-bold text-slate-900">Captura del obligado solidario</p>
+                <p className="text-[11px] text-slate-600 mt-1">
+                  Debe llenarse igual que el titular: contacto, ingresos, vivienda, empleo, referencias y documentación.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-black text-slate-900 mb-3">1. Datos personales y de contacto</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nombre completo <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoNombre} onChange={(e) => setObligadoNombre(e.target.value)} placeholder="Nombre completo" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Teléfono <span className="text-red-500">*</span></label>
+                    <input type="tel" required value={obligadoTelefono} onChange={(e) => setObligadoTelefono(e.target.value)} placeholder="81 1234 5678" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Correo electrónico</label>
+                    <input type="email" value={obligadoCorreo} onChange={(e) => setObligadoCorreo(e.target.value)} placeholder="correo@ejemplo.com" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Estado civil <span className="text-red-500">*</span></label>
+                    <select required value={obligadoEstadoCivil} onChange={(e) => setObligadoEstadoCivil(e.target.value as any)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none">
+                      <option value="">Seleccionar...</option>
+                      <option value="SOLTERO">Soltero(a)</option>
+                      <option value="CASADO">Casado(a)</option>
+                      <option value="UNION_LIBRE">Unión libre</option>
+                      <option value="DIVORCIADO">Divorciado(a)</option>
+                      <option value="VIUDO">Viudo(a)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-black text-slate-900 mb-3">2. Perfil socioeconómico y laboral</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Ingreso mensual comprobable <span className="text-red-500">*</span></label>
+                    <input type="number" required min="0" value={obligadoIngresoMensual} onChange={(e) => setObligadoIngresoMensual(e.target.value === '' ? '' : Number(e.target.value))} placeholder="ej. 35000" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Vivienda <span className="text-red-500">*</span></label>
+                    <select required value={obligadoCasaPropiaORentada} onChange={(e) => setObligadoCasaPropiaORentada(e.target.value as any)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none">
+                      <option value="">Seleccionar condición...</option>
+                      <option value="PROPIA">Casa propia</option>
+                      <option value="RENTADA">Rentada</option>
+                      <option value="FAMILIAR">Casa familiar</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Antigüedad en domicilio <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoTiempoViviendoDomicilio} onChange={(e) => setObligadoTiempoViviendoDomicilio(e.target.value)} placeholder="ej. 5 años" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Empresa / lugar de trabajo <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoNombreUbicacionEmpleo} onChange={(e) => setObligadoNombreUbicacionEmpleo(e.target.value)} placeholder="ej. Empresa XYZ" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Antigüedad en empleo <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoTiempoEnTrabajo} onChange={(e) => setObligadoTiempoEnTrabajo(e.target.value)} placeholder="ej. 3 años" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Dependientes económicos</label>
+                    <input type="number" min="0" value={obligadoDependientesEconomicos} onChange={(e) => setObligadoDependientesEconomicos(Number(e.target.value) || 0)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Dirección del empleo <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoDireccionEmpleo} onChange={(e) => setObligadoDireccionEmpleo(e.target.value)} placeholder="Calle, número, colonia, municipio, estado" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Giro / actividad de la empresa <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoGiroActividadEmpresa} onChange={(e) => setObligadoGiroActividadEmpresa(e.target.value)} placeholder="ej. Comercio, industria, servicios" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-black text-slate-900 mb-3">3. Referencias personales</h3>
+                <div className="space-y-3">
+                  {obligadoReferencias.map((ref, index) => (
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                      <input type="text" required value={ref.nombre} onChange={(e) => setObligadoReferencias((prev) => prev.map((item, i) => i === index ? { ...item, nombre: e.target.value } : item))} placeholder={index === 0 ? "Familiar (otro domicilio)" : `Nombre del conocido ${index}`} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm" />
+                      <input type="tel" required value={ref.telefono} onChange={(e) => setObligadoReferencias((prev) => prev.map((item, i) => i === index ? { ...item, telefono: e.target.value } : item))} placeholder="81 1234 5678" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm" />
+                      <div className="flex items-center text-xs font-semibold text-slate-500">{index === 0 ? 'Familiar de otro domicilio' : `Conocido ${index}`}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-black text-slate-900 mb-3">4. Documentación obligatoria</h3>
+                <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 mb-4">
+                  <p className="text-xs font-bold text-slate-900">Los mismos documentos solicitados al titular</p>
+                  <p className="text-[11px] text-slate-600 mt-1">INE ambos lados, comprobante de domicilio y 3 estados de cuenta individuales o PDF consolidado. Todo queda dentro del mismo expediente.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    {label:'INE Frente', value:obligadoIneFrente, input:obligadoIneFrenteInput, setter:setObligadoIneFrente, name:setObligadoIneFrenteNombre, nameValue:obligadoIneFrenteNombre},
+                    {label:'INE Reverso', value:obligadoIneReverso, input:obligadoIneReversoInput, setter:setObligadoIneReverso, name:setObligadoIneReversoNombre, nameValue:obligadoIneReversoNombre},
+                  ].map((doc:any) => (
+                    <div key={doc.label} className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60">
+                      <div className="flex items-center justify-between mb-3"><span className="text-xs font-bold text-slate-800">{doc.label} <span className="text-red-500">*</span></span>{doc.value && <Check className="w-4 h-4 text-emerald-600" />}</div>
+                      <button type="button" onClick={() => doc.input.current?.click()} className="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"><Upload className="w-3.5 h-3.5" /> Subir</button>
+                      <input ref={doc.input} type="file" accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden" onChange={(e) => handleObligadoFile(e, doc.setter, doc.name)} />
+                      {doc.nameValue && <p className="text-[11px] text-slate-500 mt-2 truncate">{doc.nameValue}</p>}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 border border-slate-200 rounded-2xl p-4 bg-slate-50/60">
+                  <div className="flex items-center justify-between"><span className="text-xs font-bold text-slate-800">Comprobante de domicilio <span className="text-red-500">*</span></span>{obligadoComprobante && <Check className="w-4 h-4 text-emerald-600" />}</div>
+                  <button type="button" onClick={() => obligadoComprobanteInput.current?.click()} className="w-full mt-3 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold"><Upload className="w-3.5 h-3.5 inline mr-1" /> Subir comprobante</button>
+                  <input ref={obligadoComprobanteInput} type="file" accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden" onChange={(e)=>handleObligadoFile(e,setObligadoComprobante,setObligadoComprobanteNombre)} />
+                  {obligadoComprobanteNombre && <p className="text-[11px] text-slate-500 mt-2 truncate">{obligadoComprobanteNombre}</p>}
+                </div>
+
+                <div className="mt-4 border border-slate-200 rounded-2xl p-4 bg-slate-50/60">
+                  <p className="text-xs font-bold text-slate-800 mb-3">Estados de cuenta <span className="text-red-500">*</span></p>
+                  {modoEstadosCuenta === 'individual' ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {[
+                        {label:'Mes 1', value:obligadoMes1, ref:obligadoMes1Input, setter:setObligadoMes1, name:setObligadoMes1Nombre, nameValue:obligadoMes1Nombre},
+                        {label:'Mes 2', value:obligadoMes2, ref:obligadoMes2Input, setter:setObligadoMes2, name:setObligadoMes2Nombre, nameValue:obligadoMes2Nombre},
+                        {label:'Mes 3', value:obligadoMes3, ref:obligadoMes3Input, setter:setObligadoMes3, name:setObligadoMes3Nombre, nameValue:obligadoMes3Nombre},
+                      ].map((doc:any)=>(
+                        <div key={doc.label} className="border border-slate-200 rounded-xl p-3 bg-white">
+                          <div className="flex items-center justify-between mb-2"><span className="text-xs font-bold text-slate-800">{doc.label}</span>{doc.value && <Check className="w-4 h-4 text-emerald-600" />}</div>
+                          <button type="button" onClick={()=>doc.ref.current?.click()} className="w-full py-2 bg-slate-900 text-white rounded-lg text-xs font-bold"><Upload className="w-3 h-3 inline mr-1" />Subir</button>
+                          <input ref={doc.ref} type="file" accept="application/pdf,image/png,image/jpeg" className="hidden" onChange={(e)=>handleObligadoFile(e,doc.setter,doc.name)} />
+                          {doc.nameValue && <p className="text-[10px] text-slate-500 mt-2 truncate">{doc.nameValue}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div>
+                      <button type="button" onClick={()=>obligadoConsolidadoInput.current?.click()} className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl bg-white text-xs font-bold text-slate-700"><Upload className="w-4 h-4 inline mr-1.5" /> Subir PDF consolidado (3 meses)</button>
+                      <input ref={obligadoConsolidadoInput} type="file" accept="application/pdf,image/png,image/jpeg" className="hidden" onChange={(e)=>handleObligadoFile(e,setObligadoConsolidado,setObligadoConsolidadoNombre)} />
+                      {obligadoConsolidadoNombre && <p className="text-[11px] text-slate-500 mt-2 truncate">{obligadoConsolidadoNombre}</p>}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs">
+                <span className={obligadoSolidarioCompleto ? 'text-emerald-700 font-bold' : 'text-amber-700 font-semibold'}>
+                  {obligadoSolidarioCompleto ? '✓ Obligado solidario listo para enviar' : 'Pendiente: completa todos los datos y documentos del obligado solidario'}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* BOTTOM ACTION BAR */}
