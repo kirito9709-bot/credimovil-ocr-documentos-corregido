@@ -232,6 +232,48 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
       return { username: 'asesor', role: 'asesor', nombre: 'CrediMóvil' };
     }
   })();
+  const getLoteWhatsappNumber = () => {
+    const raw = String(expediente.telefonoLote || '').replace(/\D/g, '');
+    if (!raw) return '';
+    if (raw.startsWith('52') && raw.length >= 12) return raw;
+    return raw.length === 10 ? `52${raw}` : raw;
+  };
+
+  const openWhatsAppToLote = () => {
+    const phone = getLoteWhatsappNumber();
+    if (!phone) {
+      alert('Este lote no tiene un celular registrado. Abre el Directorio de Lotes y captura su teléfono.');
+      return;
+    }
+
+    const text = `*CrediMóvil - Actualización de expediente*\\n` +
+      `Folio: *${expediente.folio}*\\n` +
+      `Cliente: *${expediente.ine?.nombreCompleto || expediente.ine?.nombre}*\\n` +
+      `Estatus: *${estatus}*\\n` +
+      `Monto a financiar: *$${calcMontoFinanciar.toLocaleString('es-MX')} MXN*\\n` +
+      `Checklist: ${window.location.origin}/?tab=fondeo&folio=${expediente.folio}&pin=${expediente.pinFondeo}`;
+
+    window.location.href = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+  };
+
+  const openEmailToLote = () => {
+    const email = String(expediente.correoLote || '').trim();
+    if (!email) {
+      alert('Este lote no tiene correo registrado. Abre el Directorio de Lotes y captura su correo.');
+      return;
+    }
+
+    const subject = `Actualización CrediMóvil - ${expediente.folio}`;
+    const body =
+      `Folio: ${expediente.folio}\n` +
+      `Cliente: ${expediente.ine?.nombreCompleto || expediente.ine?.nombre || ''}\n` +
+      `Estatus: ${estatus}\n` +
+      `Monto a financiar: $${calcMontoFinanciar.toLocaleString('es-MX')} MXN\n` +
+      `Checklist de documentación: ${window.location.origin}/?tab=fondeo&folio=${expediente.folio}&pin=${expediente.pinFondeo}`;
+
+    window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
 
   return (
     <div
@@ -278,6 +320,15 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
             >
               <Printer className="w-3.5 h-3.5 text-red-400" />
               <span className="hidden sm:inline">Carátula CrediMóvil</span>
+            </button>
+
+            <button
+              onClick={openEmailToLote}
+              className="py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border border-slate-700"
+              title={expediente.correoLote ? `Enviar correo a ${expediente.correoLote}` : 'El lote no tiene correo registrado'}
+            >
+              <Mail className="w-3.5 h-3.5 text-red-400" />
+              <span className="hidden sm:inline">Correo Lote</span>
             </button>
 
             <button
@@ -623,6 +674,28 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                       </span>
                     </p>
                   )}
+                  <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Contacto del Lote</p>
+                    <div className="flex flex-wrap gap-3 text-xs">
+                      <a
+                        href={expediente.telefonoLote ? `tel:${expediente.telefonoLote}` : '#'}
+                        className="inline-flex items-center gap-1.5 text-white hover:text-red-300"
+                        onClick={(e) => { if (!expediente.telefonoLote) e.preventDefault(); }}
+                      >
+                        <Phone className="w-3.5 h-3.5 text-red-400" /> {expediente.telefonoLote || 'Sin teléfono'}
+                      </a>
+                      {expediente.correoLote ? (
+                        <a href={`mailto:${expediente.correoLote}`} className="inline-flex items-center gap-1.5 text-white hover:text-red-300">
+                          <Mail className="w-3.5 h-3.5 text-red-400" /> {expediente.correoLote}
+                        </a>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-slate-500">
+                          <Mail className="w-3.5 h-3.5" /> Sin correo
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
                   <p>
                     <span className="text-slate-400">CLABE Dispersión:</span>{' '}
                     <span className="font-mono text-slate-300">{expediente.cuentaClabeLote || 'Pendiente de registrar por el lote'}</span>
