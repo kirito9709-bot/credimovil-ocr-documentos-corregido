@@ -1492,10 +1492,18 @@ app.post('/api/expedientes/by-folio', (req, res) => {
 });
 
 app.post('/api/expedientes', async (req, res) => {
-  const expedientes = readJson(EXPEDIENTES_FILE, []);
+  const expedientes = supabase
+    ? ((await getSupabaseExpedientes()) || [])
+    : readJson(EXPEDIENTES_FILE, []);
 
-  // Generate unique folio
-  const nextNum = 1000 + expedientes.length + 1;
+  // Generate the next folio from the highest existing folio, regardless of
+  // whether Render's local filesystem was reset.
+  const highestFolio = expedientes.reduce((max: number, exp: any) => {
+    const match = String(exp?.folio || '').match(/EXP-\\d{4}-(\\d+)$/);
+    const n = match ? Number(match[1]) : 0;
+    return Number.isFinite(n) ? Math.max(max, n) : max;
+  }, 1000);
+  const nextNum = highestFolio + 1;
   const folio = `EXP-2026-${nextNum}`;
   const pinFondeo = Math.floor(1000 + Math.random() * 9000).toString();
 
@@ -1632,8 +1640,10 @@ app.post('/api/expedientes', async (req, res) => {
 
 app.put('/api/expedientes/:id', async (req, res) => {
   if (!requireStaff(req, res)) return;
-  const expedientes = readJson(EXPEDIENTES_FILE, []);
-  const index = expedientes.findIndex((e: any) => e.id === req.params.id);
+  const expedientes = supabase
+    ? ((await getSupabaseExpedientes()) || [])
+    : readJson(EXPEDIENTES_FILE, []);
+  const index = expedientes.findIndex((e: any) => e.id === req.params.id || e.folio === req.params.id);
   if (index === -1) {
     return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
   }
@@ -1657,7 +1667,9 @@ app.put('/api/expedientes/:id', async (req, res) => {
   persistExpedienteDocuments(updated);
 
   expedientes[index] = updated;
-  writeJson(EXPEDIENTES_FILE, expedientes);
+  if (!supabase) {
+    writeJson(EXPEDIENTES_FILE, expedientes);
+  }
   if (supabase) {
     try {
       await upsertExpedienteSupabase(updated);
@@ -1671,16 +1683,20 @@ app.put('/api/expedientes/:id', async (req, res) => {
 
 app.delete('/api/expedientes/:id', async (req, res) => {
   if (!requireStaff(req, res)) return;
-  let expedientes = readJson(EXPEDIENTES_FILE, []);
+  let expedientes = supabase
+    ? ((await getSupabaseExpedientes()) || [])
+    : readJson(EXPEDIENTES_FILE, []);
   const initialLen = expedientes.length;
-  const original = expedientes.find((e: any) => e.id === req.params.id);
-  expedientes = expedientes.filter((e: any) => e.id !== req.params.id);
+  const original = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
+  expedientes = expedientes.filter((e: any) => e.id !== req.params.id && e.folio !== req.params.id);
 
   if (expedientes.length === initialLen) {
     return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
   }
 
-  writeJson(EXPEDIENTES_FILE, expedientes);
+  if (!supabase) {
+    writeJson(EXPEDIENTES_FILE, expedientes);
+  }
   if (supabase && original?.folio) {
     try {
       const { error: deleteError } = await supabase.from('expedientes').delete().eq('folio', original.folio);
@@ -1700,8 +1716,10 @@ app.delete('/api/expedientes/:id', async (req, res) => {
 app.post('/api/expedientes/:id/fondeo-doc', (req, res) => {
   if (!requireStaff(req, res)) return;
   const { docId, archivoUrl, archivoNombre, archivoTamano, subidoPor } = req.body;
-  const expedientes = readJson(EXPEDIENTES_FILE, []);
-  const exp = expedientes.find((e: any) => e.id === req.params.id);
+  const expedientes = supabase
+    ? ((await getSupabaseExpedientes()) || [])
+    : readJson(EXPEDIENTES_FILE, []);
+  const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
 
   if (!exp) {
     return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
@@ -1744,7 +1762,15 @@ app.post('/api/expedientes/:id/fondeo-doc', (req, res) => {
   }
   exp.fechaActualizacion = new Date().toISOString();
 
-  writeJson(EXPEDIENTES_FILE, expedientes);
+  if (supabase) {
+    try {
+      await upsertExpedienteSupabase(exp);
+    } catch (syncError: any) {
+      console.error('Supabase: error al sincronizar documento de fondeo:', syncError?.message || syncError);
+    }
+  } else {
+    writeJson(EXPEDIENTES_FILE, expedientes);
+  }
 
   res.json({
     success: true,
@@ -1758,8 +1784,10 @@ app.post('/api/expedientes/:id/fondeo-doc', (req, res) => {
 app.put('/api/expedientes/:id/fondeo-doc-review', (req, res) => {
   if (!requireStaff(req, res)) return;
   const { docId, estatus, observaciones } = req.body;
-  const expedientes = readJson(EXPEDIENTES_FILE, []);
-  const exp = expedientes.find((e: any) => e.id === req.params.id);
+  const expedientes = supabase
+    ? ((await getSupabaseExpedientes()) || [])
+    : readJson(EXPEDIENTES_FILE, []);
+  const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
 
   if (!exp) {
     return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
@@ -1775,7 +1803,15 @@ app.put('/api/expedientes/:id/fondeo-doc-review', (req, res) => {
   doc.fechaRevision = new Date().toISOString();
 
   exp.fechaActualizacion = new Date().toISOString();
-  writeJson(EXPEDIENTES_FILE, expedientes);
+  if (supabase) {
+    try {
+      await upsertExpedienteSupabase(exp);
+    } catch (syncError: any) {
+      console.error('Supabase: error al sincronizar revisión de documento:', syncError?.message || syncError);
+    }
+  } else {
+    writeJson(EXPEDIENTES_FILE, expedientes);
+  }
 
   res.json({
     success: true,
