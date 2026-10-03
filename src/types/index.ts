@@ -156,6 +156,14 @@ export interface ExpedienteCredito {
   notasAsesor?: string;
 }
 
+export export interface LoteUsuarioPortal {
+  id: string;
+  nombre: string;
+  username: string;
+  activo: boolean;
+  created_at?: string;
+}
+
 export interface LoteAuto {
   id: string;
   nombre: string;
@@ -168,4 +176,5 @@ export interface LoteAuto {
   bancoDefault?: string;
   totalExpedientes?: number;
   totalFondeados?: number;
+  usuariosPortal?: LoteUsuarioPortal[];
 }
