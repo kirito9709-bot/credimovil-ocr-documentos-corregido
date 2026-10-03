@@ -782,19 +782,19 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   if (savedExpediente) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-10">
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-lg text-slate-800 relative overflow-hidden">
+        <div className="bg-[#1C2541] border border-[#2E3A59] rounded-3xl p-6 sm:p-10 shadow-lg text-slate-200 relative overflow-hidden">
           <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-5 border border-emerald-200">
             <CheckCircle2 className="w-8 h-8" />
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-black text-center text-slate-900 mb-2">
+          <h2 className="text-2xl sm:text-3xl font-black text-center text-slate-100 mb-2">
             ¡Expediente Guardado y Enviado al Asesor!
           </h2>
-          <p className="text-center text-slate-600 text-sm max-w-xl mx-auto mb-8">
+          <p className="text-center text-slate-400 text-sm max-w-xl mx-auto mb-8">
             La información del cliente, su identificación INE, comprobante de domicilio y estados de cuenta bancarios han sido guardados con seguridad en la base de datos de CrediMóvil.
           </p>
 
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 mb-8">
+          <div className="bg-[#121824] border border-[#2E3A59] rounded-2xl p-6 mb-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
@@ -812,7 +812,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
                   PIN de Acceso Lote
                 </span>
-                <p className="text-2xl font-mono font-black text-slate-900">
+                <p className="text-2xl font-mono font-black text-slate-100">
                   {savedExpediente.pinFondeo}
                 </p>
                 <p className="text-[11px] text-slate-500 mt-1">
@@ -824,7 +824,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
                   RFC del Solicitante
                 </span>
-                <p className="text-xl font-mono font-bold text-slate-800">
+                <p className="text-xl font-mono font-bold text-slate-200">
                   {savedExpediente.ine?.rfc || (savedExpediente.ine?.curp ? savedExpediente.ine.curp.substring(0, 10) : 'N/A')}
                 </p>
                 <p className="text-[11px] text-slate-500 mt-1 truncate">
@@ -833,16 +833,16 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               </div>
             </div>
 
-            <div className="border-t border-slate-200 mt-5 pt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div className="border-t border-[#2E3A59] mt-5 pt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
               <div>
                 <span className="text-slate-500 block">Vehículo:</span>
-                <strong className="text-slate-900 font-semibold">
+                <strong className="text-slate-100 font-semibold">
                   {savedExpediente.autoMarca} {savedExpediente.autoModelo} ({savedExpediente.autoAno})
                 </strong>
               </div>
               <div>
                 <span className="text-slate-500 block">Lote Aliado:</span>
-                <strong className="text-slate-900 font-semibold">{savedExpediente.loteNombre}</strong>
+                <strong className="text-slate-100 font-semibold">{savedExpediente.loteNombre}</strong>
               </div>
               <div>
                 <span className="text-slate-500 block">Monto Financiado:</span>
@@ -852,7 +852,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               </div>
               <div>
                 <span className="text-slate-500 block">Documentación:</span>
-                <span className="text-slate-900 font-bold">
+                <span className="text-slate-100 font-bold">
                   {docsCompletadosCount} de 3 adjuntos
                 </span>
               </div>
@@ -870,14 +870,14 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
 
             <button
               onClick={copyShareLink}
-              className="py-3 px-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-semibold rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+              className="py-3 px-4 bg-[#1C2541] hover:bg-[#121824] text-slate-300 border border-[#3A4868] font-semibold rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
             >
               {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
               {copiedLink ? '¡Enlace Copiado!' : 'Copiar Enlace Directo'}
             </button>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-200">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-[#2E3A59]">
             <button
               onClick={() => onGoToFondeo(savedExpediente.folio)}
               className="flex-1 py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
@@ -888,7 +888,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
 
             <button
               onClick={resetForm}
-              className="py-3 px-5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer"
+              className="py-3 px-5 bg-[#1C2541] hover:bg-[#121824] text-slate-300 border border-[#3A4868] rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer"
             >
               Capturar Nueva Solicitud
             </button>
@@ -978,7 +978,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         {/* ======================================================== */}
         {/* APARTADO DESTACADO: DOCUMENTACIÓN PARA ENVÍO A ANÁLISIS */}
         {/* ======================================================== */}
-        <div className="bg-white border-2 border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+        <div className="bg-[#1C2541] border-2 border-[#2E3A59] rounded-2xl shadow-xs overflow-hidden">
           {/* Header */}
           <div className="px-6 py-5 bg-slate-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -1009,7 +1009,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                     <User className="w-4 h-4 text-red-600" />
                     1. Identificación Oficial (INE por Ambos Lados)
                   </h3>
@@ -1026,9 +1026,9 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Frente */}
-                <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60 hover:border-slate-300 transition space-y-3">
+                <div className="border border-[#2E3A59] rounded-2xl p-4 bg-[#121824]/60 hover:border-[#3A4868] transition space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800">
+                    <span className="text-xs font-bold text-slate-200">
                       Frente del INE <span className="text-red-500">*</span>
                     </span>
                     {fotoFrente && (
@@ -1038,13 +1038,13 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     )}
                   </div>
 
-                  <div className="aspect-16/10 rounded-xl bg-white border border-slate-200 overflow-hidden flex flex-col items-center justify-center relative group">
+                  <div className="aspect-16/10 rounded-xl bg-[#1C2541] border border-[#2E3A59] overflow-hidden flex flex-col items-center justify-center relative group">
                     {fotoFrente ? (
                       <>
                         {fotoFrente.startsWith('data:application/pdf') ? (
                           <div className="p-4 text-center">
                             <FileText className="w-10 h-10 text-red-600 mx-auto mb-1" />
-                            <span className="text-xs font-bold text-slate-700 block truncate max-w-[200px]">
+                            <span className="text-xs font-bold text-slate-300 block truncate max-w-[200px]">
                               {fotoFrenteNombre || 'INE_Frente.pdf'}
                             </span>
                           </div>
@@ -1062,7 +1062,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                               setPreviewModalUrl(fotoFrente);
                               setPreviewModalTitle('Credencial INE - Frente');
                             }}
-                            className="p-2 bg-white text-slate-800 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm cursor-pointer"
+                            className="p-2 bg-[#1C2541] text-slate-200 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm cursor-pointer"
                           >
                             <Eye className="w-3.5 h-3.5" /> Ver
                           </button>
@@ -1081,7 +1081,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     ) : (
                       <div className="p-4 text-center space-y-2">
                         <Scan className="w-8 h-8 text-slate-400 mx-auto" />
-                        <p className="text-xs font-medium text-slate-600">
+                        <p className="text-xs font-medium text-slate-400">
                           Foto o documento del Frente
                         </p>
                       </div>
@@ -1100,7 +1100,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     <button
                       type="button"
                       onClick={() => frenteFileInputRef.current?.click()}
-                      className="flex-1 py-2 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                      className="flex-1 py-2 px-3 bg-[#1C2541] hover:bg-[#18223A] text-slate-300 border border-[#3A4868] rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                     >
                       <Upload className="w-3.5 h-3.5" />
                       Subir PNG/PDF
@@ -1126,9 +1126,9 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 </div>
 
                 {/* Reverso */}
-                <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60 hover:border-slate-300 transition space-y-3">
+                <div className="border border-[#2E3A59] rounded-2xl p-4 bg-[#121824]/60 hover:border-[#3A4868] transition space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800">
+                    <span className="text-xs font-bold text-slate-200">
                       Reverso del INE (Firma y Código) <span className="text-red-500">*</span>
                     </span>
                     {fotoReverso && (
@@ -1138,13 +1138,13 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     )}
                   </div>
 
-                  <div className="aspect-16/10 rounded-xl bg-white border border-slate-200 overflow-hidden flex flex-col items-center justify-center relative group">
+                  <div className="aspect-16/10 rounded-xl bg-[#1C2541] border border-[#2E3A59] overflow-hidden flex flex-col items-center justify-center relative group">
                     {fotoReverso ? (
                       <>
                         {fotoReverso.startsWith('data:application/pdf') ? (
                           <div className="p-4 text-center">
                             <FileText className="w-10 h-10 text-red-600 mx-auto mb-1" />
-                            <span className="text-xs font-bold text-slate-700 block truncate max-w-[200px]">
+                            <span className="text-xs font-bold text-slate-300 block truncate max-w-[200px]">
                               {fotoReversoNombre || 'INE_Reverso.pdf'}
                             </span>
                           </div>
@@ -1162,7 +1162,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                               setPreviewModalUrl(fotoReverso);
                               setPreviewModalTitle('Credencial INE - Reverso');
                             }}
-                            className="p-2 bg-white text-slate-800 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm cursor-pointer"
+                            className="p-2 bg-[#1C2541] text-slate-200 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm cursor-pointer"
                           >
                             <Eye className="w-3.5 h-3.5" /> Ver
                           </button>
@@ -1181,7 +1181,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     ) : (
                       <div className="p-4 text-center space-y-2">
                         <Scan className="w-8 h-8 text-slate-400 mx-auto" />
-                        <p className="text-xs font-medium text-slate-600">
+                        <p className="text-xs font-medium text-slate-400">
                           Foto o documento del Reverso
                         </p>
                       </div>
@@ -1200,7 +1200,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     <button
                       type="button"
                       onClick={() => reversoFileInputRef.current?.click()}
-                      className="flex-1 py-2 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                      className="flex-1 py-2 px-3 bg-[#1C2541] hover:bg-[#18223A] text-slate-300 border border-[#3A4868] rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                     >
                       <Upload className="w-3.5 h-3.5" />
                       Subir PNG/PDF
@@ -1228,11 +1228,11 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
 
               {/* Botón Escaneo OCR de la Credencial */}
               {fotoFrente && (
-                <div className="p-4 rounded-xl bg-slate-100 border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="p-4 rounded-xl bg-[#18223A] border border-[#2E3A59] flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">
                     <Sparkles className="w-5 h-5 text-red-600 shrink-0" />
                     <div>
-                      <p className="text-xs font-bold text-slate-900">
+                      <p className="text-xs font-bold text-slate-100">
                         {ocrCompleted ? '¡Datos extraídos con éxito por CrediMóvil OCR!' : 'Credencial lista para escaneo inteligente'}
                       </p>
                       <p className="text-[11px] text-slate-500">
@@ -1282,13 +1282,13 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               )}
             </div>
 
-            <hr className="border-slate-200" />
+            <hr className="border-[#2E3A59]" />
 
             {/* SUB-SECCIÓN 1.2: COMPROBANTE DE DOMICILIO (AGUA O LUZ CFE) */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                     <Home className="w-4 h-4 text-red-600" />
                     2. Comprobante de Domicilio (Recibo de AGUA o LUZ CFE)
                   </h3>
@@ -1311,12 +1311,12 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   className={`p-3.5 rounded-xl border text-left transition flex items-start gap-3 cursor-pointer ${
                     domicilioCoincideConIne
                       ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                      : 'bg-[#1C2541] border-[#2E3A59] text-slate-300 hover:bg-[#121824]'
                   }`}
                 >
                   <div
                     className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
-                      domicilioCoincideConIne ? 'border-white bg-white text-slate-900' : 'border-slate-400'
+                      domicilioCoincideConIne ? 'border-white bg-[#1C2541] text-slate-100' : 'border-slate-400'
                     }`}
                   >
                     {domicilioCoincideConIne && <Check className="w-2.5 h-2.5" />}
@@ -1337,12 +1337,12 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   className={`p-3.5 rounded-xl border text-left transition flex items-start gap-3 cursor-pointer ${
                     !domicilioCoincideConIne
                       ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                      : 'bg-[#1C2541] border-[#2E3A59] text-slate-300 hover:bg-[#121824]'
                   }`}
                 >
                   <div
                     className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
-                      !domicilioCoincideConIne ? 'border-white bg-white text-slate-900' : 'border-slate-400'
+                      !domicilioCoincideConIne ? 'border-white bg-[#1C2541] text-slate-100' : 'border-slate-400'
                     }`}
                   >
                     {!domicilioCoincideConIne && <Check className="w-2.5 h-2.5" />}
@@ -1359,15 +1359,15 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               </div>
 
               {/* Upload Card for Comprobante de Domicilio */}
-              <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60 space-y-3">
+              <div className="border border-[#2E3A59] rounded-2xl p-4 bg-[#121824]/60 space-y-3">
                 {comprobanteDomicilioDoc ? (
-                  <div className="p-3 bg-white border border-slate-200 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="p-3 bg-[#1C2541] border border-[#2E3A59] rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
                     <div className="flex items-center gap-3 w-full sm:w-auto">
                       <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
                         <FileText className="w-6 h-6" />
                       </div>
                       <div className="overflow-hidden">
-                        <p className="text-xs font-bold text-slate-900 truncate max-w-[260px]">
+                        <p className="text-xs font-bold text-slate-100 truncate max-w-[260px]">
                           {comprobanteDomicilioNombre || 'Comprobante_Domicilio_Agua_Luz'}
                         </p>
                         <p className="text-[11px] text-slate-500">
@@ -1400,7 +1400,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                           setPreviewModalUrl(comprobanteDomicilioDoc);
                           setPreviewModalTitle(`Comprobante Domicilio: ${comprobanteDomicilioNombre || 'Recibo'}`);
                         }}
-                        className="py-1.5 px-2.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg text-xs font-medium cursor-pointer"
+                        className="py-1.5 px-2.5 bg-[#1C2541] hover:bg-[#18223A] border border-[#3A4868] text-slate-300 rounded-lg text-xs font-medium cursor-pointer"
                         title="Ver documento"
                       >
                         <Eye className="w-3.5 h-3.5" />
@@ -1414,7 +1414,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                           setComprobanteScanSuccess(null);
                           setComprobanteScanError(null);
                         }}
-                        className="py-1.5 px-2.5 bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 rounded-lg text-xs font-medium cursor-pointer"
+                        className="py-1.5 px-2.5 bg-[#1C2541] hover:bg-rose-50 border border-rose-200 text-rose-600 rounded-lg text-xs font-medium cursor-pointer"
                         title="Quitar comprobante"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1422,10 +1422,10 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <div className="p-5 border-2 border-dashed border-slate-300 rounded-xl bg-white text-center space-y-2">
+                  <div className="p-5 border-2 border-dashed border-[#3A4868] rounded-xl bg-[#1C2541] text-center space-y-2">
                     <FileText className="w-7 h-7 text-slate-400 mx-auto" />
                     <div>
-                      <p className="text-xs font-bold text-slate-800">
+                      <p className="text-xs font-bold text-slate-200">
                         Cargar Recibo de AGUA o LUZ (CFE)
                       </p>
                       <p className="text-[11px] text-slate-500">
@@ -1444,7 +1444,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                       <button
                         type="button"
                         onClick={() => comprobanteFileInputRef.current?.click()}
-                        className="py-1.5 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                        className="py-1.5 px-3 bg-[#1C2541] hover:bg-[#18223A] text-slate-300 border border-[#3A4868] rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
                       >
                         <Upload className="w-3.5 h-3.5" /> Subir Archivo
                       </button>
@@ -1491,13 +1491,13 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               </div>
             </div>
 
-            <hr className="border-slate-200" />
+            <hr className="border-[#2E3A59]" />
 
             {/* SUB-SECCIÓN 1.3: ESTADOS DE CUENTA BANCARIOS (3 MESES) */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                     <FileSpreadsheet className="w-4 h-4 text-red-600" />
                     3. Estados de Cuenta Bancarios (Últimos 3 Meses)
                   </h3>
@@ -1513,14 +1513,14 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               </div>
 
               {/* Selector de modo: Individual vs Consolidado */}
-              <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-xl max-w-md">
+              <div className="flex items-center gap-2 p-1 bg-[#18223A] rounded-xl max-w-md">
                 <button
                   type="button"
                   onClick={() => setModoEstadosCuenta('individual')}
                   className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition cursor-pointer ${
                     modoEstadosCuenta === 'individual'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-[#1C2541] text-slate-100 shadow-xs'
+                      : 'text-slate-400 hover:text-slate-100'
                   }`}
                 >
                   3 Meses Individuales
@@ -1530,8 +1530,8 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   onClick={() => setModoEstadosCuenta('consolidado')}
                   className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition cursor-pointer ${
                     modoEstadosCuenta === 'consolidado'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-[#1C2541] text-slate-100 shadow-xs'
+                      : 'text-slate-400 hover:text-slate-100'
                   }`}
                 >
                   1 Archivo PDF Consolidado
@@ -1542,18 +1542,18 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               {modoEstadosCuenta === 'individual' ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Mes 1 */}
-                  <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60 space-y-2">
+                  <div className="border border-[#2E3A59] rounded-2xl p-4 bg-[#121824]/60 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800">
+                      <span className="text-xs font-bold text-slate-200">
                         Mes 1 (Más reciente)
                       </span>
                       {mes1Doc && <Check className="w-3.5 h-3.5 text-emerald-600" />}
                     </div>
                     {mes1Doc ? (
-                      <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-2">
+                      <div className="p-3 bg-[#1C2541] border border-[#2E3A59] rounded-xl space-y-2">
                         <div className="flex items-center gap-2">
                           <FileText className="w-4 h-4 text-red-600 shrink-0" />
-                          <p className="text-xs font-semibold text-slate-800 truncate">
+                          <p className="text-xs font-semibold text-slate-200 truncate">
                             {mes1Nombre || 'Mes_1.pdf'}
                           </p>
                         </div>
@@ -1564,7 +1564,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                               setPreviewModalUrl(mes1Doc);
                               setPreviewModalTitle(`Estado de Cuenta: ${mes1Nombre}`);
                             }}
-                            className="flex-1 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1 cursor-pointer"
+                            className="flex-1 py-1 bg-[#18223A] hover:bg-[#222D47] text-slate-300 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1 cursor-pointer"
                           >
                             <Eye className="w-3 h-3" /> Ver
                           </button>
@@ -1585,10 +1585,10 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                       <button
                         type="button"
                         onClick={() => mes1InputRef.current?.click()}
-                        className="w-full py-4 border-2 border-dashed border-slate-300 rounded-xl bg-white hover:bg-slate-50 text-center space-y-1 transition cursor-pointer"
+                        className="w-full py-4 border-2 border-dashed border-[#3A4868] rounded-xl bg-[#1C2541] hover:bg-[#121824] text-center space-y-1 transition cursor-pointer"
                       >
                         <Upload className="w-4 h-4 text-slate-400 mx-auto" />
-                        <span className="text-xs font-bold text-slate-700 block">Subir Mes 1</span>
+                        <span className="text-xs font-bold text-slate-300 block">Subir Mes 1</span>
                         <span className="text-[10px] text-slate-400 block">PDF, PNG o JPG</span>
                       </button>
                     )}
@@ -1602,18 +1602,18 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   </div>
 
                   {/* Mes 2 */}
-                  <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60 space-y-2">
+                  <div className="border border-[#2E3A59] rounded-2xl p-4 bg-[#121824]/60 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800">
+                      <span className="text-xs font-bold text-slate-200">
                         Mes 2 (Anterior)
                       </span>
                       {mes2Doc && <Check className="w-3.5 h-3.5 text-emerald-600" />}
                     </div>
                     {mes2Doc ? (
-                      <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-2">
+                      <div className="p-3 bg-[#1C2541] border border-[#2E3A59] rounded-xl space-y-2">
                         <div className="flex items-center gap-2">
                           <FileText className="w-4 h-4 text-red-600 shrink-0" />
-                          <p className="text-xs font-semibold text-slate-800 truncate">
+                          <p className="text-xs font-semibold text-slate-200 truncate">
                             {mes2Nombre || 'Mes_2.pdf'}
                           </p>
                         </div>
@@ -1624,7 +1624,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                               setPreviewModalUrl(mes2Doc);
                               setPreviewModalTitle(`Estado de Cuenta: ${mes2Nombre}`);
                             }}
-                            className="flex-1 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1 cursor-pointer"
+                            className="flex-1 py-1 bg-[#18223A] hover:bg-[#222D47] text-slate-300 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1 cursor-pointer"
                           >
                             <Eye className="w-3 h-3" /> Ver
                           </button>
@@ -1645,10 +1645,10 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                       <button
                         type="button"
                         onClick={() => mes2InputRef.current?.click()}
-                        className="w-full py-4 border-2 border-dashed border-slate-300 rounded-xl bg-white hover:bg-slate-50 text-center space-y-1 transition cursor-pointer"
+                        className="w-full py-4 border-2 border-dashed border-[#3A4868] rounded-xl bg-[#1C2541] hover:bg-[#121824] text-center space-y-1 transition cursor-pointer"
                       >
                         <Upload className="w-4 h-4 text-slate-400 mx-auto" />
-                        <span className="text-xs font-bold text-slate-700 block">Subir Mes 2</span>
+                        <span className="text-xs font-bold text-slate-300 block">Subir Mes 2</span>
                         <span className="text-[10px] text-slate-400 block">PDF, PNG o JPG</span>
                       </button>
                     )}
@@ -1662,18 +1662,18 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   </div>
 
                   {/* Mes 3 */}
-                  <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60 space-y-2">
+                  <div className="border border-[#2E3A59] rounded-2xl p-4 bg-[#121824]/60 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800">
+                      <span className="text-xs font-bold text-slate-200">
                         Mes 3 (Hace 3 meses)
                       </span>
                       {mes3Doc && <Check className="w-3.5 h-3.5 text-emerald-600" />}
                     </div>
                     {mes3Doc ? (
-                      <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-2">
+                      <div className="p-3 bg-[#1C2541] border border-[#2E3A59] rounded-xl space-y-2">
                         <div className="flex items-center gap-2">
                           <FileText className="w-4 h-4 text-red-600 shrink-0" />
-                          <p className="text-xs font-semibold text-slate-800 truncate">
+                          <p className="text-xs font-semibold text-slate-200 truncate">
                             {mes3Nombre || 'Mes_3.pdf'}
                           </p>
                         </div>
@@ -1684,7 +1684,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                               setPreviewModalUrl(mes3Doc);
                               setPreviewModalTitle(`Estado de Cuenta: ${mes3Nombre}`);
                             }}
-                            className="flex-1 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1 cursor-pointer"
+                            className="flex-1 py-1 bg-[#18223A] hover:bg-[#222D47] text-slate-300 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1 cursor-pointer"
                           >
                             <Eye className="w-3 h-3" /> Ver
                           </button>
@@ -1705,10 +1705,10 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                       <button
                         type="button"
                         onClick={() => mes3InputRef.current?.click()}
-                        className="w-full py-4 border-2 border-dashed border-slate-300 rounded-xl bg-white hover:bg-slate-50 text-center space-y-1 transition cursor-pointer"
+                        className="w-full py-4 border-2 border-dashed border-[#3A4868] rounded-xl bg-[#1C2541] hover:bg-[#121824] text-center space-y-1 transition cursor-pointer"
                       >
                         <Upload className="w-4 h-4 text-slate-400 mx-auto" />
-                        <span className="text-xs font-bold text-slate-700 block">Subir Mes 3</span>
+                        <span className="text-xs font-bold text-slate-300 block">Subir Mes 3</span>
                         <span className="text-[10px] text-slate-400 block">PDF, PNG o JPG</span>
                       </button>
                     )}
@@ -1723,13 +1723,13 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 </div>
               ) : (
                 /* Opción B: Consolidado */
-                <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60">
+                <div className="border border-[#2E3A59] rounded-2xl p-4 bg-[#121824]/60">
                   {consolidadoDoc ? (
-                    <div className="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between">
+                    <div className="p-3 bg-[#1C2541] border border-[#2E3A59] rounded-xl flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <FileText className="w-6 h-6 text-red-600 shrink-0" />
                         <div>
-                          <p className="text-xs font-bold text-slate-900 truncate">
+                          <p className="text-xs font-bold text-slate-100 truncate">
                             {consolidadoNombre || 'Estados_de_Cuenta_3_Meses.pdf'}
                           </p>
                           <p className="text-[11px] text-slate-500">
@@ -1745,7 +1745,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                             setPreviewModalUrl(consolidadoDoc);
                             setPreviewModalTitle(`PDF Consolidado: ${consolidadoNombre}`);
                           }}
-                          className="py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer"
+                          className="py-1.5 px-3 bg-[#18223A] hover:bg-[#222D47] text-slate-200 text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" /> Ver PDF
                         </button>
@@ -1766,10 +1766,10 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     <button
                       type="button"
                       onClick={() => consolidadoInputRef.current?.click()}
-                      className="w-full py-6 border-2 border-dashed border-slate-300 rounded-xl bg-white hover:bg-slate-50 text-center space-y-1 transition cursor-pointer"
+                      className="w-full py-6 border-2 border-dashed border-[#3A4868] rounded-xl bg-[#1C2541] hover:bg-[#121824] text-center space-y-1 transition cursor-pointer"
                     >
                       <Upload className="w-6 h-6 text-slate-400 mx-auto" />
-                      <span className="text-xs font-bold text-slate-800 block">
+                      <span className="text-xs font-bold text-slate-200 block">
                         Subir PDF Consolidado de los 3 Meses
                       </span>
                       <span className="text-[11px] text-slate-500 block">
@@ -1793,18 +1793,18 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         {/* ======================================================== */}
         {/* SECCIÓN 2: DATOS DEL CLIENTE */}
         {/* ======================================================== */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-7 space-y-6">
-          <div className="flex items-center gap-2 pb-4 border-b border-slate-200">
+        <div className="bg-[#1C2541] border border-[#2E3A59] rounded-2xl shadow-sm p-5 sm:p-7 space-y-6">
+          <div className="flex items-center gap-2 pb-4 border-b border-[#2E3A59]">
             <span className="w-7 h-7 rounded-md bg-red-600 text-white text-xs font-black flex items-center justify-center">2</span>
             <div>
-              <h3 className="text-base font-black text-slate-900">Datos del Cliente</h3>
+              <h3 className="text-base font-black text-slate-100">Datos del Cliente</h3>
               <p className="text-xs text-slate-500">Información obtenida de la INE y domicilio validado.</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="lg:col-span-2">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nombre(s) <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Nombre(s) <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 required
@@ -1815,12 +1815,12 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   return next;
                 })}
                 placeholder="Nombre(s)"
-                className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Primer apellido <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Primer apellido <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 required
@@ -1831,12 +1831,12 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   return next;
                 })}
                 placeholder="Apellido paterno"
-                className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Segundo apellido</label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Segundo apellido</label>
               <input
                 type="text"
                 value={ineData.segundoApellido || ''}
@@ -1846,12 +1846,12 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   return next;
                 })}
                 placeholder="Apellido materno"
-                className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">CURP (18 dígitos) <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">CURP (18 dígitos) <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 required
@@ -1859,12 +1859,12 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 value={ineData.curp || ''}
                 onChange={(e) => setIneData((prev) => ({ ...prev, curp: e.target.value.toUpperCase() }))}
                 placeholder="CURP"
-                className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm font-mono uppercase focus:border-red-500 focus:outline-none"
+                className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm font-mono uppercase focus:border-red-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                 RFC del Cliente <span className="text-red-500">*</span>
                 <span className="ml-2 text-[10px] font-semibold text-red-600 normal-case">Auto-generar</span>
               </label>
@@ -1874,29 +1874,29 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 value={ineData.rfc || ''}
                 onChange={(e) => setIneData((prev) => ({ ...prev, rfc: e.target.value.toUpperCase() }))}
                 placeholder="RFC"
-                className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm font-mono uppercase focus:border-red-500 focus:outline-none"
+                className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm font-mono uppercase focus:border-red-500 focus:outline-none"
               />
               <p className="text-[10px] text-slate-500 mt-1">Se genera con la base del CURP y puede completarse con homoclave SAT.</p>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Fecha de nacimiento <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Fecha de nacimiento <span className="text-red-500">*</span></label>
               <input
                 type="date"
                 required
                 value={ineData.fechaNacimiento || ''}
                 onChange={(e) => setIneData((prev) => ({ ...prev, fechaNacimiento: e.target.value }))}
-                className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Sexo <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Sexo <span className="text-red-500">*</span></label>
               <select
                 required
                 value={ineData.sexo || ''}
                 onChange={(e) => setIneData((prev) => ({ ...prev, sexo: e.target.value }))}
-                className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none"
               >
                 <option value="">Seleccionar...</option>
                 <option value="H">Hombre</option>
@@ -1907,7 +1907,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
             <div className="lg:col-span-4">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Domicilio actual</label>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">Domicilio actual</label>
                   <p className="text-[10px] text-slate-500 mt-1">El OCR lo separa automáticamente y puedes corregir cada campo.</p>
                 </div>
                 <MapPin className="w-4 h-4 text-red-600 shrink-0" />
@@ -1921,7 +1921,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     value={ineData.domicilio?.calle || ''}
                     onChange={(e) => updateDomicilioField('calle', e.target.value)}
                     placeholder="Calle"
-                    className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                    className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -1931,7 +1931,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     value={ineData.domicilio?.numExterior || ''}
                     onChange={(e) => updateDomicilioField('numExterior', e.target.value)}
                     placeholder="No."
-                    className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                    className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -1941,7 +1941,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     value={ineData.domicilio?.numInterior || ''}
                     onChange={(e) => updateDomicilioField('numInterior', e.target.value)}
                     placeholder="Int."
-                    className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                    className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none"
                   />
                 </div>
                 <div className="lg:col-span-2">
@@ -1951,7 +1951,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     value={ineData.domicilio?.colonia || ''}
                     onChange={(e) => updateDomicilioField('colonia', e.target.value)}
                     placeholder="Colonia / fraccionamiento"
-                    className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                    className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -1963,7 +1963,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     value={ineData.domicilio?.codigoPostal || ''}
                     onChange={(e) => updateDomicilioField('codigoPostal', e.target.value.replace(/\D/g, '').slice(0, 5))}
                     placeholder="C.P."
-                    className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                    className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -1973,7 +1973,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     value={ineData.domicilio?.municipio || ''}
                     onChange={(e) => updateDomicilioField('municipio', e.target.value)}
                     placeholder="Municipio"
-                    className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                    className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -1983,7 +1983,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     value={ineData.domicilio?.estado || ''}
                     onChange={(e) => updateDomicilioField('estado', e.target.value)}
                     placeholder="Estado"
-                    className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                    className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none"
                   />
                 </div>
               </div>
@@ -1994,31 +1994,31 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         {/* ======================================================== */}
         {/* SECCIÓN 3: PERFIL SOCIOECONÓMICO Y LABORAL */}
         {/* ======================================================== */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-7 space-y-6">
-          <div className="flex items-center gap-2 pb-4 border-b border-slate-200">
+        <div className="bg-[#1C2541] border border-[#2E3A59] rounded-2xl shadow-sm p-5 sm:p-7 space-y-6">
+          <div className="flex items-center gap-2 pb-4 border-b border-[#2E3A59]">
             <span className="w-7 h-7 rounded-md bg-red-600 text-white text-xs font-black flex items-center justify-center">3</span>
             <div>
-              <h3 className="text-base font-black text-slate-900">Perfil Socioeconómico y Laboral</h3>
+              <h3 className="text-base font-black text-slate-100">Perfil Socioeconómico y Laboral</h3>
               <p className="text-xs text-slate-500">Información de contacto, empleo y referencias personales para el dictamen.</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Teléfono de contacto <span className="text-red-500">*</span></label>
-              <input type="tel" required value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="81 1234 5678" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Teléfono de contacto <span className="text-red-500">*</span></label>
+              <input type="tel" required value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="81 1234 5678" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Correo electrónico</label>
-              <input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder="cliente@ejemplo.com" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Correo electrónico</label>
+              <input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder="cliente@ejemplo.com" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Ingreso mensual comprobable ($MXN) <span className="text-red-500">*</span></label>
-              <input type="number" min="0" required value={ingresoMensual} onChange={(e) => setIngresoMensual(e.target.value === '' ? '' : Number(e.target.value))} placeholder="ej. 35000" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Ingreso mensual comprobable ($MXN) <span className="text-red-500">*</span></label>
+              <input type="number" min="0" required value={ingresoMensual} onChange={(e) => setIngresoMensual(e.target.value === '' ? '' : Number(e.target.value))} placeholder="ej. 35000" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Vivienda <span className="text-red-500">*</span></label>
-              <select required value={casaPropiaORentada} onChange={(e) => setCasaPropiaORentada(e.target.value as any)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none">
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Vivienda <span className="text-red-500">*</span></label>
+              <select required value={casaPropiaORentada} onChange={(e) => setCasaPropiaORentada(e.target.value as any)} className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none">
                 <option value="">Seleccionar condición...</option>
                 <option value="PROPIA">Casa propia</option>
                 <option value="RENTADA">Rentada</option>
@@ -2026,32 +2026,32 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Antigüedad en domicilio <span className="text-red-500">*</span></label>
-              <input type="text" required value={tiempoViviendoDomicilio} onChange={(e) => setTiempoViviendoDomicilio(e.target.value)} placeholder="ej. 5 años" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Antigüedad en domicilio <span className="text-red-500">*</span></label>
+              <input type="text" required value={tiempoViviendoDomicilio} onChange={(e) => setTiempoViviendoDomicilio(e.target.value)} placeholder="ej. 5 años" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Empresa / lugar de trabajo <span className="text-red-500">*</span></label>
-              <input type="text" required value={nombreUbicacionEmpleo} onChange={(e) => setNombreUbicacionEmpleo(e.target.value)} placeholder="ej. Nemak México" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Empresa / lugar de trabajo <span className="text-red-500">*</span></label>
+              <input type="text" required value={nombreUbicacionEmpleo} onChange={(e) => setNombreUbicacionEmpleo(e.target.value)} placeholder="ej. Nemak México" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Antigüedad en empleo <span className="text-red-500">*</span></label>
-              <input type="text" required value={tiempoEnTrabajo} onChange={(e) => setTiempoEnTrabajo(e.target.value)} placeholder="ej. 3 años" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Antigüedad en empleo <span className="text-red-500">*</span></label>
+              <input type="text" required value={tiempoEnTrabajo} onChange={(e) => setTiempoEnTrabajo(e.target.value)} placeholder="ej. 3 años" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Dependientes económicos</label>
-              <input type="number" min="0" value={dependientesEconomicos} onChange={(e) => setDependientesEconomicos(Number(e.target.value) || 0)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Dependientes económicos</label>
+              <input type="number" min="0" value={dependientesEconomicos} onChange={(e) => setDependientesEconomicos(Number(e.target.value) || 0)} className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none" />
             </div>
             <div className="lg:col-span-3">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Dirección del empleo <span className="text-red-500">*</span></label>
-              <input type="text" required value={direccionEmpleo} onChange={(e) => setDireccionEmpleo(e.target.value)} placeholder="Calle, número, colonia, municipio, estado" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Dirección del empleo <span className="text-red-500">*</span></label>
+              <input type="text" required value={direccionEmpleo} onChange={(e) => setDireccionEmpleo(e.target.value)} placeholder="Calle, número, colonia, municipio, estado" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none" />
             </div>
             <div className="lg:col-span-2">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Giro / actividad de la empresa <span className="text-red-500">*</span></label>
-              <input type="text" required value={giroActividadEmpresa} onChange={(e) => setGiroActividadEmpresa(e.target.value)} placeholder="ej. Comercio, industria, servicios" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Giro / actividad de la empresa <span className="text-red-500">*</span></label>
+              <input type="text" required value={giroActividadEmpresa} onChange={(e) => setGiroActividadEmpresa(e.target.value)} placeholder="ej. Comercio, industria, servicios" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Estado civil <span className="text-red-500">*</span></label>
-              <select required value={estadoCivil} onChange={(e) => setEstadoCivil(e.target.value as any)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none">
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Estado civil <span className="text-red-500">*</span></label>
+              <select required value={estadoCivil} onChange={(e) => setEstadoCivil(e.target.value as any)} className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none">
                 <option value="">Seleccionar...</option>
                 <option value="SOLTERO">Soltero(a)</option>
                 <option value="CASADO">Casado(a)</option>
@@ -2063,20 +2063,20 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
           </div>
 
           <div className="pt-2">
-            <h4 className="text-sm font-black text-slate-900 mb-3">Referencias personales</h4>
+            <h4 className="text-sm font-black text-slate-100 mb-3">Referencias personales</h4>
             <p className="text-xs text-slate-500 mb-3">1 familiar que viva en otro domicilio y 2 conocidos.</p>
             <div className="space-y-3">
               {referencias.map((ref, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 rounded-2xl bg-[#121824] border border-[#2E3A59]">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
                       {index === 0 ? 'Familiar (otro domicilio)' : `Conocido ${index}`}
                     </label>
-                    <input type="text" required value={ref.nombre} onChange={(e) => setReferencias((prev) => prev.map((item, i) => i === index ? { ...item, nombre: e.target.value } : item))} placeholder="Nombre completo" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+                    <input type="text" required value={ref.nombre} onChange={(e) => setReferencias((prev) => prev.map((item, i) => i === index ? { ...item, nombre: e.target.value } : item))} placeholder="Nombre completo" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none" />
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Teléfono</label>
-                    <input type="tel" required value={ref.telefono} onChange={(e) => setReferencias((prev) => prev.map((item, i) => i === index ? { ...item, telefono: e.target.value } : item))} placeholder="81 1234 5678" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+                    <input type="tel" required value={ref.telefono} onChange={(e) => setReferencias((prev) => prev.map((item, i) => i === index ? { ...item, telefono: e.target.value } : item))} placeholder="81 1234 5678" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none" />
                   </div>
                   <div className="flex items-center">
                     <span className="text-xs text-slate-500 font-semibold">{index === 0 ? 'Debe vivir en otro domicilio' : 'Conocido'}</span>
@@ -2089,13 +2089,13 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
 
         {/* SECCIÓN 4: DATOS DEL VEHÍCULO Y LOTE ASOCIADO           */}
         {/* ======================================================== */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-6 sm:p-8 space-y-6">
-          <div className="flex items-center gap-2 pb-4 border-b border-slate-200">
+        <div className="bg-[#1C2541] border border-[#2E3A59] rounded-2xl shadow-xs p-6 sm:p-8 space-y-6">
+          <div className="flex items-center gap-2 pb-4 border-b border-[#2E3A59]">
             <span className="w-6 h-6 rounded-md bg-slate-900 text-white text-xs font-black flex items-center justify-center">
               4
             </span>
             <div>
-              <h3 className="text-base font-bold text-slate-900">
+              <h3 className="text-base font-bold text-slate-100">
                 Unidad a Financiar y Lote de Autos
               </h3>
               <p className="text-xs text-slate-500">
@@ -2106,13 +2106,13 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                 Lote Aliado Asociado <span className="text-red-500">*</span>
               </label>
               <select
                 value={selectedLoteId}
                 onChange={(e) => setSelectedLoteId(e.target.value)}
-                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
+                className="w-full py-2 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-slate-900 focus:outline-none"
               >
                 {lotes.map((l) => (
                   <option key={l.id} value={l.id}>
@@ -2124,7 +2124,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                 Marca del Auto <span className="text-red-500">*</span>
               </label>
               <input
@@ -2133,12 +2133,12 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 value={autoMarca}
                 onChange={(e) => setAutoMarca(e.target.value)}
                 placeholder="ej. Mazda, Honda, Nissan"
-                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
+                className="w-full py-2 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-slate-900 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                 Modelo / Versión <span className="text-red-500">*</span>
               </label>
               <input
@@ -2147,24 +2147,24 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 value={autoModelo}
                 onChange={(e) => setAutoModelo(e.target.value)}
                 placeholder="ej. Mazda 3 i Grand Touring"
-                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
+                className="w-full py-2 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-slate-900 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                 Año / Modelo
               </label>
               <input
                 type="number"
                 value={autoAno}
                 onChange={(e) => setAutoAno(Number(e.target.value))}
-                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
+                className="w-full py-2 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-slate-900 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                 Precio de Venta ($MXN) <span className="text-red-500">*</span>
               </label>
               <input
@@ -2173,12 +2173,12 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 value={autoPrecio}
                 onChange={(e) => setAutoPrecio(e.target.value === '' ? '' : Number(e.target.value))}
                 placeholder="ej. 320000"
-                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none font-semibold"
+                className="w-full py-2 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-slate-900 focus:outline-none font-semibold"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                 Enganche <span className="text-red-500">*</span>
               </label>
               <div className="flex gap-2 mb-2">
@@ -2191,7 +2191,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border transition ${
                     engancheModo === 'PORCENTAJE'
                       ? 'bg-red-600 text-white border-red-600'
-                      : 'bg-white text-slate-600 border-slate-300'
+                      : 'bg-[#1C2541] text-slate-400 border-[#3A4868]'
                   }`}
                 >
                   Porcentaje (%)
@@ -2205,7 +2205,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border transition ${
                     engancheModo === 'MONTO'
                       ? 'bg-red-600 text-white border-red-600'
-                      : 'bg-white text-slate-600 border-slate-300'
+                      : 'bg-[#1C2541] text-slate-400 border-[#3A4868]'
                   }`}
                 >
                   Monto en efectivo ($)
@@ -2224,15 +2224,15 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                       const value = Number(e.target.value) || 20;
                       setEnganchePorcentaje(Math.min(100, Math.max(20, value)));
                     }}
-                    className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm font-semibold focus:border-slate-900 focus:outline-none"
+                    className="w-full py-2 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm font-semibold focus:border-slate-900 focus:outline-none"
                   />
-                  <div className="py-2 px-3 bg-slate-100 border border-slate-300 rounded-xl text-slate-700 text-sm font-bold">
+                  <div className="py-2 px-3 bg-[#18223A] border border-[#3A4868] rounded-xl text-slate-300 text-sm font-bold">
                     %
                   </div>
                 </div>
               ) : (
                 <div className="flex gap-2">
-                  <div className="py-2 px-3 bg-slate-100 border border-slate-300 rounded-xl text-slate-700 text-sm font-bold">
+                  <div className="py-2 px-3 bg-[#18223A] border border-[#3A4868] rounded-xl text-slate-300 text-sm font-bold">
                     $
                   </div>
                   <input
@@ -2251,7 +2251,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                       if (!Number.isFinite(value)) return;
                       setEngancheMonto(precioSeguro > 0 ? Math.min(precioSeguro, Math.max(0, value)) : Math.max(0, value));
                     }}
-                    className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm font-semibold focus:border-slate-900 focus:outline-none"
+                    className="w-full py-2 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm font-semibold focus:border-slate-900 focus:outline-none"
                   />
                 </div>
               )}
@@ -2262,13 +2262,13 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                 Plazo (Meses)
               </label>
               <select
                 value={plazoMeses}
                 onChange={(e) => setPlazoMeses(Number(e.target.value))}
-                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
+                className="w-full py-2 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-slate-900 focus:outline-none"
               >
                 <option value={12}>12 Meses (1 Año)</option>
                 <option value={24}>24 Meses (2 Años)</option>
@@ -2278,19 +2278,19 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                 Monto a Financiar
               </label>
-              <div className="py-2 px-3 bg-slate-100 border border-slate-300 rounded-xl text-emerald-800 text-sm font-bold">
+              <div className="py-2 px-3 bg-[#18223A] border border-[#3A4868] rounded-xl text-emerald-800 text-sm font-bold">
                 ${calcMontoFinanciar.toLocaleString('es-MX')} MXN
               </div>
             </div>
           </div>
 
           {/* Legalizado switch */}
-          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+          <div className="p-3.5 bg-[#121824] border border-[#2E3A59] rounded-xl flex items-center justify-between">
             <div>
-              <span className="text-xs font-bold text-slate-800 block">
+              <span className="text-xs font-bold text-slate-200 block">
                 ¿Es vehículo legalizado (importado de USA)?
               </span>
               <span className="text-[11px] text-slate-500 block">
@@ -2304,7 +2304,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 onChange={(e) => setEsVehiculoLegalizado(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#1C2541] after:border-[#3A4868] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
             </label>
           </div>
         </div>
@@ -2312,14 +2312,14 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         {/* ======================================================== */}
         {/* OBLIGADO SOLIDARIO - AL FINAL DEL EXPEDIENTE */}
         {/* ======================================================== */}
-        <div className="bg-white border-2 border-amber-200 rounded-2xl shadow-xs overflow-hidden">
+        <div className="bg-[#1C2541] border-2 border-amber-200 rounded-2xl shadow-xs overflow-hidden">
           <div className="px-5 sm:px-6 py-5 bg-amber-50 flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+              <h2 className="text-lg font-black text-slate-100 flex items-center gap-2">
                 <Users className="w-5 h-5 text-amber-600" />
                 Obligado Solidario
               </h2>
-              <p className="text-xs text-slate-600 mt-1">
+              <p className="text-xs text-slate-400 mt-1">
                 Actívalo solo cuando la financiera lo solicite. Al activarlo, se deberán capturar los mismos datos y documentación del titular.
               </p>
             </div>
@@ -2329,57 +2329,57 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               className={`relative w-14 h-7 rounded-full transition ${requiereObligadoSolidario ? 'bg-amber-500' : 'bg-slate-300'}`}
               aria-pressed={requiereObligadoSolidario}
             >
-              <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition ${requiereObligadoSolidario ? 'left-8' : 'left-1'}`} />
+              <span className={`absolute top-1 w-5 h-5 rounded-full bg-[#1C2541] shadow transition ${requiereObligadoSolidario ? 'left-8' : 'left-1'}`} />
             </button>
           </div>
 
           {requiereObligadoSolidario && (
             <div className="p-5 sm:p-8 space-y-7">
               <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200">
-                <p className="text-xs font-bold text-slate-900">Captura del obligado solidario</p>
-                <p className="text-[11px] text-slate-600 mt-1">
+                <p className="text-xs font-bold text-slate-100">Captura del obligado solidario</p>
+                <p className="text-[11px] text-slate-400 mt-1">
                   Debe llenarse igual que el titular: contacto, ingresos, vivienda, empleo, referencias y documentación.
                 </p>
               </div>
 
               <div>
-                <h3 className="text-sm font-black text-slate-900 mb-3">1. Datos de identificación y contacto</h3>
+                <h3 className="text-sm font-black text-slate-100 mb-3">1. Datos de identificación y contacto</h3>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nombre completo <span className="text-red-500">*</span></label>
-                    <input type="text" required value={obligadoNombre} onChange={(e) => setObligadoNombre(e.target.value)} placeholder="Nombre completo" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Nombre completo <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoNombre} onChange={(e) => setObligadoNombre(e.target.value)} placeholder="Nombre completo" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">CURP <span className="text-red-500">*</span></label>
-                    <input type="text" required value={obligadoCurp} onChange={(e) => setObligadoCurp(e.target.value.toUpperCase())} placeholder="18 caracteres" maxLength={18} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm uppercase focus:border-amber-500 focus:outline-none" />
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">CURP <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoCurp} onChange={(e) => setObligadoCurp(e.target.value.toUpperCase())} placeholder="18 caracteres" maxLength={18} className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm uppercase focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">RFC <span className="text-red-500">*</span></label>
-                    <input type="text" required value={obligadoRfc} onChange={(e) => setObligadoRfc(e.target.value.toUpperCase())} placeholder="RFC" maxLength={13} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm uppercase focus:border-amber-500 focus:outline-none" />
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">RFC <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoRfc} onChange={(e) => setObligadoRfc(e.target.value.toUpperCase())} placeholder="RFC" maxLength={13} className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm uppercase focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Fecha de nacimiento <span className="text-red-500">*</span></label>
-                    <input type="date" required value={obligadoFechaNacimiento} onChange={(e) => setObligadoFechaNacimiento(e.target.value)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Fecha de nacimiento <span className="text-red-500">*</span></label>
+                    <input type="date" required value={obligadoFechaNacimiento} onChange={(e) => setObligadoFechaNacimiento(e.target.value)} className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Sexo <span className="text-red-500">*</span></label>
-                    <select required value={obligadoSexo} onChange={(e) => setObligadoSexo(e.target.value)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none">
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Sexo <span className="text-red-500">*</span></label>
+                    <select required value={obligadoSexo} onChange={(e) => setObligadoSexo(e.target.value)} className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none">
                       <option value="">Seleccionar...</option>
                       <option value="H">Hombre</option>
                       <option value="M">Mujer</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Teléfono <span className="text-red-500">*</span></label>
-                    <input type="tel" required value={obligadoTelefono} onChange={(e) => setObligadoTelefono(e.target.value)} placeholder="81 1234 5678" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Teléfono <span className="text-red-500">*</span></label>
+                    <input type="tel" required value={obligadoTelefono} onChange={(e) => setObligadoTelefono(e.target.value)} placeholder="81 1234 5678" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Correo electrónico</label>
-                    <input type="email" value={obligadoCorreo} onChange={(e) => setObligadoCorreo(e.target.value)} placeholder="correo@ejemplo.com" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Correo electrónico</label>
+                    <input type="email" value={obligadoCorreo} onChange={(e) => setObligadoCorreo(e.target.value)} placeholder="correo@ejemplo.com" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Estado civil <span className="text-red-500">*</span></label>
-                    <select required value={obligadoEstadoCivil} onChange={(e) => setObligadoEstadoCivil(e.target.value as any)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none">
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Estado civil <span className="text-red-500">*</span></label>
+                    <select required value={obligadoEstadoCivil} onChange={(e) => setObligadoEstadoCivil(e.target.value as any)} className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none">
                       <option value="">Seleccionar...</option>
                       <option value="SOLTERO">Soltero(a)</option>
                       <option value="CASADO">Casado(a)</option>
@@ -2391,20 +2391,20 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nombre completo <span className="text-red-500">*</span></label>
-                    <input type="text" required value={obligadoNombre} onChange={(e) => setObligadoNombre(e.target.value)} placeholder="Nombre completo" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Nombre completo <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoNombre} onChange={(e) => setObligadoNombre(e.target.value)} placeholder="Nombre completo" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Teléfono <span className="text-red-500">*</span></label>
-                    <input type="tel" required value={obligadoTelefono} onChange={(e) => setObligadoTelefono(e.target.value)} placeholder="81 1234 5678" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Teléfono <span className="text-red-500">*</span></label>
+                    <input type="tel" required value={obligadoTelefono} onChange={(e) => setObligadoTelefono(e.target.value)} placeholder="81 1234 5678" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Correo electrónico</label>
-                    <input type="email" value={obligadoCorreo} onChange={(e) => setObligadoCorreo(e.target.value)} placeholder="correo@ejemplo.com" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Correo electrónico</label>
+                    <input type="email" value={obligadoCorreo} onChange={(e) => setObligadoCorreo(e.target.value)} placeholder="correo@ejemplo.com" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Estado civil <span className="text-red-500">*</span></label>
-                    <select required value={obligadoEstadoCivil} onChange={(e) => setObligadoEstadoCivil(e.target.value as any)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none">
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Estado civil <span className="text-red-500">*</span></label>
+                    <select required value={obligadoEstadoCivil} onChange={(e) => setObligadoEstadoCivil(e.target.value as any)} className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none">
                       <option value="">Seleccionar...</option>
                       <option value="SOLTERO">Soltero(a)</option>
                       <option value="CASADO">Casado(a)</option>
@@ -2417,15 +2417,15 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               </div>
 
               <div>
-                <h3 className="text-sm font-black text-slate-900 mb-3">2. Perfil socioeconómico y laboral</h3>
+                <h3 className="text-sm font-black text-slate-100 mb-3">2. Perfil socioeconómico y laboral</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Ingreso mensual comprobable <span className="text-red-500">*</span></label>
-                    <input type="number" required min="0" value={obligadoIngresoMensual} onChange={(e) => setObligadoIngresoMensual(e.target.value === '' ? '' : Number(e.target.value))} placeholder="ej. 35000" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Ingreso mensual comprobable <span className="text-red-500">*</span></label>
+                    <input type="number" required min="0" value={obligadoIngresoMensual} onChange={(e) => setObligadoIngresoMensual(e.target.value === '' ? '' : Number(e.target.value))} placeholder="ej. 35000" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Vivienda <span className="text-red-500">*</span></label>
-                    <select required value={obligadoCasaPropiaORentada} onChange={(e) => setObligadoCasaPropiaORentada(e.target.value as any)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none">
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Vivienda <span className="text-red-500">*</span></label>
+                    <select required value={obligadoCasaPropiaORentada} onChange={(e) => setObligadoCasaPropiaORentada(e.target.value as any)} className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none">
                       <option value="">Seleccionar condición...</option>
                       <option value="PROPIA">Casa propia</option>
                       <option value="RENTADA">Rentada</option>
@@ -2433,39 +2433,39 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Antigüedad en domicilio <span className="text-red-500">*</span></label>
-                    <input type="text" required value={obligadoTiempoViviendoDomicilio} onChange={(e) => setObligadoTiempoViviendoDomicilio(e.target.value)} placeholder="ej. 5 años" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Antigüedad en domicilio <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoTiempoViviendoDomicilio} onChange={(e) => setObligadoTiempoViviendoDomicilio(e.target.value)} placeholder="ej. 5 años" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Empresa / lugar de trabajo <span className="text-red-500">*</span></label>
-                    <input type="text" required value={obligadoNombreUbicacionEmpleo} onChange={(e) => setObligadoNombreUbicacionEmpleo(e.target.value)} placeholder="ej. Empresa XYZ" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Empresa / lugar de trabajo <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoNombreUbicacionEmpleo} onChange={(e) => setObligadoNombreUbicacionEmpleo(e.target.value)} placeholder="ej. Empresa XYZ" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Antigüedad en empleo <span className="text-red-500">*</span></label>
-                    <input type="text" required value={obligadoTiempoEnTrabajo} onChange={(e) => setObligadoTiempoEnTrabajo(e.target.value)} placeholder="ej. 3 años" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Antigüedad en empleo <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoTiempoEnTrabajo} onChange={(e) => setObligadoTiempoEnTrabajo(e.target.value)} placeholder="ej. 3 años" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Dependientes económicos</label>
-                    <input type="number" min="0" value={obligadoDependientesEconomicos} onChange={(e) => setObligadoDependientesEconomicos(Number(e.target.value) || 0)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Dependientes económicos</label>
+                    <input type="number" min="0" value={obligadoDependientesEconomicos} onChange={(e) => setObligadoDependientesEconomicos(Number(e.target.value) || 0)} className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div className="md:col-span-3">
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Dirección del empleo <span className="text-red-500">*</span></label>
-                    <input type="text" required value={obligadoDireccionEmpleo} onChange={(e) => setObligadoDireccionEmpleo(e.target.value)} placeholder="Calle, número, colonia, municipio, estado" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Dirección del empleo <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoDireccionEmpleo} onChange={(e) => setObligadoDireccionEmpleo(e.target.value)} placeholder="Calle, número, colonia, municipio, estado" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Giro / actividad de la empresa <span className="text-red-500">*</span></label>
-                    <input type="text" required value={obligadoGiroActividadEmpresa} onChange={(e) => setObligadoGiroActividadEmpresa(e.target.value)} placeholder="ej. Comercio, industria, servicios" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Giro / actividad de la empresa <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoGiroActividadEmpresa} onChange={(e) => setObligadoGiroActividadEmpresa(e.target.value)} placeholder="ej. Comercio, industria, servicios" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
                   </div>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-sm font-black text-slate-900 mb-3">3. Referencias personales</h3>
+                <h3 className="text-sm font-black text-slate-100 mb-3">3. Referencias personales</h3>
                 <div className="space-y-3">
                   {obligadoReferencias.map((ref, index) => (
-                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                      <input type="text" required value={ref.nombre} onChange={(e) => setObligadoReferencias((prev) => prev.map((item, i) => i === index ? { ...item, nombre: e.target.value } : item))} placeholder={index === 0 ? "Familiar (otro domicilio)" : `Nombre del conocido ${index}`} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm" />
-                      <input type="tel" required value={ref.telefono} onChange={(e) => setObligadoReferencias((prev) => prev.map((item, i) => i === index ? { ...item, telefono: e.target.value } : item))} placeholder="81 1234 5678" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm" />
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 rounded-2xl bg-[#121824] border border-[#2E3A59]">
+                      <input type="text" required value={ref.nombre} onChange={(e) => setObligadoReferencias((prev) => prev.map((item, i) => i === index ? { ...item, nombre: e.target.value } : item))} placeholder={index === 0 ? "Familiar (otro domicilio)" : `Nombre del conocido ${index}`} className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm" />
+                      <input type="tel" required value={ref.telefono} onChange={(e) => setObligadoReferencias((prev) => prev.map((item, i) => i === index ? { ...item, telefono: e.target.value } : item))} placeholder="81 1234 5678" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm" />
                       <div className="flex items-center text-xs font-semibold text-slate-500">{index === 0 ? 'Familiar de otro domicilio' : `Conocido ${index}`}</div>
                     </div>
                   ))}
@@ -2473,10 +2473,10 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               </div>
 
               <div>
-                <h3 className="text-sm font-black text-slate-900 mb-3">4. Documentación obligatoria</h3>
+                <h3 className="text-sm font-black text-slate-100 mb-3">4. Documentación obligatoria</h3>
                 <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 mb-4">
-                  <p className="text-xs font-bold text-slate-900">Los mismos documentos solicitados al titular</p>
-                  <p className="text-[11px] text-slate-600 mt-1">INE ambos lados, comprobante de domicilio y 3 estados de cuenta individuales o PDF consolidado. Todo queda dentro del mismo expediente.</p>
+                  <p className="text-xs font-bold text-slate-100">Los mismos documentos solicitados al titular</p>
+                  <p className="text-[11px] text-slate-400 mt-1">INE ambos lados, comprobante de domicilio y 3 estados de cuenta individuales o PDF consolidado. Todo queda dentro del mismo expediente.</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2484,8 +2484,8 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     {label:'INE Frente', value:obligadoIneFrente, input:obligadoIneFrenteInput, setter:setObligadoIneFrente, name:setObligadoIneFrenteNombre, nameValue:obligadoIneFrenteNombre},
                     {label:'INE Reverso', value:obligadoIneReverso, input:obligadoIneReversoInput, setter:setObligadoIneReverso, name:setObligadoIneReversoNombre, nameValue:obligadoIneReversoNombre},
                   ].map((doc:any) => (
-                    <div key={doc.label} className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60">
-                      <div className="flex items-center justify-between mb-3"><span className="text-xs font-bold text-slate-800">{doc.label} <span className="text-red-500">*</span></span>{doc.value && <Check className="w-4 h-4 text-emerald-600" />}</div>
+                    <div key={doc.label} className="border border-[#2E3A59] rounded-2xl p-4 bg-[#121824]/60">
+                      <div className="flex items-center justify-between mb-3"><span className="text-xs font-bold text-slate-200">{doc.label} <span className="text-red-500">*</span></span>{doc.value && <Check className="w-4 h-4 text-emerald-600" />}</div>
                       <button type="button" onClick={() => doc.input.current?.click()} className="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"><Upload className="w-3.5 h-3.5" /> Subir</button>
                       <input ref={doc.input} type="file" accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden" onChange={(e) => handleObligadoFile(e, doc.setter, doc.name)} />
                       {doc.nameValue && <p className="text-[11px] text-slate-500 mt-2 truncate">{doc.nameValue}</p>}
@@ -2493,15 +2493,15 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   ))}
                 </div>
 
-                <div className="mt-4 border border-slate-200 rounded-2xl p-4 bg-slate-50/60">
-                  <div className="flex items-center justify-between"><span className="text-xs font-bold text-slate-800">Comprobante de domicilio <span className="text-red-500">*</span></span>{obligadoComprobante && <Check className="w-4 h-4 text-emerald-600" />}</div>
+                <div className="mt-4 border border-[#2E3A59] rounded-2xl p-4 bg-[#121824]/60">
+                  <div className="flex items-center justify-between"><span className="text-xs font-bold text-slate-200">Comprobante de domicilio <span className="text-red-500">*</span></span>{obligadoComprobante && <Check className="w-4 h-4 text-emerald-600" />}</div>
                   <button type="button" onClick={() => obligadoComprobanteInput.current?.click()} className="w-full mt-3 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold"><Upload className="w-3.5 h-3.5 inline mr-1" /> Subir comprobante</button>
                   <input ref={obligadoComprobanteInput} type="file" accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden" onChange={(e)=>handleObligadoFile(e,setObligadoComprobante,setObligadoComprobanteNombre)} />
                   {obligadoComprobanteNombre && <p className="text-[11px] text-slate-500 mt-2 truncate">{obligadoComprobanteNombre}</p>}
                 </div>
 
-                <div className="mt-4 border border-slate-200 rounded-2xl p-4 bg-slate-50/60">
-                  <p className="text-xs font-bold text-slate-800 mb-3">Estados de cuenta <span className="text-red-500">*</span></p>
+                <div className="mt-4 border border-[#2E3A59] rounded-2xl p-4 bg-[#121824]/60">
+                  <p className="text-xs font-bold text-slate-200 mb-3">Estados de cuenta <span className="text-red-500">*</span></p>
                   {modoEstadosCuenta === 'individual' ? (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {[
@@ -2509,8 +2509,8 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                         {label:'Mes 2', value:obligadoMes2, ref:obligadoMes2Input, setter:setObligadoMes2, name:setObligadoMes2Nombre, nameValue:obligadoMes2Nombre},
                         {label:'Mes 3', value:obligadoMes3, ref:obligadoMes3Input, setter:setObligadoMes3, name:setObligadoMes3Nombre, nameValue:obligadoMes3Nombre},
                       ].map((doc:any)=>(
-                        <div key={doc.label} className="border border-slate-200 rounded-xl p-3 bg-white">
-                          <div className="flex items-center justify-between mb-2"><span className="text-xs font-bold text-slate-800">{doc.label}</span>{doc.value && <Check className="w-4 h-4 text-emerald-600" />}</div>
+                        <div key={doc.label} className="border border-[#2E3A59] rounded-xl p-3 bg-[#1C2541]">
+                          <div className="flex items-center justify-between mb-2"><span className="text-xs font-bold text-slate-200">{doc.label}</span>{doc.value && <Check className="w-4 h-4 text-emerald-600" />}</div>
                           <button type="button" onClick={()=>doc.ref.current?.click()} className="w-full py-2 bg-slate-900 text-white rounded-lg text-xs font-bold"><Upload className="w-3 h-3 inline mr-1" />Subir</button>
                           <input ref={doc.ref} type="file" accept="application/pdf,image/png,image/jpeg" className="hidden" onChange={(e)=>handleObligadoFile(e,doc.setter,doc.name)} />
                           {doc.nameValue && <p className="text-[10px] text-slate-500 mt-2 truncate">{doc.nameValue}</p>}
@@ -2519,7 +2519,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     </div>
                   ) : (
                     <div>
-                      <button type="button" onClick={()=>obligadoConsolidadoInput.current?.click()} className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl bg-white text-xs font-bold text-slate-700"><Upload className="w-4 h-4 inline mr-1.5" /> Subir PDF consolidado (3 meses)</button>
+                      <button type="button" onClick={()=>obligadoConsolidadoInput.current?.click()} className="w-full py-3 border-2 border-dashed border-[#3A4868] rounded-xl bg-[#1C2541] text-xs font-bold text-slate-300"><Upload className="w-4 h-4 inline mr-1.5" /> Subir PDF consolidado (3 meses)</button>
                       <input ref={obligadoConsolidadoInput} type="file" accept="application/pdf,image/png,image/jpeg" className="hidden" onChange={(e)=>handleObligadoFile(e,setObligadoConsolidado,setObligadoConsolidadoNombre)} />
                       {obligadoConsolidadoNombre && <p className="text-[11px] text-slate-500 mt-2 truncate">{obligadoConsolidadoNombre}</p>}
                     </div>
@@ -2537,9 +2537,9 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         </div>
 
         {/* BOTTOM ACTION BAR */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 sticky bottom-4 z-20">
-          <div className="text-xs text-slate-600">
-            <span className="font-bold text-slate-900 block">
+        <div className="bg-[#1C2541] border border-[#2E3A59] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 sticky bottom-4 z-20">
+          <div className="text-xs text-slate-400">
+            <span className="font-bold text-slate-100 block">
               Envío directo a asesor
             </span>
             <span>
@@ -2553,7 +2553,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
             <button
               type="button"
               onClick={resetForm}
-              className="py-2.5 px-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-xl text-xs font-semibold transition cursor-pointer"
+              className="py-2.5 px-4 bg-[#1C2541] hover:bg-[#121824] text-slate-300 border border-[#3A4868] rounded-xl text-xs font-semibold transition cursor-pointer"
             >
               Limpiar Campos
             </button>
@@ -2582,20 +2582,20 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
       {/* DOCUMENT PREVIEW MODAL */}
       {previewModalUrl && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <h4 className="text-sm font-bold text-slate-900 truncate">
+          <div className="bg-[#1C2541] rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="p-4 border-b border-[#2E3A59] flex items-center justify-between">
+              <h4 className="text-sm font-bold text-slate-100 truncate">
                 {previewModalTitle}
               </h4>
               <button
                 type="button"
                 onClick={() => setPreviewModalUrl(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 cursor-pointer"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-[#18223A] cursor-pointer"
               >
                 ✕
               </button>
             </div>
-            <div className="p-4 overflow-auto flex-1 flex items-center justify-center bg-slate-100">
+            <div className="p-4 overflow-auto flex-1 flex items-center justify-center bg-[#18223A]">
               {previewModalUrl.startsWith('data:application/pdf') ? (
                 <iframe
                   src={previewModalUrl}
