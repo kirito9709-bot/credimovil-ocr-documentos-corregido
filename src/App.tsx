@@ -137,7 +137,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#EBF0F8] text-[#163F41] flex flex-col selection:bg-red-200 selection:text-[#041329]">
+    <div className="min-h-screen bg-[#0B132B] text-slate-100 flex flex-col selection:bg-red-200 selection:text-[#041329]">
       {/* Top Navigation */}
       <Navbar
         currentTab={currentTab}
@@ -196,7 +196,7 @@ export default function App() {
       <footer className="border-t border-[#163A64] bg-[#041329] py-7 px-4 text-center text-xs text-slate-300 print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-white text-red-600 flex items-center justify-center font-bold text-xs">
+            <div className="w-6 h-6 rounded-lg bg-[#1C2541] text-red-400 flex items-center justify-center font-bold text-xs">
               AC
             </div>
             <span className="font-semibold text-white">
