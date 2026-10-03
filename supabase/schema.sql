@@ -134,3 +134,35 @@ alter table public.asesores enable row level security;
 
 create unique index if not exists documentos_exp_tipo_unique_idx
   on public.documentos(expediente_id, tipo);
+
+
+create table if not exists public.lote_chat_mensajes (
+  id uuid primary key default gen_random_uuid(),
+  lote_id uuid not null references public.lotes(id) on delete cascade,
+  autor_tipo text not null check (autor_tipo in ('lote','asesor','admin')),
+  autor_usuario text not null default '',
+  autor_nombre text not null default '',
+  mensaje text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists lote_chat_mensajes_lote_idx
+  on public.lote_chat_mensajes(lote_id, created_at);
+
+alter table public.lote_chat_mensajes enable row level security;
+
+create table if not exists public.expediente_comentarios (
+  id uuid primary key default gen_random_uuid(),
+  expediente_id uuid not null references public.expedientes(id) on delete cascade,
+  autor_tipo text not null check (autor_tipo in ('lote','asesor','admin')),
+  autor_usuario text not null default '',
+  autor_nombre text not null default '',
+  tipo text not null default 'COMENTARIO' check (tipo in ('COMENTARIO','SOLICITUD')),
+  comentario text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists expediente_comentarios_expediente_idx
+  on public.expediente_comentarios(expediente_id, created_at);
+
+alter table public.expediente_comentarios enable row level security;
