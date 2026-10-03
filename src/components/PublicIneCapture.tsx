@@ -150,6 +150,10 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   // Obligado solidario: misma documentación inicial que el solicitante, adjunta al mismo expediente.
   const [requiereObligadoSolidario, setRequiereObligadoSolidario] = useState(false);
   const [obligadoNombre, setObligadoNombre] = useState('');
+  const [obligadoCurp, setObligadoCurp] = useState('');
+  const [obligadoRfc, setObligadoRfc] = useState('');
+  const [obligadoFechaNacimiento, setObligadoFechaNacimiento] = useState('');
+  const [obligadoSexo, setObligadoSexo] = useState('');
   const [obligadoTelefono, setObligadoTelefono] = useState('');
   const [obligadoCorreo, setObligadoCorreo] = useState('');
   const [obligadoIngresoMensual, setObligadoIngresoMensual] = useState<number | ''>('');
@@ -716,6 +720,10 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     setEngancheMonto('');
     setRequiereObligadoSolidario(false);
     setObligadoNombre('');
+    setObligadoCurp('');
+    setObligadoRfc('');
+    setObligadoFechaNacimiento('');
+    setObligadoSexo('');
     setObligadoTelefono('');
     setObligadoCorreo('');
     setObligadoIngresoMensual('');
@@ -2021,7 +2029,52 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               </div>
 
               <div>
-                <h3 className="text-sm font-black text-slate-900 mb-3">1. Datos personales y de contacto</h3>
+                <h3 className="text-sm font-black text-slate-900 mb-3">1. Datos de identificación y contacto</h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nombre completo <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoNombre} onChange={(e) => setObligadoNombre(e.target.value)} placeholder="Nombre completo" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">CURP <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoCurp} onChange={(e) => setObligadoCurp(e.target.value.toUpperCase())} placeholder="18 caracteres" maxLength={18} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm uppercase focus:border-amber-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">RFC <span className="text-red-500">*</span></label>
+                    <input type="text" required value={obligadoRfc} onChange={(e) => setObligadoRfc(e.target.value.toUpperCase())} placeholder="RFC" maxLength={13} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm uppercase focus:border-amber-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Fecha de nacimiento <span className="text-red-500">*</span></label>
+                    <input type="date" required value={obligadoFechaNacimiento} onChange={(e) => setObligadoFechaNacimiento(e.target.value)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Sexo <span className="text-red-500">*</span></label>
+                    <select required value={obligadoSexo} onChange={(e) => setObligadoSexo(e.target.value)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none">
+                      <option value="">Seleccionar...</option>
+                      <option value="H">Hombre</option>
+                      <option value="M">Mujer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Teléfono <span className="text-red-500">*</span></label>
+                    <input type="tel" required value={obligadoTelefono} onChange={(e) => setObligadoTelefono(e.target.value)} placeholder="81 1234 5678" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Correo electrónico</label>
+                    <input type="email" value={obligadoCorreo} onChange={(e) => setObligadoCorreo(e.target.value)} placeholder="correo@ejemplo.com" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Estado civil <span className="text-red-500">*</span></label>
+                    <select required value={obligadoEstadoCivil} onChange={(e) => setObligadoEstadoCivil(e.target.value as any)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none">
+                      <option value="">Seleccionar...</option>
+                      <option value="SOLTERO">Soltero(a)</option>
+                      <option value="CASADO">Casado(a)</option>
+                      <option value="UNION_LIBRE">Unión libre</option>
+                      <option value="DIVORCIADO">Divorciado(a)</option>
+                      <option value="VIUDO">Viudo(a)</option>
+                    </select>
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nombre completo <span className="text-red-500">*</span></label>
