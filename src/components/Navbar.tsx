@@ -39,7 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#163F41]/98 backdrop-blur-md border-b border-[#2E766F] shadow-sm">
+    <header className="sticky top-0 z-40 bg-[#041329]/98 backdrop-blur-md border-b border-[#C81E2B] shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand: CrediMóvil */}
@@ -72,12 +72,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* Navigation Tabs */}
-          <nav className={`${mobileOpen ? 'absolute left-3 right-3 top-16' : 'hidden'} md:static md:flex items-center gap-1 sm:gap-2 md:bg-transparent bg-[#163F41] border md:border-0 border-[#2E766F] rounded-2xl p-2 md:p-0 shadow-2xl md:shadow-none z-50`}>
+          <nav className={`${mobileOpen ? 'absolute left-3 right-3 top-16' : 'hidden'} md:static md:flex items-center gap-1 sm:gap-2 md:bg-transparent bg-[#041329] border md:border-0 border-white/10 rounded-2xl p-2 md:p-0 shadow-2xl md:shadow-none z-50`}>
             <button
               onClick={() => onSelectTab('captura')}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
                 currentTab === 'captura'
-                  ? 'bg-[#4E9B92] text-white shadow-md shadow-[#0E2E30]/20'
+                  ? 'bg-[#C81E2B] text-white shadow-md shadow-[#C81E2B]/25'
                   : 'text-white/85 hover:text-white hover:bg-white/10'
               }`}
             >
@@ -89,7 +89,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => selectTab('fondeo')}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 relative ${
                 currentTab === 'fondeo'
-                  ? 'bg-[#163F41] text-white shadow-md shadow-[#163F41]/20'
+                  ? 'bg-[#C81E2B] text-white shadow-md shadow-[#C81E2B]/25'
                   : 'text-white/80 hover:text-white hover:bg-white/10'
               }`}
             >
@@ -102,7 +102,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => selectTab('admin')}
                 className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
                   currentTab === 'admin'
-                    ? 'bg-[#4E9B92] text-white'
+                    ? 'bg-[#C81E2B] text-white'
                     : 'text-white/85 hover:text-white hover:bg-white/10'
                 }`}
               >
@@ -119,7 +119,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => authUser?.role === 'lote' ? selectTab('loteportal') : onOpenLoteAuth()}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
                 currentTab === 'loteportal'
-                  ? 'bg-[#4E9B92] text-white'
+                  ? 'bg-[#C81E2B] text-white'
                   : 'text-white/85 hover:text-white hover:bg-white/10'
               }`}
             >
@@ -131,7 +131,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => selectTab('lotes')}
                 className="px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-xs font-bold text-white"
               >
-                <Building2 className="w-4 h-4 inline mr-1.5 text-[#79C2BB]" />
+                <Building2 className="w-4 h-4 inline mr-1.5 text-[#F87171]" />
                 {activeLoteCount} Lotes
               </button>
 
