@@ -186,14 +186,18 @@ async function getExpedienteRowByIdOrFolio(identifier: string) {
 
   const value = String(identifier || '').trim();
 
-  const byId = await supabase
-    .from('expedientes')
-    .select('id,folio,lote_id')
-    .eq('id', value)
-    .maybeSingle();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
-  if (byId.error) throw new Error(`Supabase expediente: ${byId.error.message}`);
-  if (byId.data) return byId.data;
+  if (isUuid) {
+    const byId = await supabase
+      .from('expedientes')
+      .select('id,folio,lote_id')
+      .eq('id', value)
+      .maybeSingle();
+
+    if (byId.error) throw new Error(`Supabase expediente: ${byId.error.message}`);
+    if (byId.data) return byId.data;
+  }
 
   const byFolio = await supabase
     .from('expedientes')
