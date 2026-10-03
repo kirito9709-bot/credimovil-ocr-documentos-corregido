@@ -205,7 +205,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
     const basePrecio = Number(expediente.autoPrecio) || 0;
     const baseEnganche = Number(expediente.enganche) || 0;
     setEnganchePorcentaje(
-      basePrecio > 0 ? Math.min(100, Math.max(20, Math.round((baseEnganche / basePrecio) * 100))) : 20
+      basePrecio > 0 ? Math.min(100, Math.max(20, Math.round((baseEnganche / basePrecio) * 10000) / 100)) : 20
     );
     setNotas(expediente.notasAsesor || '');
     setSaveSuccess(false);
