@@ -6,14 +6,17 @@ import {
   ShieldCheck,
   Lock,
   Building2,
+  UserRound,
 } from 'lucide-react';
 
 interface NavbarProps {
-  currentTab: 'captura' | 'fondeo' | 'admin' | 'lotes';
-  onSelectTab: (tab: 'captura' | 'fondeo' | 'admin' | 'lotes') => void;
+  currentTab: 'captura' | 'fondeo' | 'admin' | 'lotes' | 'loteportal';
+  onSelectTab: (tab: 'captura' | 'fondeo' | 'admin' | 'lotes' | 'loteportal') => void;
   isAdminAuth: boolean;
   onOpenAdminAuth: () => void;
+  onOpenLoteAuth: () => void;
   onLogoutAdmin: () => void;
+  authUser?: { role?: 'admin' | 'asesor' | 'lote'; nombre?: string } | null;
   activeLoteCount: number;
 }
 
@@ -22,7 +25,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSelectTab,
   isAdminAuth,
   onOpenAdminAuth,
+  onOpenLoteAuth,
   onLogoutAdmin,
+  authUser,
   activeLoteCount,
 }) => {
   return (
@@ -78,20 +83,34 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Fondeo Lotes</span>
             </button>
 
+            {authUser?.role !== 'lote' && (
+              <button
+                onClick={() => onSelectTab('admin')}
+                className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
+                  currentTab === 'admin'
+                    ? 'bg-slate-100 text-slate-950'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                {isAdminAuth ? (
+                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                ) : (
+                  <Lock className="w-4 h-4 text-slate-400" />
+                )}
+                <span>Panel Asesor</span>
+              </button>
+            )}
+
             <button
-              onClick={() => onSelectTab('admin')}
+              onClick={() => authUser?.role === 'lote' ? onSelectTab('loteportal') : onOpenLoteAuth()}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
-                currentTab === 'admin'
-                  ? 'bg-slate-100 text-slate-950'
+                currentTab === 'loteportal'
+                  ? 'bg-emerald-500 text-slate-950'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
             >
-              {isAdminAuth ? (
-                <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              ) : (
-                <Lock className="w-4 h-4 text-slate-400" />
-              )}
-              <span>Panel Asesor</span>
+              <UserRound className="w-4 h-4" />
+              <span>{authUser?.role === 'lote' ? 'Mi Portal' : 'Acceso Lote'}</span>
             </button>
           </nav>
 
@@ -107,12 +126,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {isAdminAuth ? (
-              <button
-                onClick={onLogoutAdmin}
-                className="text-xs px-2.5 py-1.5 text-red-300 hover:text-white hover:bg-red-950/40 rounded-lg border border-red-800/40 transition"
-              >
-                Cerrar Sesión
-              </button>
+              <div className="flex items-center gap-2">
+                {authUser?.role === 'lote' && (
+                  <span className="hidden xl:inline text-[11px] text-slate-400 max-w-40 truncate">{authUser.nombre}</span>
+                )}
+                <button
+                  onClick={onLogoutAdmin}
+                  className="text-xs px-2.5 py-1.5 text-red-300 hover:text-white hover:bg-red-950/40 rounded-lg border border-red-800/40 transition"
+                >
+                  Cerrar Sesión
+                </button>
+              </div>
             ) : (
               <button
                 onClick={onOpenAdminAuth}
