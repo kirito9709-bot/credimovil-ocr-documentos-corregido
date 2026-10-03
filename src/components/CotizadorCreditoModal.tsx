@@ -70,24 +70,45 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
     if (!popup) return;
     const html =
       '<html><head><title>Cotización CrediMóvil</title>' +
-      '<style>body{font-family:Arial,sans-serif;padding:36px;color:#071A33}h1{margin:0 0 8px;color:#C81E2B}table{width:100%;border-collapse:collapse;margin-top:18px}td{padding:10px;border-bottom:1px solid #ddd}td:first-child{font-weight:700;width:48%}.total{font-size:28px;font-weight:800;color:#C81E2B}.note{margin-top:28px;font-size:11px;color:#64748B}</style>' +
-      '</head><body>' +
-      '<h1>CrediMóvil</h1><div>Esquema de cotización de crédito automotriz</div>' +
-      '<p><strong>Cliente:</strong> ' + (expediente.ine?.nombreCompleto || expediente.ine?.nombre || '—') + '</p>' +
-      '<p><strong>Vehículo:</strong> ' + [expediente.autoMarca, expediente.autoModelo, expediente.autoAno].filter(Boolean).join(' ') + '</p>' +
+      '<style>' +
+      '@page{size:A4;margin:14mm}' +
+      'body{font-family:Arial,Helvetica,sans-serif;margin:0;color:#071A33;background:#fff}' +
+      '.header{background:#071A33;color:#fff;border-radius:14px;padding:18px 22px;margin-bottom:22px;border-bottom:5px solid #C81E2B;display:flex;justify-content:space-between;align-items:center}' +
+      '.brand{font-size:27px;font-weight:900;letter-spacing:-.5px}.brand b{color:#E3262F}' +
+      '.tag{font-size:10px;color:#B9C7DA;text-transform:uppercase;letter-spacing:1.4px;margin-top:4px}' +
+      '.folio{font-size:11px;color:#D7E0E7;text-align:right}.folio strong{display:block;color:#fff;font-size:15px;margin-top:3px}' +
+      '.client{background:#F1F5F9;border:1px solid #D7E0E7;border-radius:12px;padding:14px 16px;margin-bottom:18px}' +
+      '.client strong{font-size:14px}.vehicle{color:#46617D;font-size:12px;margin-top:4px}' +
+      'table{width:100%;border-collapse:separate;border-spacing:0;margin-top:8px;border:1px solid #D7E0E7;border-radius:12px;overflow:hidden}' +
+      'td{padding:11px 13px;border-bottom:1px solid #E2E8F0;font-size:12px}tr:last-child td{border-bottom:0}td:first-child{font-weight:700;width:58%;color:#294767}' +
+      '.highlight td{background:#FFF4F4}.highlight td:last-child{font-size:25px;font-weight:900;color:#C81E2B}' +
+      '.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:15px}' +
+      '.box{border:1px solid #D7E0E7;border-radius:12px;padding:12px;background:#F8FAFC}.box span{display:block;color:#64748B;font-size:10px;text-transform:uppercase;letter-spacing:.6px}.box strong{display:block;margin-top:5px;font-size:15px}' +
+      '.note{margin-top:18px;padding:11px 12px;border-left:4px solid #C81E2B;background:#F8FAFC;color:#64748B;font-size:10px;line-height:1.45}' +
+      '.footer{margin-top:24px;text-align:center;color:#94A3B8;font-size:9px}' +
+      '</style></head><body>' +
+      '<div class="header"><div><div class="brand">CREDI<span>MÓVIL</span></div><div class="tag">Cotización de crédito automotriz</div></div>' +
+      '<div class="folio">Folio<strong>' + (expediente.folio || '—') + '</strong></div></div>' +
+      '<div class="client"><strong>' + (expediente.ine?.nombreCompleto || expediente.ine?.nombre || 'Cliente sin nombre') + '</strong><div class="vehicle">' +
+      [expediente.autoMarca, expediente.autoModelo, expediente.autoAno].filter(Boolean).join(' ') + '</div></div>' +
       '<table>' +
       '<tr><td>Precio del vehículo</td><td>' + money(Number(precio) || 0) + '</td></tr>' +
       '<tr><td>Enganche</td><td>' + money(enganche) + ' (' + porcentajeReal.toFixed(2) + '%)</td></tr>' +
-      '<tr><td>Monto a financiar</td><td>' + money(montoFinanciar) + '</td></tr>' +
-      '<tr><td>Seguro</td><td>' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro) + (seguroModo === 'CONTADO' ? ' — pago de contado' : ' — incluido en financiamiento')) + '</td></tr>' +
+      '<tr><td>Monto base a financiar</td><td>' + money(montoFinanciar) + '</td></tr>' +
+      '<tr><td>Seguro</td><td>' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro) + (seguroModo === 'CONTADO' ? ' — contado' : ' — financiado')) + '</td></tr>' +
       '<tr><td>Total capital financiado</td><td>' + money(totalCapitalFinanciado) + '</td></tr>' +
       '<tr><td>Plazo</td><td>' + plazo + ' meses</td></tr>' +
       '<tr><td>Tasa anual</td><td>28%</td></tr>' +
-      '<tr><td>Mensualidad estimada</td><td class="total">' + money(mensualidad) + '</td></tr>' +
+      '<tr class="highlight"><td>Mensualidad estimada</td><td>' + money(mensualidad) + '</td></tr>' +
       '</table>' +
-      '<div class="note">Cotización estimada sujeta a validación y aprobación final. El seguro de contado no incrementa el monto financiado; el seguro financiado sí se incorpora al capital. Incluye GPS de $260 y SDD de $142 en la mensualidad.</div>' +
-      '<script>window.print();<\/script>' +
-      '</body></html>';
+      '<div class="summary">' +
+      '<div class="box"><span>GPS</span><strong>$260 MXN</strong></div>' +
+      '<div class="box"><span>SDD</span><strong>$142 MXN</strong></div>' +
+      '<div class="box"><span>Seguro contado</span><strong>' + (seguroModo === 'CONTADO' ? money(seguro) : '$0 MXN') + '</strong></div>' +
+      '</div>' +
+      '<div class="note">Cotización estimada sujeta a validación y aprobación final. El seguro de contado se paga por separado; el seguro financiado se incorpora al capital financiado y modifica la mensualidad. GPS y SDD están incluidos en la mensualidad estimada.</div>' +
+      '<div class="footer">CrediMóvil • Tu auto, más cerca de tus planes</div>' +
+      '<script>window.print();<\/script></body></html>';
     popup.document.write(html);
     popup.document.close();
   };
