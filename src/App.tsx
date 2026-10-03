@@ -137,7 +137,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7FAFA] text-[#163F41] flex flex-col selection:bg-[#B9DDD8] selection:text-[#163F41]">
+    <div className="min-h-screen bg-[#F4F7FB] text-[#163F41] flex flex-col selection:bg-red-200 selection:text-[#041329]">
       {/* Top Navigation */}
       <Navbar
         currentTab={currentTab}
@@ -196,10 +196,10 @@ export default function App() {
       <footer className="border-t border-[#d9e7e7] bg-white py-8 px-4 text-center text-xs text-[#5A7476] print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-[#DDEEEB] text-[#2E766F] flex items-center justify-center font-bold text-xs">
+            <div className="w-6 h-6 rounded-lg bg-red-100 text-red-700 flex items-center justify-center font-bold text-xs">
               AC
             </div>
-            <span className="font-semibold text-[#35585A]">
+            <span className="font-semibold text-[#173252]">
               AutoCred • Plataforma de Crédito Automotriz Directo
             </span>
           </div>
