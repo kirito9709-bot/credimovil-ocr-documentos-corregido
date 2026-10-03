@@ -32,9 +32,12 @@ export interface IneData {
 
 export type EstatusCredito =
   | 'NUEVO'
-  | 'EN_EVALUACION'
   | 'PRE_APROBADO'
+  | 'EN_EVALUACION'
   | 'APROBADO'
+  | 'CONTRATO'
+  | 'GPS'
+  | 'FONDEO'
   | 'FONDEO_PENDIENTE'
   | 'FONDEO_REVISION'
   | 'FONDEADO'
