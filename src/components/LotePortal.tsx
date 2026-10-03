@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Building2, Car, Clock3, FileText, RefreshCw, Search, ShieldCheck, Wallet } from 'lucide-react';
+import { Building2, Car, Clock3, FileText, RefreshCw, Search, ShieldCheck, Wallet, MessageCircle } from 'lucide-react';
 import { api } from '../services/api';
+import { ChatLoteModal } from './ChatLoteModal';
+import { ExpedienteComentariosModal } from './ExpedienteComentariosModal';
 
 interface LotePortalProps {
   authUser: { username: string; role: 'lote'; nombre: string; loteId?: string | null };
@@ -25,6 +27,8 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
   const [estatus, setEstatus] = useState('TODOS');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showChat, setShowChat] = useState(false);
+  const [commentTarget, setCommentTarget] = useState<{ id: string; folio: string } | null>(null);
 
   const load = async () => {
     setLoading(true); setError(null);
@@ -69,9 +73,14 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
           <div className='flex items-center gap-2'><Building2 className='w-6 h-6 text-red-400' /><h1 className='text-2xl sm:text-3xl font-black text-white'>Portal del Lote</h1></div>
           <p className='text-sm text-slate-400 mt-1'>Sesión: <strong className='text-slate-200'>{authUser.nombre}</strong> • Control de créditos enviados por tu lote</p>
         </div>
-        <button onClick={load} className='self-start lg:self-auto inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs font-bold hover:bg-slate-800'>
-          <RefreshCw className={loading ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} /> Actualizar
-        </button>
+        <div className='flex items-center gap-2'>
+          <button onClick={() => setShowChat(true)} className='inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-600/20 border border-emerald-500/20 text-emerald-300 text-xs font-bold hover:bg-emerald-600/30'>
+            <MessageCircle className='w-4 h-4' /> Chat con CrediMóvil
+          </button>
+          <button onClick={load} className='self-start lg:self-auto inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs font-bold hover:bg-slate-800'>
+            <RefreshCw className={loading ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} /> Actualizar
+          </button>
+        </div>
       </div>
 
       <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
@@ -108,18 +117,45 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
                       <span className='inline-flex items-center gap-1.5'><Clock3 className='w-3.5 h-3.5' />{e.fechaCreacion ? new Date(e.fechaCreacion).toLocaleDateString('es-MX') : '—'}</span>
                     </div>
                   </div>
-                  <div className='flex items-center gap-8 shrink-0'>
+                  <div className='flex items-center gap-3 shrink-0'>
+                    <button
+                      onClick={() => setCommentTarget({ id: e.id, folio: e.folio })}
+                      className='inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold hover:text-white hover:bg-slate-700'
+                    >
+                      <MessageCircle className='w-3.5 h-3.5' /> Comentarios
+                    </button>
+                    <div className='flex items-center gap-8'>
+
                     <div className='text-right'><div className='text-[10px] text-slate-500 uppercase tracking-wider'>Monto a financiar</div><div className='text-lg font-black text-emerald-400'>${(e.montoFinanciar || 0).toLocaleString('es-MX')} MXN</div></div>
                     <div className='text-right hidden sm:block'><div className='text-[10px] text-slate-500 uppercase tracking-wider'>Documentos</div><div className='text-sm font-bold text-slate-200'>{e.docsSubidos} / {e.docsRequeridos}</div></div>
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
+
           </div>
         )}
       </div>
 
       <div className='bg-slate-900/70 border border-slate-800 rounded-2xl p-4 flex items-center gap-3 text-xs text-slate-400'><Wallet className='w-4 h-4 text-emerald-400 shrink-0' /><span>Monto total actualmente en cartera: <strong className='text-white'>${stats.monto.toLocaleString('es-MX')} MXN</strong>.</span></div>
+      <ChatLoteModal
+        isOpen={showChat}
+        onClose={() => setShowChat(false)}
+        authUser={authUser}
+        lotes={[]}
+        initialLoteId={authUser.loteId}
+      />
+
+      {commentTarget && (
+        <ExpedienteComentariosModal
+          isOpen={Boolean(commentTarget)}
+          onClose={() => setCommentTarget(null)}
+          expedienteId={commentTarget.id}
+          folio={commentTarget.folio}
+          authUser={authUser}
+        />
+      )}
     </div>
   );
 };
