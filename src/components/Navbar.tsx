@@ -39,7 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#041329]/98 backdrop-blur-md border-b border-[#C81E2B] shadow-sm">
+    <header className="sticky top-0 z-40 bg-[#0B132B]/98 backdrop-blur-md border-b border-[#C81E2B] shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand: CrediMóvil */}
@@ -72,7 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* Navigation Tabs */}
-          <nav className={`${mobileOpen ? 'absolute left-3 right-3 top-16' : 'hidden'} md:static md:flex items-center gap-1 sm:gap-2 md:bg-transparent bg-[#041329] border md:border-0 border-white/10 rounded-2xl p-2 md:p-0 shadow-2xl md:shadow-none z-50`}>
+          <nav className={`${mobileOpen ? 'absolute left-3 right-3 top-16' : 'hidden'} md:static md:flex items-center gap-1 sm:gap-2 md:bg-transparent bg-[#0B132B] border md:border-0 border-white/10 rounded-2xl p-2 md:p-0 shadow-2xl md:shadow-none z-50`}>
             <button
               onClick={() => onSelectTab('captura')}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
@@ -172,7 +172,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
                 <button
                   onClick={onLogoutAdmin}
-                  className="text-xs px-2.5 py-1.5 text-[#7c3f3f] hover:text-[#163F41] hover:bg-[#F8ECEC] rounded-lg border border-[#ead7d7] transition"
+                  className="text-xs px-2.5 py-1.5 text-white hover:text-white hover:bg-[#C81E2B] rounded-lg border border-[#2E3A59] transition"
                 >
                   Cerrar Sesión
                 </button>
