@@ -65,21 +65,275 @@ function mapSupabaseLote(row: any) {
   };
 }
 
+const SUPABASE_BUCKET = 'credimovil-documentos';
+const SIGNED_DOCUMENT_TTL_SECONDS = 60 * 60;
+
+function cloneJson(value: any) {
+  return JSON.parse(JSON.stringify(value ?? {}));
+}
+
+function stripDocumentValues(exp: any) {
+  const copy = cloneJson(exp);
+  copy.fotoIneFrente = '';
+  copy.fotoIneReverso = '';
+  copy.comprobanteDomicilioActualUrl = '';
+
+  if (copy.estadosCuenta) {
+    for (const key of ['mes1Url', 'mes2Url', 'mes3Url', 'archivoConsolidadoUrl']) {
+      copy.estadosCuenta[key] = '';
+    }
+  }
+
+  copy.documentosFondeo = (copy.documentosFondeo || []).map((doc: any) => ({
+    ...doc,
+    archivoUrl: '',
+  }));
+
+  return copy;
+}
+
+function documentTypeForStateKey(key: string) {
+  const map: Record<string, string> = {
+    mes1Url: 'ESTADO_CUENTA_MES1',
+    mes2Url: 'ESTADO_CUENTA_MES2',
+    mes3Url: 'ESTADO_CUENTA_MES3',
+    archivoConsolidadoUrl: 'ESTADO_CUENTA_CONSOLIDADO',
+  };
+  return map[key] || key.toUpperCase();
+}
+
+function isSignedOrApiDocumentUrl(value: unknown) {
+  return typeof value === 'string' && (
+    value.startsWith('/api/expedientes/') ||
+    value.includes('/storage/v1/object/') ||
+    value.includes('accessToken=')
+  );
+}
+
+async function getSupabaseExpedienteRowByFolio(folio: string) {
+  if (!supabase) throw new Error('Supabase no está configurado.');
+
+  const { data, error } = await supabase
+    .from('expedientes')
+    .select('id,folio,data')
+    .eq('folio', folio)
+    .maybeSingle();
+
+  if (error) throw new Error(`Supabase expediente ${folio}: ${error.message}`);
+  return data || null;
+}
+
+async function uploadDataUriToSupabase(
+  dbExpedienteId: string,
+  tipo: string,
+  dataUri: string,
+  originalName = '',
+  estatus = 'SUBIDO',
+  observaciones = ''
+) {
+  if (!supabase) throw new Error('Supabase no está configurado.');
+  if (!isDataUri(dataUri)) return null;
+
+  const { mimeType, base64 } = extractMimeAndBase64(dataUri);
+  if (!base64) throw new Error(`Documento vacío para ${tipo}`);
+
+  const safeTipo = sanitizeFileName(tipo);
+  const ext = fileExtensionFromMime(mimeType, originalName);
+  const safeOriginal = sanitizeFileName(originalName || `${safeTipo}.${ext}`);
+  const storagePath = `expedientes/${dbExpedienteId}/${safeTipo}-${Date.now()}-${safeOriginal}`;
+  const bytes = Buffer.from(base64, 'base64');
+
+  const { data: previous, error: previousError } = await supabase
+    .from('documentos')
+    .select('id,storage_path')
+    .eq('expediente_id', dbExpedienteId)
+    .eq('tipo', tipo)
+    .maybeSingle();
+
+  if (previousError) {
+    throw new Error(`Supabase documento previo: ${previousError.message}`);
+  }
+
+  if (previous?.storage_path) {
+    await supabase.storage.from(SUPABASE_BUCKET).remove([previous.storage_path]).catch(() => undefined);
+  }
+
+  const { error: uploadError } = await supabase.storage
+    .from(SUPABASE_BUCKET)
+    .upload(storagePath, bytes, {
+      contentType: mimeType,
+      upsert: true,
+    });
+
+  if (uploadError) {
+    throw new Error(`Supabase Storage ${tipo}: ${uploadError.message}`);
+  }
+
+  const { error: docError } = await supabase
+    .from('documentos')
+    .upsert({
+      ...(previous?.id ? { id: previous.id } : {}),
+      expediente_id: dbExpedienteId,
+      tipo,
+      nombre: safeOriginal,
+      storage_path: storagePath,
+      mime_type: mimeType,
+      tamano: bytes.length,
+      estatus,
+      observaciones,
+      subido_por: null,
+    }, {
+      onConflict: 'expediente_id,tipo',
+    });
+
+  if (docError) {
+    await supabase.storage.from(SUPABASE_BUCKET).remove([storagePath]).catch(() => undefined);
+    throw new Error(`Supabase metadata ${tipo}: ${docError.message}`);
+  }
+
+  return storagePath;
+}
+
+async function createSignedStorageUrl(storagePath: string) {
+  if (!supabase || !storagePath) return '';
+  const { data, error } = await supabase.storage
+    .from(SUPABASE_BUCKET)
+    .createSignedUrl(storagePath, SIGNED_DOCUMENT_TTL_SECONDS);
+
+  if (error) {
+    console.warn(`No se pudo firmar ${storagePath}:`, error.message);
+    return '';
+  }
+
+  return data?.signedUrl || '';
+}
+
+async function storeExpedienteDocuments(exp: any, dbExpedienteId: string) {
+  const working = cloneJson(exp);
+
+  const topLevelDocuments: Array<[string, string, string, string]> = [
+    ['fotoIneFrente', 'INE_FRENTE', 'INE_Frente.jpg', working.fotoIneFrente],
+    ['fotoIneReverso', 'INE_REVERSO', 'INE_Reverso.jpg', working.fotoIneReverso],
+    ['comprobanteDomicilioActualUrl', 'COMPROBANTE_DOMICILIO', working.comprobanteDomicilioActualNombre || 'Comprobante_Domicilio', working.comprobanteDomicilioActualUrl],
+  ];
+
+  for (const [field, tipo, fallbackName, value] of topLevelDocuments) {
+    if (isDataUri(value)) {
+      await uploadDataUriToSupabase(
+        dbExpedienteId,
+        tipo,
+        value,
+        field === 'comprobanteDomicilioActualUrl' ? (working.comprobanteDomicilioActualNombre || fallbackName) : fallbackName
+      );
+      working[field] = '';
+    } else if (isSignedOrApiDocumentUrl(value)) {
+      working[field] = '';
+    }
+  }
+
+  if (working.estadosCuenta) {
+    for (const key of ['mes1Url', 'mes2Url', 'mes3Url', 'archivoConsolidadoUrl']) {
+      const value = working.estadosCuenta[key];
+      if (isDataUri(value)) {
+        const nameKey = key.replace(/Url$/, 'Nombre');
+        await uploadDataUriToSupabase(
+          dbExpedienteId,
+          documentTypeForStateKey(key),
+          value,
+          working.estadosCuenta[nameKey] || key
+        );
+        working.estadosCuenta[key] = '';
+      } else if (isSignedOrApiDocumentUrl(value)) {
+        working.estadosCuenta[key] = '';
+      }
+    }
+  }
+
+  working.documentosFondeo = (working.documentosFondeo || []).map((doc: any) => ({ ...doc, archivoUrl: doc.archivoUrl || '' }));
+  for (const doc of working.documentosFondeo) {
+    if (isDataUri(doc.archivoUrl)) {
+      await uploadDataUriToSupabase(
+        dbExpedienteId,
+        `FONDEO_${doc.id}`,
+        doc.archivoUrl,
+        doc.archivoNombre || doc.id,
+        doc.estatus || 'SUBIDO',
+        doc.observaciones || ''
+      );
+      doc.archivoUrl = '';
+    } else if (isSignedOrApiDocumentUrl(doc.archivoUrl)) {
+      doc.archivoUrl = '';
+    }
+  }
+
+  return stripDocumentValues(working);
+}
+
+function applyStoredDocumentsToExpediente(exp: any, documentRows: any[]) {
+  const result = cloneJson(exp);
+  const byType = new Map<string, any>();
+
+  for (const row of documentRows || []) {
+    byType.set(row.tipo, row);
+  }
+
+  const signedCache = new Map<string, string>();
+  const loadUrl = async (row?: any) => {
+    if (!row?.storage_path) return '';
+    if (!signedCache.has(row.storage_path)) {
+      signedCache.set(row.storage_path, await createSignedStorageUrl(row.storage_path));
+    }
+    return signedCache.get(row.storage_path) || '';
+  };
+
+  return (async () => {
+    result.fotoIneFrente = await loadUrl(byType.get('INE_FRENTE'));
+    result.fotoIneReverso = await loadUrl(byType.get('INE_REVERSO'));
+    result.comprobanteDomicilioActualUrl = await loadUrl(byType.get('COMPROBANTE_DOMICILIO'));
+
+    if (!result.estadosCuenta) result.estadosCuenta = {};
+    for (const key of ['mes1Url', 'mes2Url', 'mes3Url', 'archivoConsolidadoUrl']) {
+      result.estadosCuenta[key] = await loadUrl(byType.get(documentTypeForStateKey(key)));
+    }
+
+    const defaultDocs = result.documentosFondeo || getCredimovilDefaultDocs(Boolean(result.esVehiculoLegalizado));
+    result.documentosFondeo = await Promise.all(defaultDocs.map(async (doc: any) => {
+      const stored = byType.get(`FONDEO_${doc.id}`);
+      if (!stored) return { ...doc, archivoUrl: '' };
+
+      return {
+        ...doc,
+        estatus: stored.estatus || doc.estatus,
+        archivoUrl: await loadUrl(stored),
+        archivoNombre: stored.nombre || doc.archivoNombre,
+        archivoTipo: stored.mime_type || doc.archivoTipo,
+        archivoTamano: stored.tamano || doc.archivoTamano,
+        observaciones: stored.observaciones || '',
+        fechaSubida: stored.created_at || doc.fechaSubida,
+      };
+    }));
+
+    return result;
+  })();
+}
+
 async function getSupabaseExpedientes() {
   if (!supabase) return null;
 
   const { data, error } = await supabase
     .from('expedientes')
-    .select('*')
+    .select('*,documentos(*)')
     .order('updated_at', { ascending: false });
 
   if (error) throw new Error(`Supabase expedientes: ${error.message}`);
 
-  return (data || []).map((row: any) => {
+  const result = [];
+  for (const row of data || []) {
     const source = row.data && typeof row.data === 'object' ? row.data : {};
-    return {
+    const exp = {
       ...source,
       id: source.id || row.id,
+      supabaseId: row.id,
       folio: row.folio || source.folio,
       pinFondeo: row.pin_fondeo || source.pinFondeo,
       estatus: row.estatus || source.estatus || 'NUEVO',
@@ -93,440 +347,33 @@ async function getSupabaseExpedientes() {
       fechaCreacion: source.fechaCreacion || row.created_at,
       fechaActualizacion: source.fechaActualizacion || row.updated_at,
     };
-  });
-}
-
-async function getSupabaseLotes() {
-  if (!supabase) return null;
-  const { data, error } = await supabase
-    .from('lotes')
-    .select('*')
-    .order('created_at', { ascending: true });
-
-  if (error) {
-    throw new Error(`Supabase lotes: ${error.message}`);
+    result.push(await applyStoredDocumentsToExpediente(exp, row.documentos || []));
   }
 
-  return (data || []).map(mapSupabaseLote);
-}
-
-async function ensureLegacyLotesMigrated() {
-  if (!supabase) return;
-
-  const localLotes = readJson(LOTES_FILE, DEFAULT_LOTES);
-  if (!Array.isArray(localLotes) || localLotes.length === 0) return;
-
-  for (const lote of localLotes) {
-    const nombre = String(lote?.nombre || '').trim();
-    if (!nombre) continue;
-
-    const { data: existing, error: findError } = await supabase
-      .from('lotes')
-      .select('id')
-      .ilike('nombre', nombre)
-      .limit(1);
-
-    if (findError) {
-      console.error('Supabase: no se pudo revisar lote legado:', findError.message);
-      continue;
-    }
-
-    if (existing && existing.length > 0) {
-      continue;
-    }
-
-    const payload = {
-      nombre,
-      contacto: String(lote?.contacto || ''),
-      telefono: String(lote?.telefono || ''),
-      correo: String(lote?.correo || ''),
-      direccion: String(lote?.direccion || ''),
-      ciudad: String(lote?.ciudad || 'México'),
-      cuenta_clabe_default: String(lote?.cuentaClabeDefault || ''),
-      banco_default: String(lote?.bancoDefault || ''),
-      activo: lote?.activo !== false,
-    };
-
-    const { error: insertError } = await supabase.from('lotes').insert(payload);
-    if (insertError) {
-      console.error(`Supabase: no se pudo migrar el lote "${nombre}":`, insertError.message);
-    } else {
-      console.log(`Supabase: lote legado migrado correctamente: ${nombre}`);
-    }
-  }
-}
-
-
-// Body parser with 50mb limit for high-res PNG, JPG and PDF documents
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// Persistence directory
-const DATA_DIR = path.resolve(__dirname, 'data');
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
-const EXPEDIENTES_FILE = path.join(DATA_DIR, 'expedientes.json');
-const LOTES_FILE = path.join(DATA_DIR, 'lotes.json');
-const ADMIN_FILE = path.join(DATA_DIR, 'admin.json');
-const ASESORES_FILE = path.join(DATA_DIR, 'asesores.json');
-const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
-
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
-// Initialize Gemini Client
-const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim();
-
-// Always authenticate explicitly with an API key. If the variable is absent,
-// never let the SDK fall back to Google Application Default Credentials.
-const ai = GEMINI_API_KEY
-  ? new GoogleGenAI({
-      apiKey: GEMINI_API_KEY,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'credimovil-ocr',
-        },
-      },
-    })
-  : null;
-
-// Helper: extract exact MIME type and raw Base64 string from data URI
-function extractMimeAndBase64(dataUriOrRaw: string): { mimeType: string; base64: string } {
-  if (!dataUriOrRaw) return { mimeType: 'image/jpeg', base64: '' };
-  const trimmed = dataUriOrRaw.trim();
-  const match = trimmed.match(/^data:([^;]+);base64,(.+)$/s);
-  if (match) {
-    let mime = match[1].toLowerCase().trim();
-    if (mime === 'image/jpg') mime = 'image/jpeg';
-    // Clean any accidental whitespace inside base64 payload
-    const base64Clean = match[2].replace(/\s+/g, '');
-    return { mimeType: mime, base64: base64Clean };
-  }
-  // If raw base64 without prefix
-  const clean = trimmed.replace(/\s+/g, '');
-  return { mimeType: 'image/jpeg', base64: clean };
-}
-
-// CrediMóvil Official Document Checklist generator
-export function getCredimovilDefaultDocs(esLegalizado: boolean = false) {
-  const docs = [
-    // 1. Documentación Básica (Todos los Vehículos) - Checklist CrediMóvil
-    {
-      id: 'doc-factura',
-      categoria: 'VEHICULO_BASICA',
-      tipo: 'FACTURA',
-      nombre: 'Factura Original del Vehículo',
-      descripcion: 'Debe presentarse la factura original correspondiente legible.',
-      requerido: true,
-      estatus: 'PENDIENTE',
-    },
-    {
-      id: 'doc-consecutivos',
-      categoria: 'VEHICULO_BASICA',
-      tipo: 'CONSECUTIVOS_FACTURA',
-      nombre: 'Consecutivos de Factura',
-      descripcion: 'Todas las facturas consecutivas. Incluir la cadena completa de facturación.',
-      requerido: true,
-      estatus: 'PENDIENTE',
-    },
-    {
-      id: 'doc-endosos',
-      categoria: 'VEHICULO_BASICA',
-      tipo: 'ENDOSOS',
-      nombre: 'Endosos de las Facturas',
-      descripcion: 'Endosos de las facturas en caso de existir, acompañando a los consecutivos correspondientes.',
-      requerido: false,
-      estatus: 'PENDIENTE',
-    },
-    {
-      id: 'doc-refrendos',
-      categoria: 'VEHICULO_BASICA',
-      tipo: 'REFRENDO_TENENCIA',
-      nombre: 'Refrendo / Tenencia (Últimos 5 Años)',
-      descripcion: 'Comprobantes de pago de refrendo y tenencia de los últimos 5 años.',
-      requerido: true,
-      estatus: 'PENDIENTE',
-    },
-
-    // 2. Inicio de Crédito (CrediMóvil)
-    {
-      id: 'doc-ingresos',
-      categoria: 'INICIO_CREDITO',
-      tipo: 'COMPROBANTES_INGRESOS',
-      nombre: 'Comprobantes de Ingresos (3 Meses)',
-      descripcion: 'Últimos 3 meses de nómina, estados de cuenta bancarios o recibos de honorarios.',
-      requerido: true,
-      estatus: 'PENDIENTE',
-    },
-    {
-      id: 'doc-domicilio',
-      categoria: 'INICIO_CREDITO',
-      tipo: 'COMPROBANTE_DOMICILIO',
-      nombre: 'Comprobante de Domicilio (Agua o Luz)',
-      descripcion: 'Recibo oficial de agua o luz con antigüedad no mayor a 3 meses.',
-      requerido: true,
-      estatus: 'PENDIENTE',
-    },
-
-    // 3. Fondeo y Pago al Lote
-    {
-      id: 'doc-clabe-lote',
-      categoria: 'PAGO_FONDEO',
-      tipo: 'CARATULA_BANCARIA_LOTE',
-      nombre: 'Carátula Bancaria del Lote (CLABE)',
-      descripcion: 'Estado de cuenta oficial del lote con CLABE interbancaria para la transferencia de fondeo.',
-      requerido: true,
-      estatus: 'PENDIENTE',
-    },
-
-    // 4. Documentación Adicional (Solo si el vehículo es legalizado)
-    {
-      id: 'doc-titulo',
-      categoria: 'VEHICULO_LEGALIZADO',
-      tipo: 'TITULO_PROPIEDAD',
-      nombre: 'Título de Propiedad',
-      descripcion: 'Título de propiedad (aplica únicamente para vehículos legalizados).',
-      requerido: esLegalizado,
-      estatus: 'PENDIENTE',
-    },
-    {
-      id: 'doc-pedimento',
-      categoria: 'VEHICULO_LEGALIZADO',
-      tipo: 'PEDIMENTO_IMPORTACION',
-      nombre: 'Pedimento de Importación',
-      descripcion: 'Pedimento oficial de importación (aplica únicamente para vehículos legalizados).',
-      requerido: esLegalizado,
-      estatus: 'PENDIENTE',
-    },
-    {
-      id: 'doc-factura-importadora',
-      categoria: 'VEHICULO_LEGALIZADO',
-      tipo: 'FACTURA_IMPORTADORA',
-      nombre: 'Factura de Importadora',
-      descripcion: 'Factura emitida por la importadora (incluir todos los consecutivos).',
-      requerido: esLegalizado,
-      estatus: 'PENDIENTE',
-    },
-    {
-      id: 'doc-consecutivos-importadora',
-      categoria: 'VEHICULO_LEGALIZADO',
-      tipo: 'CONSECUTIVOS_IMPORTADORA',
-      nombre: 'Consecutivos de Importadora',
-      descripcion: 'Cadena de facturas de la importadora (presentar la documentación completa).',
-      requerido: esLegalizado,
-      estatus: 'PENDIENTE',
-    },
-    {
-      id: 'doc-pagos-legalizacion',
-      categoria: 'VEHICULO_LEGALIZADO',
-      tipo: 'PAGOS_LEGALIZACION',
-      nombre: 'Comprobantes de Pagos de Legalización',
-      descripcion: 'Comprobantes de pago de legalización según la fecha en que se realizó.',
-      requerido: esLegalizado,
-      estatus: 'PENDIENTE',
-    },
-  ];
-
-  return docs;
-}
-
-// Initial Dealerships
-const DEFAULT_LOTES: any[] = [];
-
-// Helper: read/write JSON safely
-function readJson(filePath: string, fallback: any) {
-  try {
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify(fallback, null, 2), 'utf-8');
-      return fallback;
-    }
-
-    const raw = fs.readFileSync(filePath, 'utf-8').trim();
-    if (!raw) {
-      fs.writeFileSync(filePath, JSON.stringify(fallback, null, 2), 'utf-8');
-      console.warn(`Archivo JSON vacío reparado: ${filePath}`);
-      return fallback;
-    }
-
-    return JSON.parse(raw);
-  } catch (err) {
-    console.warn(`Archivo JSON corrupto, se reconstruye con valores seguros: ${filePath}`, err);
-    try {
-      fs.writeFileSync(filePath, JSON.stringify(fallback, null, 2), 'utf-8');
-    } catch (writeErr) {
-      console.warn(`No se pudo reparar ${filePath}:`, writeErr);
-    }
-    return fallback;
-  }
-}
-
-function writeJson(filePath: string, data: any) {
-  try {
-    const tempPath = `${filePath}.tmp.${Date.now()}`;
-    fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf-8');
-    fs.renameSync(tempPath, filePath);
-  } catch (err) {
-    console.error(`Error writing ${filePath}:`, err);
-  }
-}
-
-const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
-const DOCUMENT_TTL_SECONDS = 24 * 60 * 60;
-const SESSION_SECRET = (process.env.CREDIMOVIL_SESSION_SECRET || process.env.GEMINI_API_KEY || '').trim();
-const sessions = new Map<string, { username: string; role: 'admin' | 'asesor' | 'lote'; nombre: string; loteId?: string; expiresAt: number }>();
-
-function normalizeUsername(value: string = '') { return value.trim().toLowerCase(); }
-function hashPassword(password: string, salt = randomBytes(16).toString('hex')) {
-  return `${salt}:${scryptSync(password, salt, 64).toString('hex')}`;
-}
-function verifyPassword(password: string, storedHash: string) {
-  const [salt, expectedHex] = String(storedHash || '').split(':');
-  if (!salt || !expectedHex) return false;
-  const actual = scryptSync(password, salt, 64);
-  const expected = Buffer.from(expectedHex, 'hex');
-  return expected.length === actual.length && timingSafeEqual(actual, expected);
-}
-function safeEqualText(a: string, b: string) {
-  const aa = Buffer.from(String(a)); const bb = Buffer.from(String(b));
-  return aa.length === bb.length && timingSafeEqual(aa, bb);
-}
-function getBearerToken(req: any) {
-  const value = String(req.headers.authorization || '');
-  return value.startsWith('Bearer ') ? value.slice(7).trim() : '';
-}
-function getSession(req: any) {
-  const token = getBearerToken(req);
-  if (!token) return null;
-  const session = sessions.get(token);
-  if (!session) return null;
-  if (session.expiresAt < Date.now()) { sessions.delete(token); return null; }
-  return { ...session, token };
-}
-function requireAuth(req: any, res: any) {
-  const session = getSession(req);
-  if (!session) {
-    res.status(401).json({ success: false, message: 'Debes iniciar sesión como asesor para acceder a este recurso.' });
-    return null;
-  }
-  return session;
-}
-function requireAdmin(req: any, res: any) {
-  const session = requireAuth(req, res);
-  if (!session) return null;
-  if (session.role !== 'admin') {
-    res.status(403).json({ success: false, message: 'Esta función requiere permisos de administrador.' });
-    return null;
-  }
-  return session;
-}
-
-function requireStaff(req: any, res: any) {
-  const session = requireAuth(req, res);
-  if (!session) return null;
-  if (session.role !== 'admin' && session.role !== 'asesor') {
-    res.status(403).json({ success: false, message: 'Esta función es exclusiva del equipo CrediMóvil.' });
-    return null;
-  }
-  return session;
-}
-function advisorRecords() { return readJson(ASESORES_FILE, []); }
-function writeAdvisorRecords(records: any[]) { writeJson(ASESORES_FILE, records); }
-
-async function findLoteUser(username: string) {
-  if (!supabase) return null;
-  const { data, error } = await supabase
-    .from('lote_usuarios')
-    .select('id,nombre,username,password_hash,activo,lote_id')
-    .eq('username', username)
-    .maybeSingle();
-
-  if (error) throw new Error(`Supabase usuarios de lote: ${error.message}`);
-  return data || null;
-}
-
-function requireLote(req: any, res: any) {
-  const session = requireAuth(req, res);
-  if (!session) return null;
-  if (session.role !== 'lote' || !session.loteId) {
-    res.status(403).json({ success: false, message: 'Esta función es exclusiva del portal del lote.' });
-    return null;
-  }
-  return session;
-}
-
-async function supabaseLoteUserList() {
-  if (!supabase) return [];
-  const { data, error } = await supabase
-    .from('lote_usuarios')
-    .select('id,nombre,username,activo,lote_id,created_at')
-    .order('created_at', { ascending: true });
-  if (error) throw new Error(`Supabase usuarios de lote: ${error.message}`);
-  return data || [];
-}
-
-function expedienteToSupabasePayload(exp: any) {
-  const ine = exp?.ine || {};
-  return {
-    folio: String(exp?.folio || ''),
-    pin_fondeo: String(exp?.pinFondeo || ''),
-    estatus: String(exp?.estatus || 'NUEVO'),
-    lote_id: typeof exp?.loteId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(exp.loteId) ? exp.loteId : null,
-    asesor_id: null,
-    cliente_nombre: String(ine?.nombreCompleto || ine?.nombre || ''),
-    cliente_curp: String(ine?.curp || ''),
-    cliente_rfc: String(ine?.rfc || ''),
-    telefono: String(exp?.telefono || ''),
-    correo: String(exp?.correo || ''),
-    auto_marca: String(exp?.autoMarca || ''),
-    auto_modelo: String(exp?.autoModelo || ''),
-    auto_ano: Number(exp?.autoAno) || null,
-    monto_financiar: Number(exp?.montoFinanciar) || 0,
-    data: exp || {},
-  };
+  return result;
 }
 
 async function upsertExpedienteSupabase(exp: any) {
-  if (!supabase || !exp?.folio) return;
+  if (!supabase || !exp?.folio) throw new Error('Supabase no está configurado.');
 
-  let payload = expedienteToSupabasePayload(exp);
-
-  // Legacy/manual lots may only have the lot name. Resolve it to the Supabase UUID.
-  if (!payload.lote_id && exp?.loteNombre) {
-    const { data: lote, error: loteError } = await supabase
-      .from('lotes')
-      .select('id')
-      .ilike('nombre', String(exp.loteNombre).trim())
-      .limit(1)
-      .maybeSingle();
-    if (loteError) throw new Error(`Supabase lote para expediente: ${loteError.message}`);
-    if (lote?.id) {
-      payload = { ...payload, lote_id: lote.id };
-    }
-  }
+  const existing = await getSupabaseExpedienteRowByFolio(exp.folio);
+  const dbId = existing?.id || randomUUID();
+  const clean = await storeExpedienteDocuments(exp, dbId);
+  const payload = {
+    ...expedienteToSupabasePayload(clean),
+    id: dbId,
+    data: clean,
+  };
 
   const { error } = await supabase
     .from('expedientes')
     .upsert(payload, { onConflict: 'folio' });
 
   if (error) throw new Error(`Supabase expediente ${exp.folio}: ${error.message}`);
+
+  return dbId;
 }
 
-async function ensureLegacyExpedientesMigrated() {
-  if (!supabase) return;
-  const localExpedientes = readJson(EXPEDIENTES_FILE, []);
-  if (!Array.isArray(localExpedientes) || localExpedientes.length === 0) return;
-
-  for (const exp of localExpedientes) {
-    try {
-      await upsertExpedienteSupabase(exp);
-    } catch (error: any) {
-      console.error(`Supabase: no se pudo migrar expediente ${exp?.folio || exp?.id}:`, error?.message || error);
-    }
-  }
-}
 function signDocumentAccessToken(expedienteId: string) {
   if (!SESSION_SECRET) return '';
   const payload = Buffer.from(JSON.stringify({
