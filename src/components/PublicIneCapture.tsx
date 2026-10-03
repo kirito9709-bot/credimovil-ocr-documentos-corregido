@@ -141,7 +141,9 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const [tiempoViviendoDomicilio, setTiempoViviendoDomicilio] = useState('');
   const [casaPropiaORentada, setCasaPropiaORentada] = useState<'PROPIA' | 'RENTADA' | 'FAMILIAR' | ''>('');
   const [tiempoEnTrabajo, setTiempoEnTrabajo] = useState('');
+  const [tiempoViviendoDomicilio, setTiempoViviendoDomicilio] = useState('');
   const [nombreUbicacionEmpleo, setNombreUbicacionEmpleo] = useState('');
+  const [direccionEmpleo, setDireccionEmpleo] = useState('');
   const [giroActividadEmpresa, setGiroActividadEmpresa] = useState('');
   const [dependientesEconomicos, setDependientesEconomicos] = useState<number>(0);
   const [estadoCivil, setEstadoCivil] = useState<'SOLTERO' | 'CASADO' | 'UNION_LIBRE' | 'DIVORCIADO' | 'VIUDO' | ''>('SOLTERO');
@@ -465,6 +467,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         casaPropiaORentada,
         tiempoEnTrabajo,
         nombreUbicacionEmpleo,
+        direccionEmpleo,
         giroActividadEmpresa,
         dependientesEconomicos: Number(dependientesEconomicos) || 0,
         estadoCivil,
@@ -1975,6 +1978,19 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Antigüedad en domicilio
+              </label>
+              <input
+                type="text"
+                value={tiempoViviendoDomicilio}
+                onChange={(e) => setTiempoViviendoDomicilio(e.target.value)}
+                placeholder="ej. 5 años"
+                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 Empresa / Lugar de Trabajo
               </label>
               <input
@@ -1982,6 +1998,19 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 value={nombreUbicacionEmpleo}
                 onChange={(e) => setNombreUbicacionEmpleo(e.target.value)}
                 placeholder="ej. Nemak México"
+                className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Dirección del empleo
+              </label>
+              <input
+                type="text"
+                value={direccionEmpleo}
+                onChange={(e) => setDireccionEmpleo(e.target.value)}
+                placeholder="Calle, número, colonia, municipio, estado"
                 className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
               />
             </div>
