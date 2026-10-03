@@ -67,6 +67,7 @@ export interface ReferenciaPersonal {
   telefono: string;
   relacion: string;
   esFamiliar: boolean;
+  ciudad?: string;
 }
 
 export interface EstadosCuentaAnalisis {
