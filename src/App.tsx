@@ -107,6 +107,10 @@ export default function App() {
     setLotes((prev) => [...prev, newLote]);
   };
 
+  const handleLoteDeleted = (id: string) => {
+    setLotes((prev) => prev.filter((l) => l.id !== id));
+  };
+
   const handleDeleteExpediente = async (id: string) => {
     try {
       await api.deleteExpediente(id);
@@ -224,6 +228,7 @@ export default function App() {
         onClose={() => setShowLotesModal(false)}
         lotes={lotes}
         onLoteCreated={handleLoteCreated}
+        onLoteDeleted={handleLoteDeleted}
       />
     </div>
   );
