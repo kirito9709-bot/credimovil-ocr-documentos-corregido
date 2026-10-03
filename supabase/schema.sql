@@ -101,3 +101,18 @@ on conflict (id) do update set public = false;
 
 -- No public read policies are created intentionally.
 -- The server will generate time-limited signed URLs for private documents.
+
+
+create table if not exists public.lote_usuarios (
+  id uuid primary key default gen_random_uuid(),
+  lote_id uuid not null references public.lotes(id) on delete cascade,
+  nombre text not null,
+  username text not null unique,
+  password_hash text not null,
+  activo boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists lote_usuarios_lote_id_idx on public.lote_usuarios(lote_id);
+alter table public.lote_usuarios enable row level security;
+
