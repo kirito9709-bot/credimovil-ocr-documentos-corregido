@@ -222,6 +222,16 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
 
   const ine = expediente.ine || {};
   const dom = ine.domicilio || {};
+  const currentChatUser = (() => {
+    try {
+      const saved = localStorage.getItem('credimovil_auth_user');
+      return saved
+        ? JSON.parse(saved)
+        : { username: 'asesor', role: 'asesor', nombre: 'CrediMóvil' };
+    } catch {
+      return { username: 'asesor', role: 'asesor', nombre: 'CrediMóvil' };
+    }
+  })();
 
   return (
     <div
@@ -1040,10 +1050,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
           onClose={() => setShowComments(false)}
           expedienteId={expediente.id}
           folio={expediente.folio}
-          authUser={(() => {
-            const saved = localStorage.getItem('credimovil_auth_user');
-            return saved ? JSON.parse(saved) : { username: 'asesor', role: 'asesor', nombre: 'CrediMóvil' };
-          })()}
+          authUser={currentChatUser}
         />
       )}
 
