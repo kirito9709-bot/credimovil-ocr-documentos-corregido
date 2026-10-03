@@ -1,15 +1,15 @@
 @theme {
-  --color-slate-950: #041329;
-  --color-slate-900: #071A33;
-  --color-slate-800: #0F2A4D;
-  --color-slate-700: #294767;
-  --color-slate-600: #46617D;
-  --color-slate-500: #647B92;
-  --color-slate-400: #8DA0B3;
-  --color-slate-300: #B8C5D1;
-  --color-slate-200: #D7E0E7;
-  --color-slate-100: #EAF0F4;
-  --color-slate-50: #F5F8FA;
+  --color-slate-950: #0B132B;
+  --color-slate-900: #1C2541;
+  --color-slate-800: #2E3A59;
+  --color-slate-700: #3A4868;
+  --color-slate-600: #52627F;
+  --color-slate-500: #7483A0;
+  --color-slate-400: #94A3BD;
+  --color-slate-300: #B9C4D6;
+  --color-slate-200: #D1D9E6;
+  --color-slate-100: #E6EBF3;
+  --color-slate-50: #F1F4F8;
 
   --color-red-300: #F87171;
   --color-red-400: #F05252;
@@ -85,7 +85,7 @@ body {
   margin: 0;
   overflow-x: hidden;
   overscroll-behavior-x: none;
-  background: #EBF0F8;
+  background: #0B132B;
 }
 
 button,
