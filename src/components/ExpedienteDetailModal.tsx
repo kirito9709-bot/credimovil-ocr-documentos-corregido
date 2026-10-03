@@ -847,6 +847,16 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
         </div>
       </div>
 
+      <div className="flex justify-end border-t border-slate-800 pt-4 print:hidden">
+        <button
+          type="button"
+          onClick={onClose}
+          className="py-2.5 px-5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs"
+        >
+          Cerrar expediente
+        </button>
+      </div>
+
       {/* Preview modal for PDF & PNG */}
       {previewDocUrl && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/90 p-4">
