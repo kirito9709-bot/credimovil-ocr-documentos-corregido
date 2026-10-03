@@ -23,7 +23,6 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
     setError(null);
     try {
       const res = await api.login(username.trim(), password);
-      localStorage.setItem('credimovil_auth_token', res.token);
       localStorage.setItem('credimovil_auth_user', JSON.stringify(res.user));
       onSuccess(res.user);
       onClose();
