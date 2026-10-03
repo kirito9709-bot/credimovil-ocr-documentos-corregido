@@ -14,20 +14,21 @@ export const ChatLoteModal: React.FC<Props> = ({ isOpen, onClose, authUser, lote
   const isLote = authUser.role === 'lote';
   const [selectedLoteId, setSelectedLoteId] = useState(initialLoteId || authUser.loteId || '');
   const [messages, setMessages] = useState<any[]>([]);
+  const [chatLoteName, setChatLoteName] = useState('Lote');
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const lotName = useMemo(() => lotes.find((l) => l.id === selectedLoteId)?.nombre || 'Lote', [lotes, selectedLoteId]);
+  const lotName = useMemo(() => lotes.find((l) => l.id === selectedLoteId)?.nombre || chatLoteName, [lotes, selectedLoteId, chatLoteName]);
 
   const load = async (silent = false) => {
     if (!selectedLoteId) return;
     if (!silent) setLoading(true);
     try {
       const res = await api.getLoteChat(selectedLoteId);
-      if (res.success) setMessages(res.mensajes || []);
+      if (res.success) { setMessages(res.mensajes || []); setChatLoteName(res.lote?.nombre || 'Lote'); }
       else setError(res.message || 'No se pudo cargar el chat.');
     } catch (err: any) { if (!silent) setError(err.message || 'No se pudo cargar el chat.'); }
     finally { if (!silent) setLoading(false); }
