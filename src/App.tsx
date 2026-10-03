@@ -37,19 +37,19 @@ export default function App() {
 
   // Initial load
   useEffect(() => {
-    // Check local storage for auth token
-    const token = localStorage.getItem('credimovil_auth_token');
+    // Restore the authenticated session from the HttpOnly cookie.
     const savedUser = localStorage.getItem('credimovil_auth_user');
-    if (token && savedUser) {
-      try {
-        const user = JSON.parse(savedUser);
-        setIsAdminAuth(true);
-        setAuthUser(user);
-      } catch {
-        localStorage.removeItem('credimovil_auth_token');
+    api.getMe()
+      .then((res) => {
+        if (res?.success && res.user) {
+          setIsAdminAuth(true);
+          setAuthUser(res.user);
+          localStorage.setItem('credimovil_auth_user', JSON.stringify(res.user));
+        }
+      })
+      .catch(() => {
         localStorage.removeItem('credimovil_auth_user');
-      }
-    }
+      });
 
     // Load initial lotes
     loadLotes();
