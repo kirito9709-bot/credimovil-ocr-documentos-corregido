@@ -267,6 +267,16 @@ export const LotesManagerModal: React.FC<LotesManagerModalProps> = ({
                       <span className="font-mono text-slate-300">{lote.cuentaClabeDefault}</span> ({lote.bancoDefault || 'Banco'})
                     </p>
                   )}
+
+                  <p>
+                    <span className="text-slate-500">Usuario portal:</span>{' '}
+                    {lote.usuariosPortal?.length
+                      ? lote.usuariosPortal
+                          .filter((u: any) => u.activo !== false)
+                          .map((u: any) => `@${u.username}`)
+                          .join(', ')
+                      : 'Sin acceso creado'}
+                  </p>
                 </div>
 
 {canManage && (
