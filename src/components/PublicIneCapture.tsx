@@ -163,7 +163,9 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const [autoModelo, setAutoModelo] = useState('');
   const [autoAno, setAutoAno] = useState<number>(new Date().getFullYear());
   const [autoPrecio, setAutoPrecio] = useState<number | ''>('');
+  const [engancheModo, setEngancheModo] = useState<'PORCENTAJE' | 'MONTO'>('PORCENTAJE');
   const [enganchePorcentaje, setEnganchePorcentaje] = useState<number>(20);
+  const [engancheMonto, setEngancheMonto] = useState<number | ''>('');
   const [plazoMeses, setPlazoMeses] = useState<number>(48);
   const [esVehiculoLegalizado, setEsVehiculoLegalizado] = useState(false);
 
@@ -380,8 +382,17 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   if (hasEstadosCuenta) docsCompletadosCount++;
 
   // Calculations: enganche expressed as a percentage, minimum 20%.
+  const precioSeguro = Number(autoPrecio) || 0;
+  const engancheMinimoPesos = Math.round(precioSeguro * 0.20);
   const enganchePorcentajeSeguro = Math.min(100, Math.max(20, Number(enganchePorcentaje) || 20));
-  const calcEnganche = Math.round((Number(autoPrecio) || 0) * enganchePorcentajeSeguro / 100);
+  const engancheMontoSeguro = Math.min(
+    precioSeguro,
+    Math.max(engancheMinimoPesos, Number(engancheMonto) || engancheMinimoPesos)
+  );
+  const calcEnganche = engancheModo === 'PORCENTAJE'
+    ? Math.round(precioSeguro * enganchePorcentajeSeguro / 100)
+    : engancheMontoSeguro;
+  const calcEnganchePorcentajeReal = precioSeguro > 0 ? Math.round((calcEnganche / precioSeguro) * 10000) / 100 : 0;
   const calcMontoFinanciar = Math.max(0, (Number(autoPrecio) || 0) - calcEnganche);
   const tasaInteresFija = 28;
   const tasaMensual = (tasaInteresFija / 100) / 12;
@@ -466,6 +477,8 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         autoAno,
         autoPrecio: Number(autoPrecio) || 0,
         enganche: calcEnganche,
+        engancheModo,
+        enganchePorcentaje: calcEnganchePorcentajeReal,
         montoFinanciar: calcMontoFinanciar,
         plazoMeses,
         tasaInteresAnual: 28,
@@ -567,7 +580,9 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     setAutoMarca('');
     setAutoModelo('');
     setAutoPrecio('');
+    setEngancheModo('PORCENTAJE');
     setEnganchePorcentaje(20);
+    setEngancheMonto('');
     setReferencias([
       { nombre: '', telefono: '', relacion: 'Familiar (otro domicilio)', esFamiliar: true },
       { nombre: '', telefono: '', relacion: 'Conocido 1', esFamiliar: false },
@@ -2159,27 +2174,79 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Enganche (% del valor) <span className="text-red-500">*</span>
+                Enganche <span className="text-red-500">*</span>
               </label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  min={20}
-                  max={100}
-                  step={1}
-                  value={enganchePorcentajeSeguro}
-                  onChange={(e) => {
-                    const value = Number(e.target.value) || 20;
-                    setEnganchePorcentaje(Math.min(100, Math.max(20, value)));
+              <div className="flex gap-2 mb-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEngancheModo('PORCENTAJE');
+                    if (!enganchePorcentaje) setEnganchePorcentaje(20);
                   }}
-                  className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm font-semibold focus:border-slate-900 focus:outline-none"
-                />
-                <div className="py-2 px-3 bg-slate-100 border border-slate-300 rounded-xl text-slate-700 text-sm font-bold">
-                  %
-                </div>
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border transition ${
+                    engancheModo === 'PORCENTAJE'
+                      ? 'bg-red-600 text-white border-red-600'
+                      : 'bg-white text-slate-600 border-slate-300'
+                  }`}
+                >
+                  Porcentaje (%)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEngancheModo('MONTO');
+                    setEngancheMonto(calcEnganche);
+                  }}
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border transition ${
+                    engancheModo === 'MONTO'
+                      ? 'bg-red-600 text-white border-red-600'
+                      : 'bg-white text-slate-600 border-slate-300'
+                  }`}
+                >
+                  Monto en efectivo ($)
+                </button>
               </div>
+
+              {engancheModo === 'PORCENTAJE' ? (
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min={20}
+                    max={100}
+                    step={1}
+                    value={enganchePorcentajeSeguro}
+                    onChange={(e) => {
+                      const value = Number(e.target.value) || 20;
+                      setEnganchePorcentaje(Math.min(100, Math.max(20, value)));
+                    }}
+                    className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm font-semibold focus:border-slate-900 focus:outline-none"
+                  />
+                  <div className="py-2 px-3 bg-slate-100 border border-slate-300 rounded-xl text-slate-700 text-sm font-bold">
+                    %
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <div className="py-2 px-3 bg-slate-100 border border-slate-300 rounded-xl text-slate-700 text-sm font-bold">
+                    $
+                  </div>
+                  <input
+                    type="number"
+                    min={engancheMinimoPesos}
+                    max={precioSeguro}
+                    step={1000}
+                    value={engancheMonto === '' ? engancheMinimoPesos : engancheMonto}
+                    onChange={(e) => {
+                      const value = Number(e.target.value) || engancheMinimoPesos;
+                      setEngancheMonto(Math.min(precioSeguro, Math.max(engancheMinimoPesos, value)));
+                    }}
+                    className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm font-semibold focus:border-slate-900 focus:outline-none"
+                  />
+                </div>
+              )}
+
               <p className="text-[10px] text-slate-500 mt-1">
-                Mínimo requerido: 20% • Enganche calculado: $ {calcEnganche.toLocaleString('es-MX')} MXN
+                Mínimo: 20% ({engancheMinimoPesos.toLocaleString('es-MX')} MXN) • Equivalente: {calcEnganchePorcentajeReal}%
               </p>
             </div>
 
