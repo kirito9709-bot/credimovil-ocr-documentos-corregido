@@ -147,6 +147,31 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const [dependientesEconomicos, setDependientesEconomicos] = useState<number>(0);
   const [estadoCivil, setEstadoCivil] = useState<'SOLTERO' | 'CASADO' | 'UNION_LIBRE' | 'DIVORCIADO' | 'VIUDO' | ''>('SOLTERO');
 
+  // Obligado solidario: misma documentación inicial que el solicitante, adjunta al mismo expediente.
+  const [requiereObligadoSolidario, setRequiereObligadoSolidario] = useState(false);
+  const [obligadoNombre, setObligadoNombre] = useState('');
+  const [obligadoIneFrente, setObligadoIneFrente] = useState<string | null>(null);
+  const [obligadoIneFrenteNombre, setObligadoIneFrenteNombre] = useState('');
+  const [obligadoIneReverso, setObligadoIneReverso] = useState<string | null>(null);
+  const [obligadoIneReversoNombre, setObligadoIneReversoNombre] = useState('');
+  const [obligadoComprobante, setObligadoComprobante] = useState<string | null>(null);
+  const [obligadoComprobanteNombre, setObligadoComprobanteNombre] = useState('');
+  const [obligadoMes1, setObligadoMes1] = useState<string | null>(null);
+  const [obligadoMes1Nombre, setObligadoMes1Nombre] = useState('');
+  const [obligadoMes2, setObligadoMes2] = useState<string | null>(null);
+  const [obligadoMes2Nombre, setObligadoMes2Nombre] = useState('');
+  const [obligadoMes3, setObligadoMes3] = useState<string | null>(null);
+  const [obligadoMes3Nombre, setObligadoMes3Nombre] = useState('');
+  const [obligadoConsolidado, setObligadoConsolidado] = useState<string | null>(null);
+  const [obligadoConsolidadoNombre, setObligadoConsolidadoNombre] = useState('');
+  const obligadoIneFrenteInput = useRef<HTMLInputElement | null>(null);
+  const obligadoIneReversoInput = useRef<HTMLInputElement | null>(null);
+  const obligadoComprobanteInput = useRef<HTMLInputElement | null>(null);
+  const obligadoMes1Input = useRef<HTMLInputElement | null>(null);
+  const obligadoMes2Input = useRef<HTMLInputElement | null>(null);
+  const obligadoMes3Input = useRef<HTMLInputElement | null>(null);
+  const obligadoConsolidadoInput = useRef<HTMLInputElement | null>(null);
+
   // Referencias Personales
   const [referencias, setReferencias] = useState<ReferenciaPersonal[]>([
     { nombre: '', telefono: '', relacion: 'Familiar (otro domicilio)', esFamiliar: true },
@@ -369,6 +394,24 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     reader.readAsDataURL(file);
   };
 
+  const handleObligadoFile = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setter: (value: string | null) => void,
+    nameSetter: (value: string) => void,
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setter(reader.result);
+        nameSetter(file.name);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Readiness evaluation for analysis
   const hasIneCompleta = Boolean(fotoFrente && fotoReverso);
   const hasComprobanteDomicilio = Boolean(comprobanteDomicilioDoc);
@@ -376,6 +419,12 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     ? Boolean(comprobanteDomicilioDoc)
     : Boolean(ineData.domicilio?.calle || ocrCompleted || fotoFrente);
   const hasEstadosCuenta = modoEstadosCuenta === 'consolidado' ? Boolean(consolidadoDoc) : Boolean(mes1Doc && mes2Doc && mes3Doc);
+  const hasObligadoIne = Boolean(obligadoIneFrente && obligadoIneReverso);
+  const hasObligadoComprobante = Boolean(obligadoComprobante);
+  const hasObligadoEstados = modoEstadosCuenta === 'consolidado'
+    ? Boolean(obligadoConsolidado)
+    : Boolean(obligadoMes1 && obligadoMes2 && obligadoMes3);
+  const obligadoSolidarioCompleto = !requiereObligadoSolidario || Boolean(obligadoNombre.trim() && hasObligadoIne && hasObligadoComprobante && hasObligadoEstados);
 
   let docsCompletadosCount = 0;
   if (hasIneCompleta) docsCompletadosCount++;
@@ -420,6 +469,11 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     );
     if (referencias.length !== 3 || referenciasIncompletas) {
       setScanError('Debes capturar las 3 referencias obligatorias: 1 familiar de otro domicilio y 2 conocidos.');
+      return;
+    }
+
+    if (requiereObligadoSolidario && !obligadoSolidarioCompleto) {
+      setScanError('El obligado solidario requiere nombre, INE por ambos lados, comprobante de domicilio y los últimos 3 meses de estados de cuenta (o PDF consolidado).');
       return;
     }
 
@@ -471,6 +525,31 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         dependientesEconomicos: Number(dependientesEconomicos) || 0,
         estadoCivil,
         referenciasPersonales: referencias,
+        obligadoSolidario: requiereObligadoSolidario ? {
+          requerido: true,
+          nombre: obligadoNombre.trim(),
+          fotoIneFrente: obligadoIneFrente || '',
+          fotoIneFrenteNombre: obligadoIneFrenteNombre || '',
+          fotoIneReverso: obligadoIneReverso || '',
+          fotoIneReversoNombre: obligadoIneReversoNombre || '',
+          comprobanteDomicilioUrl: obligadoComprobante || '',
+          comprobanteDomicilioNombre: obligadoComprobanteNombre || '',
+          estadosCuenta: modoEstadosCuenta === 'consolidado'
+            ? {
+                archivoConsolidadoUrl: obligadoConsolidado || undefined,
+                archivoConsolidadoNombre: obligadoConsolidadoNombre || undefined,
+                fechaSubida: new Date().toISOString(),
+              }
+            : {
+                mes1Url: obligadoMes1 || undefined,
+                mes1Nombre: obligadoMes1Nombre || undefined,
+                mes2Url: obligadoMes2 || undefined,
+                mes2Nombre: obligadoMes2Nombre || undefined,
+                mes3Url: obligadoMes3 || undefined,
+                mes3Nombre: obligadoMes3Nombre || undefined,
+                fechaSubida: new Date().toISOString(),
+              },
+        } : { requerido: false },
         loteId: selectedLoteId === 'otro' ? undefined : selectedLoteId,
         loteNombre: loteNombreFinal,
         asesorLoteContacto: contactoVendedorLote || selectedLote?.contacto || '',
@@ -586,6 +665,22 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     setEngancheModo('PORCENTAJE');
     setEnganchePorcentaje(20);
     setEngancheMonto('');
+    setRequiereObligadoSolidario(false);
+    setObligadoNombre('');
+    setObligadoIneFrente(null);
+    setObligadoIneFrenteNombre('');
+    setObligadoIneReverso(null);
+    setObligadoIneReversoNombre('');
+    setObligadoComprobante(null);
+    setObligadoComprobanteNombre('');
+    setObligadoMes1(null);
+    setObligadoMes1Nombre('');
+    setObligadoMes2(null);
+    setObligadoMes2Nombre('');
+    setObligadoMes3(null);
+    setObligadoMes3Nombre('');
+    setObligadoConsolidado(null);
+    setObligadoConsolidadoNombre('');
     setReferencias([
       { nombre: '', telefono: '', relacion: 'Familiar (otro domicilio)', esFamiliar: true },
       { nombre: '', telefono: '', relacion: 'Conocido 1', esFamiliar: false },
@@ -1603,6 +1698,132 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               )}
             </div>
           </div>
+        </div>
+
+        {/* ======================================================== */}
+        {/* OBLIGADO SOLIDARIO */}
+        {/* ======================================================== */}
+        <div className="bg-white border-2 border-amber-200 rounded-2xl shadow-xs overflow-hidden">
+          <div className="px-6 py-5 bg-amber-50 flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <Users className="w-5 h-5 text-amber-600" />
+                Obligado Solidario
+              </h2>
+              <p className="text-xs text-slate-600 mt-1">
+                Actívalo únicamente cuando la financiera solicite un obligado solidario. Se adjuntará al mismo expediente.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRequiereObligadoSolidario((value) => !value)}
+              className={`relative w-14 h-7 rounded-full transition ${requiereObligadoSolidario ? 'bg-amber-500' : 'bg-slate-300'}`}
+              aria-pressed={requiereObligadoSolidario}
+            >
+              <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition ${requiereObligadoSolidario ? 'left-8' : 'left-1'}`} />
+            </button>
+          </div>
+
+          {requiereObligadoSolidario && (
+            <div className="p-6 sm:p-8 space-y-6">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Nombre completo del obligado solidario <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={obligadoNombre}
+                  onChange={(e) => setObligadoNombre(e.target.value)}
+                  placeholder="Nombre completo"
+                  className="w-full md:max-w-xl py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200">
+                <p className="text-xs font-bold text-slate-900">Documentación obligatoria del obligado solidario</p>
+                <p className="text-[11px] text-slate-600 mt-1">
+                  Se requieren los mismos documentos del solicitante: INE ambos lados, comprobante de domicilio y 3 meses de estados de cuenta, o un PDF consolidado.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  {label:'INE Frente', value:obligadoIneFrente, input:obligadoIneFrenteInput, setter:setObligadoIneFrente, name:setObligadoIneFrenteNombre, nameValue:obligadoIneFrenteNombre},
+                  {label:'INE Reverso', value:obligadoIneReverso, input:obligadoIneReversoInput, setter:setObligadoIneReverso, name:setObligadoIneReversoNombre, nameValue:obligadoIneReReversoNombre},
+                ].map((doc:any, index:number) => (
+                  <div key={doc.label} className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-bold text-slate-800">{doc.label} <span className="text-red-500">*</span></span>
+                      {doc.value && <Check className="w-4 h-4 text-emerald-600" />}
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => doc.input.current?.click()} className="flex-1 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
+                        <Upload className="w-3.5 h-3.5" /> Subir
+                      </button>
+                      {doc.value && <button type="button" onClick={() => { doc.setter(null); doc.name(''); }} className="px-3 py-2 bg-rose-50 text-rose-600 rounded-xl"><Trash2 className="w-3.5 h-3.5" /></button>}
+                    </div>
+                    <input
+                      ref={doc.input}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,application/pdf"
+                      className="hidden"
+                      onChange={(e) => handleObligadoFile(e, doc.setter, doc.name)}
+                    />
+                    {doc.nameValue && <p className="text-[11px] text-slate-500 mt-2 truncate">{doc.nameValue}</p>}
+                  </div>
+                ))}
+              </div>
+
+              <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800">Comprobante de domicilio <span className="text-red-500">*</span></span>
+                  {obligadoComprobante && <Check className="w-4 h-4 text-emerald-600" />}
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <button type="button" onClick={() => obligadoComprobanteInput.current?.click()} className="flex-1 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
+                    <Upload className="w-3.5 h-3.5" /> Subir comprobante
+                  </button>
+                  {obligadoComprobante && <button type="button" onClick={() => {setObligadoComprobante(null);setObligadoComprobanteNombre('')}} className="px-3 py-2 bg-rose-50 text-rose-600 rounded-xl"><Trash2 className="w-3.5 h-3.5" /></button>}
+                </div>
+                <input ref={obligadoComprobanteInput} type="file" accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden" onChange={(e)=>handleObligadoFile(e,setObligadoComprobante,setObligadoComprobanteNombre)} />
+                {obligadoComprobanteNombre && <p className="text-[11px] text-slate-500 mt-2 truncate">{obligadoComprobanteNombre}</p>}
+              </div>
+
+              <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60">
+                <p className="text-xs font-bold text-slate-800 mb-3">Estados de cuenta del obligado solidario <span className="text-red-500">*</span></p>
+                {modoEstadosCuenta === 'individual' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {[
+                      {label:'Mes 1', value:obligadoMes1, ref:obligadoMes1Input, setter:setObligadoMes1, name:setObligadoMes1Nombre, nameValue:obligadoMes1Nombre},
+                      {label:'Mes 2', value:obligadoMes2, ref:obligadoMes2Input, setter:setObligadoMes2, name:setObligadoMes2Nombre, nameValue:obligadoMes2Nombre},
+                      {label:'Mes 3', value:obligadoMes3, ref:obligadoMes3Input, setter:setObligadoMes3, name:setObligadoMes3Nombre, nameValue:obligadoMes3Nombre},
+                    ].map((doc:any)=>(
+                      <div key={doc.label} className="border border-slate-200 rounded-xl p-3 bg-white">
+                        <div className="flex items-center justify-between mb-2"><span className="text-xs font-bold text-slate-800">{doc.label}</span>{doc.value && <Check className="w-4 h-4 text-emerald-600" />}</div>
+                        <button type="button" onClick={()=>doc.ref.current?.click()} className="w-full py-2 bg-slate-900 text-white rounded-lg text-xs font-bold"><Upload className="w-3 h-3 inline mr-1" />Subir</button>
+                        <input ref={doc.ref} type="file" accept="application/pdf,image/png,image/jpeg" className="hidden" onChange={(e)=>handleObligadoFile(e,doc.setter,doc.name)} />
+                        {doc.nameValue && <p className="text-[10px] text-slate-500 mt-2 truncate">{doc.nameValue}</p>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div>
+                    <button type="button" onClick={()=>obligadoConsolidadoInput.current?.click()} className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl bg-white text-xs font-bold text-slate-700">
+                      <Upload className="w-4 h-4 inline mr-1.5" /> Subir PDF consolidado (3 meses)
+                    </button>
+                    <input ref={obligadoConsolidadoInput} type="file" accept="application/pdf,image/png,image/jpeg" className="hidden" onChange={(e)=>handleObligadoFile(e,setObligadoConsolidado,setObligadoConsolidadoNombre)} />
+                    {obligadoConsolidadoNombre && <p className="text-[11px] text-slate-500 mt-2 truncate">{obligadoConsolidadoNombre}</p>}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 text-xs">
+                <span className={obligadoSolidarioCompleto ? 'text-emerald-700 font-bold' : 'text-amber-700 font-semibold'}>
+                  {obligadoSolidarioCompleto ? '✓ Documentación del obligado completa' : 'Pendiente: faltan documentos del obligado'}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ======================================================== */}
