@@ -63,7 +63,10 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
   useEffect(() => {
     if (initialFolio) {
       setFolioInput(initialFolio);
-      handleLookup(initialFolio, initialPin);
+      if (initialPin) {
+        setPinInput(initialPin);
+        handleLookup(initialFolio, initialPin);
+      }
     }
   }, [initialFolio, initialPin]);
 
@@ -73,6 +76,11 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
 
     if (!f) {
       setError('Por favor ingresa el folio CrediMóvil del expediente (ej. EXP-2026-1001).');
+      return;
+    }
+
+    if (!/^\d{4}$/.test(p)) {
+      setError('Ingresa el PIN de 4 dígitos que te proporcionó CrediMóvil.');
       return;
     }
 
@@ -248,7 +256,7 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
           <div className="sm:col-span-3">
             <button
               type="submit"
-              disabled={isLoading || !folioInput.trim()}
+              disabled={isLoading || !folioInput.trim() || !/^\d{4}$/.test(pinInput.trim())}
               className="w-full py-2.5 px-4 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition shadow-lg shadow-red-900/30 flex items-center justify-center gap-2"
             >
               {isLoading ? (
