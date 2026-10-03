@@ -1971,8 +1971,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         </div>
 
         {/* ======================================================== */}
-        {
-          {/* Referencias personales obligatorias */}
+        {/* Referencias personales obligatorias */}
           <div className="pt-2 border-t border-slate-200 space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -2064,10 +2063,9 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               ))}
             </div>
           </div>
-
         </div>
 
-        /* SECCIÓN 4: DATOS DEL VEHÍCULO Y LOTE ASOCIADO           */}
+        {/* SECCIÓN 4: DATOS DEL VEHÍCULO Y LOTE ASOCIADO           */}
         {/* ======================================================== */}
         <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-6 sm:p-8 space-y-6">
           <div className="flex items-center gap-2 pb-4 border-b border-slate-200">
