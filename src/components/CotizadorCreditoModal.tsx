@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Calculator, X, Printer, Copy, Check, Car } from 'lucide-react';
+import { Calculator, X, Printer, Copy, Check, Car, ShieldCheck } from 'lucide-react';
 import { ExpedienteCredito } from '../types';
 
 interface CotizadorCreditoModalProps {
@@ -17,6 +17,8 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
   );
   const [plazo, setPlazo] = useState<number>([12, 24, 36, 48].includes(Number(expediente.plazoMeses)) ? Number(expediente.plazoMeses) : 48);
   const [copied, setCopied] = useState(false);
+  const [seguroModo, setSeguroModo] = useState<'NINGUNO' | 'CONTADO' | 'FINANCIADO'>('NINGUNO');
+  const [seguroMonto, setSeguroMonto] = useState<number>(0);
 
   const enganche = useMemo(() => {
     const p = Math.max(0, Number(precio) || 0);
@@ -25,10 +27,13 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
   }, [precio, modoEnganche, engancheMonto, enganchePorcentaje]);
 
   const montoFinanciar = Math.max(0, (Number(precio) || 0) - enganche);
-  const capitalMensual = montoFinanciar > 0 ? montoFinanciar / plazo : 0;
-  const interesMensual = montoFinanciar * 0.02;
+  const seguro = Math.max(0, Number(seguroMonto) || 0);
+  const montoSeguroFinanciado = seguroModo === 'FINANCIADO' ? seguro : 0;
+  const totalCapitalFinanciado = montoFinanciar + montoSeguroFinanciado;
+  const capitalMensual = totalCapitalFinanciado > 0 ? totalCapitalFinanciado / plazo : 0;
+  const interesMensual = totalCapitalFinanciado * 0.02;
   const ivaInteres = interesMensual * 0.16;
-  const mensualidad = montoFinanciar > 0 ? capitalMensual + interesMensual + ivaInteres + 260 + 142 : 0;
+  const mensualidad = totalCapitalFinanciado > 0 ? capitalMensual + interesMensual + ivaInteres + 260 + 142 : 0;
   const totalPagos = mensualidad * plazo;
   const porcentajeReal = Number(precio) > 0 ? (enganche / Number(precio)) * 100 : 0;
 
@@ -42,6 +47,8 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
     'Precio: ' + money(Number(precio) || 0),
     'Enganche: ' + money(enganche) + ' (' + porcentajeReal.toFixed(2) + '%)',
     'Monto a financiar: ' + money(montoFinanciar),
+    'Seguro: ' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro) + (seguroModo === 'CONTADO' ? ' contado' : ' financiado')),
+    'Total capital financiado: ' + money(totalCapitalFinanciado),
     'Plazo: ' + plazo + ' meses',
     'Tasa anual: 28%',
     'Mensualidad estimada: ' + money(mensualidad),
@@ -72,11 +79,13 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
       '<tr><td>Precio del vehículo</td><td>' + money(Number(precio) || 0) + '</td></tr>' +
       '<tr><td>Enganche</td><td>' + money(enganche) + ' (' + porcentajeReal.toFixed(2) + '%)</td></tr>' +
       '<tr><td>Monto a financiar</td><td>' + money(montoFinanciar) + '</td></tr>' +
+      '<tr><td>Seguro</td><td>' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro) + (seguroModo === 'CONTADO' ? ' — pago de contado' : ' — incluido en financiamiento')) + '</td></tr>' +
+      '<tr><td>Total capital financiado</td><td>' + money(totalCapitalFinanciado) + '</td></tr>' +
       '<tr><td>Plazo</td><td>' + plazo + ' meses</td></tr>' +
       '<tr><td>Tasa anual</td><td>28%</td></tr>' +
       '<tr><td>Mensualidad estimada</td><td class="total">' + money(mensualidad) + '</td></tr>' +
       '</table>' +
-      '<div class="note">Cotización estimada sujeta a validación y aprobación final. Incluye GPS de $260 y SDD de $142 en la mensualidad.</div>' +
+      '<div class="note">Cotización estimada sujeta a validación y aprobación final. El seguro de contado no incrementa el monto financiado; el seguro financiado sí se incorpora al capital. Incluye GPS de $260 y SDD de $142 en la mensualidad.</div>' +
       '<script>window.print();<\/script>' +
       '</body></html>';
     popup.document.write(html);
@@ -84,7 +93,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
   };
 
   return (
-    <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm p-3 sm:p-6 flex items-center justify-center">
+    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm p-3 sm:p-6 flex items-center justify-center" onMouseDown={(e) => e.stopPropagation()}>
       <div className="w-full max-w-3xl max-h-[94vh] overflow-y-auto bg-[#071A33] border border-[#18365C] rounded-3xl shadow-2xl">
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 p-4 sm:p-5 bg-[#071A33] border-b border-[#173A63]">
           <div>
@@ -93,7 +102,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
             </div>
             <p className="text-xs text-slate-400 mt-1">Simula sin modificar el expediente.</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-white">
+          <button type="button" onClick={(e) => { e.stopPropagation(); onClose(); }} className="p-2 rounded-xl bg-white/10 border border-white/15 text-white hover:bg-red-600 transition" aria-label="Cerrar cotizador">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -144,6 +153,35 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
             </div>
           </div>
 
+
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-4 sm:p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldCheck className="w-4 h-4 text-red-400" />
+              <div>
+                <div className="text-xs font-bold text-white uppercase">Seguro del vehículo</div>
+                <div className="text-[11px] text-slate-400">Captura el valor de la póliza según la cotización de la aseguradora.</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px] gap-3">
+              <div className="grid grid-cols-3 gap-2">
+                <button type="button" onClick={() => setSeguroModo('NINGUNO')} className={'py-2.5 rounded-xl border text-xs font-bold ' + (seguroModo === 'NINGUNO' ? 'bg-slate-700 border-slate-500 text-white' : 'bg-white/5 border-white/10 text-slate-300')}>Sin seguro</button>
+                <button type="button" onClick={() => setSeguroModo('CONTADO')} className={'py-2.5 rounded-xl border text-xs font-bold ' + (seguroModo === 'CONTADO' ? 'bg-red-600 border-red-500 text-white' : 'bg-white/5 border-white/10 text-slate-300')}>Contado</button>
+                <button type="button" onClick={() => setSeguroModo('FINANCIADO')} className={'py-2.5 rounded-xl border text-xs font-bold ' + (seguroModo === 'FINANCIADO' ? 'bg-red-600 border-red-500 text-white' : 'bg-white/5 border-white/10 text-slate-300')}>Financiado</button>
+              </div>
+              <label className="text-[11px] font-bold text-slate-300 uppercase">
+                Prima del seguro
+                <input type="number" min={0} step={1} value={seguroMonto} onChange={(e) => setSeguroMonto(Number(e.target.value) || 0)} className="mt-1.5 w-full rounded-xl bg-[#F5F8FC] text-[#102A43] border border-[#C5D1DF] px-3 py-2.5 text-sm" />
+              </label>
+            </div>
+
+            <div className="mt-3 text-xs text-slate-400">
+              {seguroModo === 'NINGUNO' && 'No se agrega seguro a la cotización.'}
+              {seguroModo === 'CONTADO' && <>El cliente paga <strong className="text-white">{money(seguro)}</strong> por separado; la mensualidad no cambia.</>}
+              {seguroModo === 'FINANCIADO' && <>Se agregan <strong className="text-white">{money(seguro)}</strong> al capital financiado; la mensualidad cambia a <strong className="text-red-300">{money(mensualidad)}</strong>.</>}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="rounded-2xl bg-white/5 border border-white/10 p-4"><div className="text-[11px] text-slate-400">Enganche</div><div className="text-base font-black text-white mt-1">{money(enganche)}</div></div>
             <div className="rounded-2xl bg-white/5 border border-white/10 p-4"><div className="text-[11px] text-slate-400">A financiar</div><div className="text-base font-black text-emerald-400 mt-1">{money(montoFinanciar)}</div></div>
@@ -162,7 +200,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
             <button onClick={printQuote} className="py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold inline-flex items-center justify-center gap-2">
               <Printer className="w-4 h-4" /> Imprimir / PDF
             </button>
-            <button onClick={onClose} className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">Cerrar</button>
+            <button type="button" onClick={(e) => { e.stopPropagation(); onClose(); }} className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-red-700 text-white text-xs font-bold">Cerrar</button>
           </div>
         </div>
       </div>
