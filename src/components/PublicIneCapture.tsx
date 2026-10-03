@@ -387,7 +387,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const enganchePorcentajeSeguro = Math.min(100, Math.max(20, Number(enganchePorcentaje) || 20));
   const engancheMontoSeguro = Math.min(
     precioSeguro,
-    Math.max(engancheMinimoPesos, Number(engancheMonto) || engancheMinimoPesos)
+    Math.max(0, Number(engancheMonto) || 0)
   );
   const calcEnganche = engancheModo === 'PORCENTAJE'
     ? Math.round(precioSeguro * enganchePorcentajeSeguro / 100)
@@ -2190,7 +2190,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   type="button"
                   onClick={() => {
                     setEngancheModo('MONTO');
-                    setEngancheMonto(calcEnganche);
+                    setEngancheMonto(engancheMonto === '' ? calcEnganche : engancheMonto);
                   }}
                   className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border transition ${
                     engancheModo === 'MONTO'
@@ -2227,13 +2227,13 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   </div>
                   <input
                     type="number"
-                    min={engancheMinimoPesos}
+                    min={0}
                     max={precioSeguro}
                     step={1}
-                    value={engancheMonto === '' ? engancheMinimoPesos : engancheMonto}
+                    value={engancheMonto === '' ? 0 : engancheMonto}
                     onChange={(e) => {
-                      const value = Number(e.target.value) || engancheMinimoPesos;
-                      setEngancheMonto(Math.min(precioSeguro, Math.max(engancheMinimoPesos, value)));
+                      const value = Number(e.target.value);
+                      setEngancheMonto(Number.isFinite(value) ? Math.min(precioSeguro, Math.max(0, value)) : 0);
                     }}
                     className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm font-semibold focus:border-slate-900 focus:outline-none"
                   />
@@ -2241,7 +2241,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               )}
 
               <p className="text-[10px] text-slate-500 mt-1">
-                Mínimo: 20% ({engancheMinimoPesos.toLocaleString('es-MX')} MXN) • Equivalente: {calcEnganchePorcentajeReal}%
+                En efectivo: monto libre • Equivalente informativo: {calcEnganchePorcentajeReal}% del valor
               </p>
             </div>
 
