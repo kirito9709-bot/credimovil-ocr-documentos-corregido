@@ -167,6 +167,16 @@ export const api = {
     return res.json();
   },
 
+  async uploadExpedienteDocument(expedienteId: string, payload: { tipo: string; archivoData: string; archivoNombre: string; displayName?: string }) {
+    const res = await fetch(`/api/expedientes/${encodeURIComponent(expedienteId)}/documentos`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) await parseError(res, 'Error al subir documento al expediente');
+    return res.json();
+  },
+
   async uploadFondeoDoc(expedienteId: string, payload: { docId: string; archivoUrl: string; archivoNombre: string; archivoTamano?: string; subidoPor?: string }) {
     const res = await fetch(`/api/expedientes/${encodeURIComponent(expedienteId)}/fondeo-doc`, {
       method: 'POST',
