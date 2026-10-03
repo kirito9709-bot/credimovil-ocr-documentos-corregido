@@ -42,18 +42,18 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
   onOpenPrint,
 }) => {
   const [activeTab, setActiveTab] = useState<'detalle' | 'fondeo' | 'fotos'>('detalle');
-  const [estatus, setEstatus] = useState<EstatusCredito>(expediente.estatus);
-  const [financiera, setFinanciera] = useState(expediente.financieraAsignada || 'CrediMóvil Auto');
-  const [plazo, setPlazo] = useState(expediente.plazoMeses || 48);
-  const [precio, setPrecio] = useState(expediente.autoPrecio || 0);
+  const [estatus, setEstatus] = useState<EstatusCredito>(expediente?.estatus || 'NUEVO');
+  const [financiera, setFinanciera] = useState(expediente?.financieraAsignada || 'CrediMóvil Auto');
+  const [plazo, setPlazo] = useState(expediente?.plazoMeses || 48);
+  const [precio, setPrecio] = useState(expediente?.autoPrecio || 0);
   const [enganchePorcentaje, setEnganchePorcentaje] = useState(() => {
-    const basePrecio = Number(expediente.autoPrecio) || 0;
-    const baseEnganche = Number(expediente.enganche) || 0;
+    const basePrecio = Number(expediente?.autoPrecio) || 0;
+    const baseEnganche = Number(expediente?.enganche) || 0;
     return basePrecio > 0
       ? Math.min(100, Math.max(20, Math.round((baseEnganche / basePrecio) * 100)))
       : 20;
   });
-  const [notas, setNotas] = useState(expediente.notasAsesor || '');
+  const [notas, setNotas] = useState(expediente?.notasAsesor || '');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -136,6 +136,27 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
   }, [onClose]);
+
+  // Sync editable values when the selected expediente changes.
+  useEffect(() => {
+    if (!expediente) return;
+    setActiveTab('detalle');
+    setEstatus(expediente.estatus);
+    setFinanciera(expediente.financieraAsignada || 'CrediMóvil Auto');
+    setPlazo(expediente.plazoMeses || 48);
+    setPrecio(expediente.autoPrecio || 0);
+    const basePrecio = Number(expediente.autoPrecio) || 0;
+    const baseEnganche = Number(expediente.enganche) || 0;
+    setEnganchePorcentaje(
+      basePrecio > 0 ? Math.min(100, Math.max(20, Math.round((baseEnganche / basePrecio) * 100))) : 20
+    );
+    setNotas(expediente.notasAsesor || '');
+    setSaveSuccess(false);
+    setReviewingDocId(null);
+    setReviewComment('');
+    setPreviewDocUrl(null);
+    setPreviewDocTitle('');
+  }, [expediente?.id]);
 
   if (!expediente) return null;
 
