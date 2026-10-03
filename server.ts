@@ -544,6 +544,55 @@ async function storeExpedienteDocuments(exp: any, dbExpedienteId: string) {
     }
   }
 
+  if (working.obligadoSolidario?.requerido) {
+    const os = working.obligadoSolidario;
+
+    const osDocuments: Array<[string, string, string, string]> = [
+      ['fotoIneFrente', 'OBLIGADO_SOLIDARIO_INE_FRENTE', os.fotoIneFrenteNombre || 'Obligado_INE_Frente.jpg', os.fotoIneFrente],
+      ['fotoIneReverso', 'OBLIGADO_SOLIDARIO_INE_REVERSO', os.fotoIneReversoNombre || 'Obligado_INE_Reverso.jpg', os.fotoIneReverso],
+      ['comprobanteDomicilioUrl', 'OBLIGADO_SOLIDARIO_COMPROBANTE_DOMICILIO', os.comprobanteDomicilioNombre || 'Obligado_Comprobante_Domicilio', os.comprobanteDomicilioUrl],
+    ];
+
+    for (const [field, tipo, fallbackName, value] of osDocuments) {
+      if (isDataUri(value)) {
+        await uploadDataUriToSupabase(
+          dbExpedienteId,
+          tipo,
+          value,
+          fallbackName,
+          'SUBIDO',
+          '',
+          { participante: 'OBLIGADO_SOLIDARIO', fechaSubida: new Date().toISOString() }
+        );
+        os[field] = '';
+      } else if (isSignedOrApiDocumentUrl(value)) {
+        os[field] = '';
+      }
+    }
+
+    if (os.estadosCuenta) {
+      for (const key of ['mes1Url', 'mes2Url', 'mes3Url', 'archivoConsolidadoUrl']) {
+        const value = os.estadosCuenta[key];
+        if (isDataUri(value)) {
+          const nameKey = key.replace(/Url$/, 'Nombre');
+          const documentType = 'OBLIGADO_SOLIDARIO_' + documentTypeForStateKey(key);
+          await uploadDataUriToSupabase(
+            dbExpedienteId,
+            documentType,
+            value,
+            os.estadosCuenta[nameKey] || key,
+            'SUBIDO',
+            '',
+            { participante: 'OBLIGADO_SOLIDARIO', fechaSubida: new Date().toISOString() }
+          );
+          os.estadosCuenta[key] = '';
+        } else if (isSignedOrApiDocumentUrl(value)) {
+          os.estadosCuenta[key] = '';
+        }
+      }
+    }
+  }
+
   if (working.estadosCuenta) {
     for (const key of ['mes1Url', 'mes2Url', 'mes3Url', 'archivoConsolidadoUrl']) {
       const value = working.estadosCuenta[key];
@@ -610,6 +659,18 @@ function applyStoredDocumentsToExpediente(exp: any, documentRows: any[]) {
     result.fotoIneFrente = await loadUrl(byType.get('INE_FRENTE'));
     result.fotoIneReverso = await loadUrl(byType.get('INE_REVERSO'));
     result.comprobanteDomicilioActualUrl = await loadUrl(byType.get('COMPROBANTE_DOMICILIO'));
+
+    if (result.obligadoSolidario?.requerido) {
+      const os = result.obligadoSolidario;
+      os.fotoIneFrente = await loadUrl(byType.get('OBLIGADO_SOLIDARIO_INE_FRENTE'));
+      os.fotoIneReverso = await loadUrl(byType.get('OBLIGADO_SOLIDARIO_INE_REVERSO'));
+      os.comprobanteDomicilioUrl = await loadUrl(byType.get('OBLIGADO_SOLIDARIO_COMPROBANTE_DOMICILIO'));
+      if (!os.estadosCuenta) os.estadosCuenta = {};
+      os.estadosCuenta.mes1Url = await loadUrl(byType.get('OBLIGADO_SOLIDARIO_ESTADO_CUENTA_MES1'));
+      os.estadosCuenta.mes2Url = await loadUrl(byType.get('OBLIGADO_SOLIDARIO_ESTADO_CUENTA_MES2'));
+      os.estadosCuenta.mes3Url = await loadUrl(byType.get('OBLIGADO_SOLIDARIO_ESTADO_CUENTA_MES3'));
+      os.estadosCuenta.archivoConsolidadoUrl = await loadUrl(byType.get('OBLIGADO_SOLIDARIO_ESTADO_CUENTA_CONSOLIDADO'));
+    }
 
     if (!result.estadosCuenta) result.estadosCuenta = {};
     for (const key of ['mes1Url', 'mes2Url', 'mes3Url', 'archivoConsolidadoUrl']) {
