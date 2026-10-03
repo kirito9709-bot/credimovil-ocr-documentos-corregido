@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { createHmac, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
+import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
@@ -62,6 +62,21 @@ function mapSupabaseLote(row: any) {
     bancoDefault: row.banco_default || '',
     activo: row.activo !== false,
     created_at: row.created_at,
+  };
+}
+
+function extractMimeAndBase64(dataUriOrRaw: string): { mimeType: string; base64: string } {
+  if (!dataUriOrRaw) return { mimeType: 'application/octet-stream', base64: '' };
+  const trimmed = String(dataUriOrRaw).trim();
+  const match = trimmed.match(/^data:([^;]+);base64,(.+)$/s);
+  if (match) {
+    let mimeType = match[1].toLowerCase().trim();
+    if (mimeType === 'image/jpg') mimeType = 'image/jpeg';
+    return { mimeType, base64: match[2].replace(/\s+/g, '') };
+  }
+  return {
+    mimeType: 'application/octet-stream',
+    base64: trimmed.replace(/\s+/g, ''),
   };
 }
 
@@ -374,143 +389,13 @@ async function upsertExpedienteSupabase(exp: any) {
   return dbId;
 }
 
-function signDocumentAccessToken(expedienteId: string) {
-  if (!SESSION_SECRET) return '';
-  const payload = Buffer.from(JSON.stringify({
-    expedienteId, exp: Math.floor(Date.now() / 1000) + DOCUMENT_TTL_SECONDS, kind: 'document',
-  })).toString('base64url');
-  const signature = createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
-  return `${payload}.${signature}`;
-}
-function verifyDocumentAccessToken(token: string, expedienteId: string) {
-  if (!SESSION_SECRET || !token) return false;
-  const [payload, signature] = token.split('.');
-  if (!payload || !signature) return false;
-  const expected = createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
-  if (!safeEqualText(signature, expected)) return false;
-  try {
-    const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-    return parsed.kind === 'document' && parsed.expedienteId === expedienteId && Number(parsed.exp) > Math.floor(Date.now() / 1000);
-  } catch { return false; }
-}
-function decorateExpedienteDocumentUrls(exp: any) {
-  const accessToken = signDocumentAccessToken(exp.id);
-  if (!accessToken) return exp;
-  const withToken = (value: any) => {
-    if (typeof value !== 'string' || !value.startsWith('/api/expedientes/')) return value;
-    return `${value}${value.includes('?') ? '&' : '?'}accessToken=${encodeURIComponent(accessToken)}`;
-  };
-  exp.fotoIneFrente = withToken(exp.fotoIneFrente);
-  exp.fotoIneReverso = withToken(exp.fotoIneReverso);
-  exp.comprobanteDomicilioActualUrl = withToken(exp.comprobanteDomicilioActualUrl);
-  if (exp.estadosCuenta) for (const key of ['mes1Url','mes2Url','mes3Url','archivoConsolidadoUrl']) exp.estadosCuenta[key] = withToken(exp.estadosCuenta[key]);
-  for (const doc of exp.documentosFondeo || []) doc.archivoUrl = withToken(doc.archivoUrl);
-  return exp;
-}
 function sanitizeLoteForPublic(lote: any) {
   return { id: lote.id, nombre: lote.nombre, ciudad: lote.ciudad };
 }
 
-function sanitizeFileName(name: string = 'documento') {
-  const base = path.basename(name).replace(/[^a-zA-Z0-9._-]/g, '_');
-  return base || 'documento';
+function sanitizeLoteForPublic(lote: any) {
+  return { id: lote.id, nombre: lote.nombre, ciudad: lote.ciudad };
 }
-
-function fileExtensionFromMime(mimeType: string, originalName = '') {
-  const lowerMime = (mimeType || '').toLowerCase();
-  if (lowerMime === 'application/pdf') return 'pdf';
-  if (lowerMime === 'image/png') return 'png';
-  if (lowerMime === 'image/webp') return 'webp';
-  if (lowerMime === 'image/jpeg' || lowerMime === 'image/jpg') return 'jpg';
-  const ext = path.extname(originalName).replace('.', '').toLowerCase();
-  return ['pdf', 'png', 'jpg', 'jpeg', 'webp'].includes(ext) ? (ext === 'jpeg' ? 'jpg' : ext) : 'bin';
-}
-
-function saveDataUriAsFile(expedienteId: string, slot: string, dataUri: string, originalName = '') {
-  if (!dataUri || typeof dataUri !== 'string' || !dataUri.startsWith('data:')) return dataUri;
-
-  const { mimeType, base64 } = extractMimeAndBase64(dataUri);
-  if (!base64) throw new Error(`Documento vacío para ${slot}`);
-
-  const ext = fileExtensionFromMime(mimeType, originalName);
-  const safeOriginal = sanitizeFileName(originalName || `${slot}.${ext}`);
-  const timestamp = Date.now();
-  const finalName = `${slot}-${timestamp}-${safeOriginal}`.slice(0, 180);
-  const expDir = path.join(UPLOADS_DIR, sanitizeFileName(expedienteId));
-  fs.mkdirSync(expDir, { recursive: true });
-  const absolutePath = path.join(expDir, finalName);
-  fs.writeFileSync(absolutePath, Buffer.from(base64, 'base64'));
-
-  return `/api/expedientes/${encodeURIComponent(expedienteId)}/documentos/${encodeURIComponent(finalName)}`;
-}
-
-function isDataUri(value: unknown): value is string {
-  return typeof value === 'string' && value.startsWith('data:');
-}
-
-function persistExpedienteDocuments(exp: any) {
-  let changed = false;
-
-  if (isDataUri(exp.fotoIneFrente)) {
-    exp.fotoIneFrente = saveDataUriAsFile(exp.id, 'ine-frente', exp.fotoIneFrente, 'INE_Frente.jpg');
-    changed = true;
-  }
-  if (isDataUri(exp.fotoIneReverso)) {
-    exp.fotoIneReverso = saveDataUriAsFile(exp.id, 'ine-reverso', exp.fotoIneReverso, 'INE_Reverso.jpg');
-    changed = true;
-  }
-  if (isDataUri(exp.comprobanteDomicilioActualUrl)) {
-    exp.comprobanteDomicilioActualUrl = saveDataUriAsFile(exp.id, 'comprobante-domicilio', exp.comprobanteDomicilioActualUrl, exp.comprobanteDomicilioActualNombre || 'Comprobante_Domicilio.pdf');
-    changed = true;
-  }
-
-  const ec = exp.estadosCuenta || {};
-  for (const key of ['mes1Url', 'mes2Url', 'mes3Url', 'archivoConsolidadoUrl']) {
-    if (isDataUri(ec[key])) {
-      const nameKey = key.replace(/Url$/, 'Nombre');
-      ec[key] = saveDataUriAsFile(exp.id, key.replace(/Url$/, ''), ec[key], ec[nameKey] || `${key}.pdf`);
-      changed = true;
-    }
-  }
-  exp.estadosCuenta = ec;
-
-  for (const doc of exp.documentosFondeo || []) {
-    if (isDataUri(doc.archivoUrl)) {
-      doc.archivoUrl = saveDataUriAsFile(exp.id, `doc-${doc.id}`, doc.archivoUrl, doc.archivoNombre || doc.id);
-      changed = true;
-    }
-  }
-
-  return changed;
-}
-
-function persistIncomingDocument(expedienteId: string, dataUriOrUrl: string, slot: string, originalName = '') {
-  if (!dataUriOrUrl) return '';
-  if (isDataUri(dataUriOrUrl)) return saveDataUriAsFile(expedienteId, slot, dataUriOrUrl, originalName);
-  return dataUriOrUrl;
-}
-
-// Initialize clean data
-function initializeData() {
-  if (!fs.existsSync(LOTES_FILE)) {
-    writeJson(LOTES_FILE, DEFAULT_LOTES);
-  }
-  // expedientes.json starts clean with zero fake records
-  if (!fs.existsSync(EXPEDIENTES_FILE)) {
-    writeJson(EXPEDIENTES_FILE, []);
-  }
-  if (!fs.existsSync(ADMIN_FILE)) {
-    writeJson(ADMIN_FILE, {
-      pin: '1234',
-      asesorNombre: 'Asesor CrediMóvil',
-      telefonoContacto: '',
-      correoNotificaciones: '',
-    });
-  }
-}
-initializeData();
-
-// API ROUTES
 
 // 1. Health
 app.get('/api/health', (req, res) => {
