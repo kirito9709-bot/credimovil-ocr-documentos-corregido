@@ -26,7 +26,9 @@ function normalizeSupabaseUrl(raw: string) {
     // Normalize common accidental suffixes entered in Render.
     return url.origin;
   } catch {
-    return value.replace(/\\/g, '').replace(/\\/+$/, '').replace(/\\/(?:rest|auth|storage)\\/v1(?:\\/.*)?$/i, '');
+    return value
+      .replace(/[\\/]+$/, '')
+      .replace(/\\/(?:rest|auth|storage)\\/v1(?:\\/.*)?$/i, '');
   }
 }
 
