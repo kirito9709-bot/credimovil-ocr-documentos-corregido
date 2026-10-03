@@ -21,9 +21,11 @@ import {
   Plus,
   RefreshCw,
   FolderOpen,
+  MessageCircle,
 } from 'lucide-react';
 import { ExpedienteCredito, LoteAuto, EstatusCredito } from '../types';
 import { api } from '../services/api';
+import { ChatLoteModal } from './ChatLoteModal';
 
 interface AdminPanelProps {
   isAdminAuth: boolean;
@@ -77,6 +79,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [advisorMessage, setAdvisorMessage] = useState<string | null>(null);
 
   const [showLoteUsersModal, setShowLoteUsersModal] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
   const [loteUsuarios, setLoteUsuarios] = useState<any[]>([]);
   const [newLoteUserLoteId, setNewLoteUserLoteId] = useState('');
   const [newLoteUserName, setNewLoteUserName] = useState('');
@@ -356,6 +359,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </button>
             </>
           )}
+
+          <button
+            onClick={() => setShowChatModal(true)}
+            className="py-2 px-3 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/20 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+          >
+            <MessageCircle className="w-3.5 h-3.5" />
+            <span>Chat Lotes</span>
+          </button>
 
           <button
             onClick={loadData}
@@ -715,6 +726,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {showChatModal && authUser && (
+        <ChatLoteModal
+          isOpen={showChatModal}
+          onClose={() => setShowChatModal(false)}
+          authUser={authUser}
+          lotes={lotes}
+        />
       )}
 
       {showLoteUsersModal && authUser?.role === 'admin' && (
