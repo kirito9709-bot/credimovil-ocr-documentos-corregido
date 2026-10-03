@@ -24,9 +24,11 @@ import {
   Download,
   Upload,
   Loader2,
+  MessageSquare,
 } from 'lucide-react';
 import { ExpedienteCredito, EstatusCredito } from '../types';
 import { api } from '../services/api';
+import { ExpedienteComentariosModal } from './ExpedienteComentariosModal';
 
 interface ExpedienteDetailModalProps {
   expediente: ExpedienteCredito | null;
@@ -67,6 +69,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
   const [previewDocUrl, setPreviewDocUrl] = useState<string | null>(null);
   const [previewDocTitle, setPreviewDocTitle] = useState<string>('');
   const [uploadingDocumentType, setUploadingDocumentType] = useState<string | null>(null);
+  const [showComments, setShowComments] = useState(false);
 
   const isPdfUrl = (url?: string | null) => Boolean(url && (/^data:application\/pdf/i.test(url) || /\.pdf(?:$|[?#])/i.test(url)));
 
@@ -323,6 +326,14 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
             <span className="px-1.5 py-0.2 rounded text-[10px] bg-black/40 text-white">
               {expediente.documentosFondeo?.filter((d) => d.estatus === 'SUBIDO').length || 0} pendientes
             </span>
+          </button>
+
+          <button
+            onClick={() => setShowComments(true)}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-slate-400 hover:text-white bg-slate-950/50 border border-slate-800"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            Comentarios
           </button>
 
           <button
@@ -1022,6 +1033,19 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
           )}
         </div>
       </div>
+
+      {showComments && (
+        <ExpedienteComentariosModal
+          isOpen={showComments}
+          onClose={() => setShowComments(false)}
+          expedienteId={expediente.id}
+          folio={expediente.folio}
+          authUser={(() => {
+            const saved = localStorage.getItem('credimovil_auth_user');
+            return saved ? JSON.parse(saved) : { username: 'asesor', role: 'asesor', nombre: 'CrediMóvil' };
+          })()}
+        />
+      )}
 
       <div className="flex justify-end border-t border-slate-800 pt-4 print:hidden">
         <button
