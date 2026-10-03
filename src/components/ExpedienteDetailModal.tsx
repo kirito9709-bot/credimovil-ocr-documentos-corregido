@@ -518,7 +518,6 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                       <option value={24}>24 Meses</option>
                       <option value={36}>36 Meses</option>
                       <option value={48}>48 Meses</option>
-                      <option value={60}>60 Meses</option>
                     </select>
                   </div>
 
