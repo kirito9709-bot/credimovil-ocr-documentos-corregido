@@ -193,18 +193,18 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[#d9e7e7] bg-white py-8 px-4 text-center text-xs text-[#5A7476] print:hidden">
+      <footer className="border-t border-[#163A64] bg-[#041329] py-7 px-4 text-center text-xs text-slate-300 print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-red-100 text-red-700 flex items-center justify-center font-bold text-xs">
+            <div className="w-6 h-6 rounded-lg bg-white text-red-600 flex items-center justify-center font-bold text-xs">
               AC
             </div>
-            <span className="font-semibold text-[#173252]">
+            <span className="font-semibold text-white">
               AutoCred • Plataforma de Crédito Automotriz Directo
             </span>
           </div>
 
-          <div className="flex items-center gap-4 text-[11px] text-slate-400">
+          <div className="flex items-center gap-4 text-[11px] text-slate-300">
             <span>OCR de INE con IA Multimodal</span>
             <span>•</span>
             <span>Base de Datos Segura</span>
@@ -212,7 +212,7 @@ export default function App() {
             <span>Módulo de Fondeo sin Intermediarios</span>
           </div>
 
-          <div className="text-slate-500 text-[11px]">
+          <div className="text-slate-300 text-[11px]">
             Conectando Asesores y Lotes de Autos de México
           </div>
         </div>
