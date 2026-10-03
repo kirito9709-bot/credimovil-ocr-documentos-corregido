@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { createHmac, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
+import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
@@ -14,6 +15,100 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
+
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').trim();
+const SUPABASE_SECRET_KEY = (
+  process.env.SUPABASE_SECRET_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  ''
+).trim();
+
+const supabase = SUPABASE_URL && SUPABASE_SECRET_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_SECRET_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+  : null;
+
+function supabaseConfigured() {
+  return Boolean(supabase);
+}
+
+function mapSupabaseLote(row: any) {
+  return {
+    id: row.id,
+    nombre: row.nombre,
+    contacto: row.contacto || '',
+    telefono: row.telefono || '',
+    correo: row.correo || '',
+    direccion: row.direccion || '',
+    ciudad: row.ciudad || 'México',
+    cuentaClabeDefault: row.cuenta_clabe_default || '',
+    bancoDefault: row.banco_default || '',
+    activo: row.activo !== false,
+    created_at: row.created_at,
+  };
+}
+
+async function getSupabaseLotes() {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('lotes')
+    .select('*')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    throw new Error(`Supabase lotes: ${error.message}`);
+  }
+
+  return (data || []).map(mapSupabaseLote);
+}
+
+async function ensureLegacyLotesMigrated() {
+  if (!supabase) return;
+
+  const localLotes = readJson(LOTES_FILE, DEFAULT_LOTES);
+  if (!Array.isArray(localLotes) || localLotes.length === 0) return;
+
+  for (const lote of localLotes) {
+    const nombre = String(lote?.nombre || '').trim();
+    if (!nombre) continue;
+
+    const { data: existing, error: findError } = await supabase
+      .from('lotes')
+      .select('id')
+      .ilike('nombre', nombre)
+      .limit(1);
+
+    if (findError) {
+      console.error('Supabase: no se pudo revisar lote legado:', findError.message);
+      continue;
+    }
+
+    if (existing && existing.length > 0) {
+      continue;
+    }
+
+    const payload = {
+      nombre,
+      contacto: String(lote?.contacto || ''),
+      telefono: String(lote?.telefono || ''),
+      correo: String(lote?.correo || ''),
+      direccion: String(lote?.direccion || ''),
+      ciudad: String(lote?.ciudad || 'México'),
+      cuenta_clabe_default: String(lote?.cuentaClabeDefault || ''),
+      banco_default: String(lote?.bancoDefault || ''),
+      activo: lote?.activo !== false,
+    };
+
+    const { error: insertError } = await supabase.from('lotes').insert(payload);
+    if (insertError) {
+      console.error(`Supabase: no se pudo migrar el lote "${nombre}":`, insertError.message);
+    } else {
+      console.log(`Supabase: lote legado migrado correctamente: ${nombre}`);
+    }
+  }
+}
+
 
 // Body parser with 50mb limit for high-res PNG, JPG and PDF documents
 app.use(express.json({ limit: '50mb' }));
@@ -820,63 +915,161 @@ Reglas:
 });
 
 // 4. Lotes de Autos
-app.get('/api/lotes', (req, res) => {
-  const lotes = readJson(LOTES_FILE, DEFAULT_LOTES);
-  const session = getSession(req);
-  const expedientes = readJson(EXPEDIENTES_FILE, []);
+app.get('/api/lotes', async (req, res) => {
+  try {
+    const session = getSession(req);
 
-  if (!session) {
-    return res.json({ success: true, lotes: lotes.map(sanitizeLoteForPublic) });
+    if (supabaseConfigured()) {
+      const lotes = await getSupabaseLotes();
+
+      if (!session) {
+        return res.json({ success: true, lotes: (lotes || []).map(sanitizeLoteForPublic) });
+      }
+
+      // Expedientes todavía pueden estar en la migración local; conservamos sus
+      // estadísticas para no romper la pantalla mientras migramos expedientes.
+      const expedientes = readJson(EXPEDIENTES_FILE, []);
+      const lotesWithStats = (lotes || []).map((l: any) => {
+        const exps = expedientes.filter((e: any) => e.loteNombre === l.nombre || e.loteId === l.id);
+        const fondeados = exps.filter((e: any) => e.estatus === 'FONDEADO').length;
+        return { ...l, totalExpedientes: exps.length, totalFondeados: fondeados };
+      });
+
+      return res.json({ success: true, lotes: lotesWithStats });
+    }
+
+    const lotes = readJson(LOTES_FILE, DEFAULT_LOTES);
+    const expedientes = readJson(EXPEDIENTES_FILE, []);
+
+    if (!session) {
+      return res.json({ success: true, lotes: lotes.map(sanitizeLoteForPublic) });
+    }
+
+    const lotesWithStats = lotes.map((l: any) => {
+      const exps = expedientes.filter((e: any) => e.loteId === l.id || e.loteNombre === l.nombre);
+      const fondeados = exps.filter((e: any) => e.estatus === 'FONDEADO').length;
+      return { ...l, totalExpedientes: exps.length, totalFondeados: fondeados };
+    });
+
+    return res.json({ success: true, lotes: lotesWithStats });
+  } catch (error: any) {
+    console.error('GET /api/lotes error:', error);
+    return res.status(500).json({ success: false, message: error?.message || 'No se pudieron cargar los lotes.' });
   }
-
-  const lotesWithStats = lotes.map((l: any) => {
-    const exps = expedientes.filter((e: any) => e.loteId === l.id || e.loteNombre === l.nombre);
-    const fondeados = exps.filter((e: any) => e.estatus === 'FONDEADO').length;
-    return { ...l, totalExpedientes: exps.length, totalFondeados: fondeados };
-  });
-
-  res.json({ success: true, lotes: lotesWithStats });
 });
 
-app.post('/api/lotes', (req, res) => {
+app.post('/api/lotes', async (req, res) => {
   if (!requireAuth(req, res)) return;
+
   const { nombre, contacto, telefono, correo, direccion, ciudad, cuentaClabeDefault, bancoDefault } = req.body;
-  if (!nombre) return res.status(400).json({ success: false, message: 'El nombre del lote es obligatorio.' });
+  const nombreLote = String(nombre || '').trim();
 
-  const lotes = readJson(LOTES_FILE, DEFAULT_LOTES);
-  const newLote = {
-    id: `lote-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    nombre: String(nombre).trim(),
-    contacto: contacto || '',
-    telefono: telefono || '',
-    correo: correo || '',
-    direccion: direccion || '',
-    ciudad: ciudad || 'México',
-    cuentaClabeDefault: cuentaClabeDefault || '',
-    bancoDefault: bancoDefault || '',
-  };
-
-  lotes.push(newLote);
-  writeJson(LOTES_FILE, lotes);
-  res.json({ success: true, lote: newLote, message: 'Lote registrado con éxito.' });
-});
-
-app.delete('/api/lotes/:id', (req, res) => {
-  if (!requireAuth(req, res)) return;
-  const lotes = readJson(LOTES_FILE, DEFAULT_LOTES);
-  const index = lotes.findIndex((l: any) => l.id === req.params.id);
-  if (index < 0) return res.status(404).json({ success: false, message: 'Lote no encontrado.' });
-
-  const lote = lotes[index];
-  const expedientes = readJson(EXPEDIENTES_FILE, []);
-  const hasExpedientes = expedientes.some((e: any) => e.loteId === lote.id || e.loteNombre === lote.nombre);
-  if (hasExpedientes) {
-    return res.status(409).json({ success: false, message: 'No puedes eliminar un lote que ya tiene expedientes asociados.' });
+  if (!nombreLote) {
+    return res.status(400).json({ success: false, message: 'El nombre del lote es obligatorio.' });
   }
 
-  lotes.splice(index, 1);
-  writeJson(LOTES_FILE, lotes);
-  res.json({ success: true, message: 'Lote eliminado correctamente.' });
+  try {
+    if (supabaseConfigured()) {
+      const { data: existing, error: findError } = await supabase
+        .from('lotes')
+        .select('*')
+        .ilike('nombre', nombreLote)
+        .limit(1);
+
+      if (findError) throw new Error(`Supabase lotes: ${findError.message}`);
+
+      if (existing && existing.length > 0) {
+        return res.status(409).json({ success: false, message: 'Ya existe un lote con ese nombre.', lote: mapSupabaseLote(existing[0]) });
+      }
+
+      const { data, error } = await supabase
+        .from('lotes')
+        .insert({
+          nombre: nombreLote,
+          contacto: String(contacto || ''),
+          telefono: String(telefono || ''),
+          correo: String(correo || ''),
+          direccion: String(direccion || ''),
+          ciudad: String(ciudad || 'México'),
+          cuenta_clabe_default: String(cuentaClabeDefault || ''),
+          banco_default: String(bancoDefault || ''),
+          activo: true,
+        })
+        .select('*')
+        .single();
+
+      if (error) throw new Error(`Supabase lotes: ${error.message}`);
+
+      const newLote = mapSupabaseLote(data);
+      return res.json({ success: true, lote: newLote, message: 'Lote registrado correctamente en Supabase.' });
+    }
+
+    const lotes = readJson(LOTES_FILE, DEFAULT_LOTES);
+    const newLote = {
+      id: `lote-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      nombre: nombreLote,
+      contacto: contacto || '',
+      telefono: telefono || '',
+      correo: correo || '',
+      direccion: direccion || '',
+      ciudad: ciudad || 'México',
+      cuentaClabeDefault: cuentaClabeDefault || '',
+      bancoDefault: bancoDefault || '',
+    };
+
+    lotes.push(newLote);
+    writeJson(LOTES_FILE, lotes);
+    return res.json({ success: true, lote: newLote, message: 'Lote registrado con éxito.' });
+  } catch (error: any) {
+    console.error('POST /api/lotes error:', error);
+    return res.status(500).json({ success: false, message: error?.message || 'No se pudo registrar el lote.' });
+  }
+});
+
+app.delete('/api/lotes/:id', async (req, res) => {
+  if (!requireAuth(req, res)) return;
+
+  try {
+    if (supabaseConfigured()) {
+      const { data: lote, error: findError } = await supabase
+        .from('lotes')
+        .select('*')
+        .eq('id', req.params.id)
+        .maybeSingle();
+
+      if (findError) throw new Error(`Supabase lotes: ${findError.message}`);
+      if (!lote) return res.status(404).json({ success: false, message: 'Lote no encontrado.' });
+
+      const expedientes = readJson(EXPEDIENTES_FILE, []);
+      const hasLocalExpedientes = expedientes.some((e: any) => e.loteId === lote.id || e.loteNombre === lote.nombre);
+      if (hasLocalExpedientes) {
+        return res.status(409).json({ success: false, message: 'No puedes eliminar un lote que ya tiene expedientes asociados.' });
+      }
+
+      const { error } = await supabase.from('lotes').delete().eq('id', req.params.id);
+      if (error) throw new Error(`Supabase lotes: ${error.message}`);
+
+      return res.json({ success: true, message: 'Lote eliminado correctamente de Supabase.' });
+    }
+
+    const lotes = readJson(LOTES_FILE, DEFAULT_LOTES);
+    const index = lotes.findIndex((l: any) => l.id === req.params.id);
+    if (index < 0) return res.status(404).json({ success: false, message: 'Lote no encontrado.' });
+
+    const lote = lotes[index];
+    const expedientes = readJson(EXPEDIENTES_FILE, []);
+    const hasExpedientes = expedientes.some((e: any) => e.loteId === lote.id || e.loteNombre === lote.nombre);
+    if (hasExpedientes) {
+      return res.status(409).json({ success: false, message: 'No puedes eliminar un lote que ya tiene expedientes asociados.' });
+    }
+
+    lotes.splice(index, 1);
+    writeJson(LOTES_FILE, lotes);
+    return res.json({ success: true, message: 'Lote eliminado correctamente.' });
+  } catch (error: any) {
+    console.error('DELETE /api/lotes error:', error);
+    return res.status(500).json({ success: false, message: error?.message || 'No se pudo eliminar el lote.' });
+  }
 });
 
 // Securely serve persisted expedition documents. Files never live inside expedientes.json.
@@ -1293,6 +1486,13 @@ function resolveDistPath() {
 }
 
 async function startServer() {
+  if (supabaseConfigured()) {
+    console.log('Supabase configurado. Sincronizando lotes locales...');
+    await ensureLegacyLotesMigrated();
+  } else {
+    console.warn('Supabase no configurado: usando persistencia local de lotes.');
+  }
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
