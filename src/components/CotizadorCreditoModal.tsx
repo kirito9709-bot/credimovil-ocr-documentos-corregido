@@ -9,7 +9,7 @@ interface CotizadorCreditoModalProps {
   showRate?: boolean;
 }
 
-export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ expediente, onClose, customerMode = false, showRate = true }) => {
+export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ expediente, onClose, customerMode = false, showRate = false }) => {
   const [precio, setPrecio] = useState<number>(Number(expediente.autoPrecio) || 0);
   const [modoEnganche, setModoEnganche] = useState<'PORCENTAJE' | 'MONTO'>(expediente.engancheModo || 'MONTO');
   const [engancheMonto, setEngancheMonto] = useState<number>(Number(expediente.enganche) || 0);
