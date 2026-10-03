@@ -196,23 +196,23 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="min-h-[calc(100vh-64px)] bg-[#DCE5F2] px-3 sm:px-6 py-8 sm:py-10">
       {/* Header */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold mb-3">
+      <div className="max-w-5xl mx-auto text-center mb-8">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 text-xs font-bold mb-3">
           <FolderSync className="w-3.5 h-3.5" />
           <span>CrediMóvil • Checklist de Documentación para Trámite de Vehículo</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+        <h1 className="text-3xl sm:text-4xl font-black text-[#102A43] tracking-tight">
           Carga de Documentos para <span className="text-red-500">Fondeo de Vehículo</span>
         </h1>
-        <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto mt-2">
+        <p className="text-sm sm:text-base text-[#46617D] max-w-2xl mx-auto mt-2">
           Cuando el crédito de tu cliente es aprobado, el lote sube directamente los documentos (PNG o PDF) para que se libere el pago de fondeo a tu cuenta sin intermediarios.
         </p>
       </div>
 
       {/* Lookup Card */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl mb-8">
+      <div className="max-w-6xl mx-auto bg-[#071A33] border border-[#0F2A4D] rounded-3xl p-5 sm:p-6 shadow-[0_18px_45px_rgba(7,26,51,0.22)] mb-8">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -221,17 +221,17 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
           className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end"
         >
           <div className="sm:col-span-6">
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-semibold text-white uppercase tracking-wider mb-1.5">
               Folio CrediMóvil
             </label>
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+              <Search className="w-4 h-4 text-[#8AA0B8] absolute left-3.5 top-3.5" />
               <input
                 type="text"
                 value={folioInput}
                 onChange={(e) => setFolioInput(e.target.value.toUpperCase())}
                 placeholder="ej. EXP-2026-1001"
-                className="w-full py-2.5 pl-10 pr-4 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono text-sm uppercase focus:outline-none focus:border-red-500"
+                className="w-full py-2.5 pl-10 pr-4 bg-[#F5F8FC] border border-[#C5D1DF] rounded-xl text-[#102A43] font-mono text-sm uppercase focus:outline-none focus:border-red-500"
               />
             </div>
           </div>
@@ -241,14 +241,14 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
               PIN del Lote (4 Dígitos)
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+              <Lock className="w-4 h-4 text-slate-300 absolute left-3.5 top-3.5" />
               <input
                 type="password"
                 maxLength={4}
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
                 placeholder="••••"
-                className="w-full py-2.5 pl-10 pr-4 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono text-sm focus:outline-none focus:border-red-500"
+                className="w-full py-2.5 pl-10 pr-4 bg-[#F5F8FC] border border-[#C5D1DF] rounded-xl text-[#102A43] font-mono text-sm focus:outline-none focus:border-red-500"
               />
             </div>
           </div>
@@ -257,7 +257,7 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
             <button
               type="submit"
               disabled={isLoading || !folioInput.trim() || !/^\d{4}$/.test(pinInput.trim())}
-              className="w-full py-2.5 px-4 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition shadow-lg shadow-red-900/30 flex items-center justify-center gap-2"
+              className="w-full py-2.5 px-4 bg-[#E3262F] hover:bg-[#C81E2B] disabled:opacity-50 text-white font-bold rounded-xl text-sm transition shadow-lg shadow-red-900/25 flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
@@ -275,7 +275,7 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
         </form>
 
         {error && (
-          <div className="mt-4 p-3 bg-rose-950/40 border border-rose-800/40 rounded-xl text-xs text-rose-300 flex items-center gap-2">
+          <div className="mt-4 p-3 bg-red-950/30 border border-red-500/30 rounded-xl text-xs text-red-200 flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span>{error}</span>
           </div>
@@ -286,7 +286,7 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
       {expediente && (
         <div className="space-y-8 animate-fadeIn">
           {/* Status Banner */}
-          <div className="bg-gradient-to-r from-slate-900 to-slate-900/90 border border-red-500/30 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+          <div className="bg-[#071A33] border border-red-500/30 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -315,7 +315,7 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
                   Cliente: {expediente.ine?.nombreCompleto || expediente.ine?.nombre}
                 </h2>
                 <p className="text-xs text-slate-400 mt-1 flex items-center gap-3">
-                  <span>Lote: <strong className="text-slate-200">{expediente.loteNombre}</strong></span>
+                  <span>Lote: <strong className="text-white">{expediente.loteNombre}</strong></span>
                   <span>•</span>
                   <span>Financiera: <strong className="text-red-400">{expediente.financieraAsignada || 'CrediMóvil Auto'}</strong></span>
                 </p>
@@ -365,7 +365,7 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
           </div>
 
           {/* Bank Account Section for Funding Payment */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+          <div className="bg-[#071A33] border border-[#0F2A4D] rounded-3xl p-6 shadow-[0_14px_32px_rgba(7,26,51,0.15)]">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-red-500" />
@@ -382,7 +382,7 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
 
             <form onSubmit={handleSaveBankInfo} className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
               <div className="sm:col-span-5">
-                <label className="block text-xs font-semibold text-slate-400 mb-1">
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
                   CLABE Interbancaria (18 dígitos)
                 </label>
                 <input
@@ -412,7 +412,7 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
                 <button
                   type="submit"
                   disabled={isSavingBank}
-                  className="w-full py-2 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold rounded-xl text-xs transition flex items-center justify-center gap-2"
+                  className="w-full py-2 px-4 bg-[#0F2A4D] hover:bg-[#163A64] text-white border border-[#294767] font-semibold rounded-xl text-xs transition flex items-center justify-center gap-2"
                 >
                   {isSavingBank ? 'Guardando...' : 'Actualizar Cuenta'}
                 </button>
