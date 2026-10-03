@@ -1798,6 +1798,68 @@ app.delete('/api/expedientes/:id', async (req, res) => {
   }
 });
 
+app.post('/api/expedientes/:id/documentos', async (req, res) => {
+  if (!requireStaff(req, res)) return;
+
+  try {
+    const { tipo, archivoData, archivoNombre, displayName } = req.body || {};
+    const allowed = new Set([
+      'INE_FRENTE',
+      'INE_REVERSO',
+      'COMPROBANTE_DOMICILIO',
+      'ESTADO_CUENTA_MES1',
+      'ESTADO_CUENTA_MES2',
+      'ESTADO_CUENTA_MES3',
+      'ESTADO_CUENTA_CONSOLIDADO',
+    ]);
+
+    if (!allowed.has(String(tipo || ''))) {
+      return res.status(400).json({ success: false, message: 'Tipo de documento no permitido.' });
+    }
+
+    if (!isDataUri(archivoData)) {
+      return res.status(400).json({ success: false, message: 'Debes seleccionar un archivo válido.' });
+    }
+
+    const expedientes = (await getSupabaseExpedientes()) || [];
+    const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
+    if (!exp) {
+      return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    }
+
+    const row = await getSupabaseExpedienteRowByFolio(exp.folio);
+    if (!row?.id) {
+      return res.status(404).json({ success: false, message: 'No se encontró el registro persistente del expediente.' });
+    }
+
+    await uploadDataUriToSupabase(
+      row.id,
+      String(tipo),
+      archivoData,
+      String(archivoNombre || displayName || tipo),
+      'SUBIDO',
+      '',
+      {
+        cargaPosterior: true,
+        displayName: String(displayName || tipo),
+        fechaSubida: new Date().toISOString(),
+      }
+    );
+
+    const saved = (await getSupabaseExpedientes())?.find((e: any) => e.folio === exp.folio);
+    if (!saved) return res.status(500).json({ success: false, message: 'Documento guardado, pero no se pudo reconstruir el expediente.' });
+
+    res.json({
+      success: true,
+      message: `${displayName || tipo} guardado en Supabase Storage.`,
+      expediente: saved,
+    });
+  } catch (error: any) {
+    console.error('POST /api/expedientes/:id/documentos error:', error);
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo subir el documento.' });
+  }
+});
+
 app.post('/api/expedientes/:id/fondeo-doc', async (req, res) => {
   if (!requireStaff(req, res)) return;
   try {
