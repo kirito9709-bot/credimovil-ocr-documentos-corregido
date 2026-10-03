@@ -209,6 +209,47 @@ function extractMimeAndBase64(dataUriOrRaw: string): { mimeType: string; base64:
   };
 }
 
+function sanitizeFileName(name: string = 'documento') {
+  const base = path.basename(String(name)).replace(/[^a-zA-Z0-9._-]/g, '_');
+  return base || 'documento';
+}
+
+function fileExtensionFromMime(mimeType: string, originalName = '') {
+  const lowerMime = String(mimeType || '').toLowerCase();
+  if (lowerMime === 'application/pdf') return 'pdf';
+  if (lowerMime === 'image/png') return 'png';
+  if (lowerMime === 'image/webp') return 'webp';
+  if (lowerMime === 'image/jpeg' || lowerMime === 'image/jpg') return 'jpg';
+  const ext = path.extname(originalName).replace('.', '').toLowerCase();
+  return ['pdf', 'png', 'jpg', 'jpeg', 'webp'].includes(ext) ? (ext === 'jpeg' ? 'jpg' : ext) : 'bin';
+}
+
+function isDataUri(value: unknown): value is string {
+  return typeof value === 'string' && value.startsWith('data:');
+}
+
+function expedienteToSupabasePayload(exp: any) {
+  const ine = exp?.ine || {};
+  return {
+    id: exp?.supabaseId || undefined,
+    folio: String(exp?.folio || ''),
+    pin_fondeo: String(exp?.pinFondeo || ''),
+    estatus: String(exp?.estatus || 'NUEVO'),
+    lote_id: typeof exp?.loteId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(exp.loteId) ? exp.loteId : null,
+    asesor_id: null,
+    cliente_nombre: String(ine?.nombreCompleto || ine?.nombre || ''),
+    cliente_curp: String(ine?.curp || ''),
+    cliente_rfc: String(ine?.rfc || ''),
+    telefono: String(exp?.telefono || ''),
+    correo: String(exp?.correo || ''),
+    auto_marca: String(exp?.autoMarca || ''),
+    auto_modelo: String(exp?.autoModelo || ''),
+    auto_ano: Number(exp?.autoAno) || null,
+    monto_financiar: Number(exp?.montoFinanciar) || 0,
+    data: exp || {},
+  };
+}
+
 const SUPABASE_BUCKET = 'credimovil-documentos';
 const SIGNED_DOCUMENT_TTL_SECONDS = 60 * 60;
 
