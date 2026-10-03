@@ -604,8 +604,8 @@ app.post('/api/auth/login', async (req, res) => {
   if (username === adminUsername && safeEqualText(password, adminPassword)) {
     account = { role: 'admin', nombre: 'Administrador CrediMóvil' };
   } else {
-    const user = advisorRecords().find((item: any) => item.username === username && item.active !== false);
-    if (user && verifyPassword(password, user.passwordHash)) {
+    const user = await findAdvisor(username);
+    if (user && user.activo !== false && verifyPassword(password, user.password_hash)) {
       account = { role: 'asesor', nombre: user.nombre || username };
     } else if (supabase) {
       const loteUser = await findLoteUser(username);
@@ -651,20 +651,28 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ success: true });
 });
 
-app.get('/api/asesores', (req, res) => {
+app.get('/api/asesores', async (req, res) => {
   if (!requireAdmin(req, res)) return;
-  const users = advisorRecords().map((user: any) => ({
-    id: user.id,
-    username: user.username,
-    nombre: user.nombre,
-    active: user.active !== false,
-    fechaCreacion: user.fechaCreacion,
-  }));
-  res.json({ success: true, asesores: users });
+  try {
+    const users = await supabaseAdvisorList();
+    res.json({
+      success: true,
+      asesores: users.map((user: any) => ({
+        id: user.id,
+        username: user.username,
+        nombre: user.nombre,
+        active: user.activo !== false,
+        fechaCreacion: user.created_at,
+      })),
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || 'No se pudieron consultar los asesores.' });
+  }
 });
 
-app.post('/api/asesores', (req, res) => {
+app.post('/api/asesores', async (req, res) => {
   if (!requireAdmin(req, res)) return;
+
   const username = normalizeUsername(req.body?.username);
   const password = String(req.body?.password || '');
   const nombre = String(req.body?.nombre || '').trim();
@@ -679,36 +687,50 @@ app.post('/api/asesores', (req, res) => {
     return res.status(400).json({ success: false, message: 'El nombre del asesor es obligatorio.' });
   }
 
-  const records = advisorRecords();
-  if (records.some((item: any) => item.username === username) || normalizeUsername(process.env.CREDIMOVIL_ADMIN_USER || '') === username) {
-    return res.status(409).json({ success: false, message: 'Ese usuario ya existe.' });
+  try {
+    const existing = await findAdvisor(username);
+    if (existing || normalizeUsername(process.env.CREDIMOVIL_ADMIN_USER || '') === username) {
+      return res.status(409).json({ success: false, message: 'Ese usuario ya existe.' });
+    }
+
+    const { data, error } = await supabase
+      .from('asesores')
+      .insert({
+        username,
+        nombre,
+        password_hash: hashPassword(password),
+        activo: true,
+      })
+      .select('id,nombre,username,activo,created_at')
+      .single();
+
+    if (error) throw new Error(`Supabase asesor: ${error.message}`);
+
+    res.status(201).json({
+      success: true,
+      asesor: {
+        id: data.id,
+        username: data.username,
+        nombre: data.nombre,
+        active: data.activo !== false,
+        fechaCreacion: data.created_at,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo crear el asesor.' });
   }
-
-  const record = {
-    id: `asesor-${Date.now()}-${randomBytes(3).toString('hex')}`,
-    username,
-    nombre,
-    passwordHash: hashPassword(password),
-    active: true,
-    fechaCreacion: new Date().toISOString(),
-  };
-  records.push(record);
-  writeAdvisorRecords(records);
-
-  res.status(201).json({
-    success: true,
-    asesor: { id: record.id, username: record.username, nombre: record.nombre, active: true, fechaCreacion: record.fechaCreacion },
-  });
 });
 
-app.delete('/api/asesores/:id', (req, res) => {
+app.delete('/api/asesores/:id', async (req, res) => {
   if (!requireAdmin(req, res)) return;
-  const records = advisorRecords();
-  const index = records.findIndex((item: any) => item.id === req.params.id);
-  if (index < 0) return res.status(404).json({ success: false, message: 'Asesor no encontrado.' });
-  records.splice(index, 1);
-  writeAdvisorRecords(records);
-  res.json({ success: true, message: 'Usuario de asesor eliminado.' });
+
+  try {
+    const { error } = await supabase.from('asesores').delete().eq('id', req.params.id);
+    if (error) throw new Error(`Supabase asesor: ${error.message}`);
+    res.json({ success: true, message: 'Usuario de asesor eliminado.' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo eliminar el asesor.' });
+  }
 });
 
 app.get('/api/lote-usuarios', async (req, res) => {
