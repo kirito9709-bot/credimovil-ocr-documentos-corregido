@@ -131,10 +131,36 @@ export const Navbar: React.FC<NavbarProps> = ({
               <UserRound className="w-4 h-4" />
               <span>{authUser?.role === 'lote' ? 'Mi Portal' : 'Acceso Lote'}</span>
             </button>
+            <div className="md:hidden mt-2 pt-2 border-t border-slate-800 grid grid-cols-2 gap-2">
+              <button
+                onClick={() => selectTab('lotes')}
+                className="px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-200"
+              >
+                <Building2 className="w-4 h-4 inline mr-1.5 text-red-400" />
+                {activeLoteCount} Lotes
+              </button>
+
+              {isAdminAuth ? (
+                <button
+                  onClick={onLogoutAdmin}
+                  className="px-3 py-2.5 rounded-xl bg-red-950/40 border border-red-800/40 text-xs font-bold text-red-200"
+                >
+                  Cerrar sesión
+                </button>
+              ) : (
+                <button
+                  onClick={() => { onOpenAdminAuth(); setMobileOpen(false); }}
+                  className="px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-200"
+                >
+                  <Lock className="w-4 h-4 inline mr-1.5 text-red-400" />
+                  Acceso Asesor
+                </button>
+              )}
+            </div>
           </nav>
 
-          {/* Right actions */}
-          <div className="flex items-center gap-2">
+          {/* Desktop actions */}
+          <div className="hidden md:flex items-center gap-2">
             <button
               onClick={() => selectTab('lotes')}
               className="hidden lg:flex items-center gap-1.5 text-xs text-slate-300 hover:text-red-400 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 transition"
@@ -165,8 +191,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>Acceso Asesor</span>
               </button>
             )}
-          </div>
-        </div>
+          </div>        </div>
       </div>
     </header>
   );
