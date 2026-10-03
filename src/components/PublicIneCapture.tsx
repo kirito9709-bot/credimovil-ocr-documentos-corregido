@@ -384,10 +384,10 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     }
 
     const referenciasIncompletas = referencias.some(
-      (r) => !r.nombre.trim() || !r.telefono.trim() || (r.esFamiliar && !r.ciudad?.trim())
+      (r) => !r.nombre.trim() || !r.telefono.trim()
     );
     if (referencias.length !== 3 || referenciasIncompletas) {
-      setScanError('Debes capturar las 3 referencias obligatorias: 1 familiar de otro domicilio y 2 conocidos. El familiar debe incluir su ciudad o municipio.');
+      setScanError('Debes capturar las 3 referencias obligatorias: 1 familiar de otro domicilio y 2 conocidos.');
       return;
     }
 
@@ -1982,7 +1982,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   3 Referencias Personales <span className="text-red-500">*</span>
                 </h4>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  1 familiar que viva en otro domicilio y 2 conocidos. Captura nombres y teléfonos diferentes.
+                  1 familiar que viva en otro domicilio y 2 conocidos. Solo se solicita nombre y teléfono.
                 </p>
               </div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded-lg">
@@ -2042,30 +2042,11 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     />
                   </div>
 
-                  {ref.esFamiliar && (
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                        Ciudad / Municipio donde vive *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={ref.ciudad || ''}
-                        onChange={(e) =>
-                          setReferencias((prev) =>
-                            prev.map((item, i) => (i === index ? { ...item, ciudad: e.target.value } : item))
-                          )
-                        }
-                        placeholder="ej. Apodaca, N.L."
-                        className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
-                      />
-                    </div>
-                  )}
+
                 </div>
               ))}
             </div>
           </div>
-        </div>
 
         {/* SECCIÓN 4: DATOS DEL VEHÍCULO Y LOTE ASOCIADO           */}
         {/* ======================================================== */}
