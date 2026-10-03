@@ -142,7 +142,7 @@ export interface ExpedienteCredito {
   engancheModo?: 'PORCENTAJE' | 'MONTO';
   enganchePorcentaje?: number;
   montoFinanciar: number;
-  plazoMeses: number; // 12, 24, 36, 48, 60
+  plazoMeses: number; // 12, 24, 36, 48
   tasaInteresAnual?: number;
   mensualidadEstimada?: number;
   financieraAsignada?: string;
