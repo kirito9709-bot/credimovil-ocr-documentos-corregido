@@ -28,7 +28,7 @@ function normalizeSupabaseUrl(raw: string) {
   } catch {
     return value
       .replace(/[\\/]+$/, '')
-      .replace(/\\/(?:rest|auth|storage)\\/v1(?:\\/.*)?$/i, '');
+      .replace(/\/(?:rest|auth|storage)\/v1(?:\/.*)?$/i, '');
   }
 }
 
