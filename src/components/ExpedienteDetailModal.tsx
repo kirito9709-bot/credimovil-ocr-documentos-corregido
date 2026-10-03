@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   X,
   CheckCircle2,
@@ -41,15 +41,19 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
   onDelete,
   onOpenPrint,
 }) => {
-  if (!expediente) return null;
-
   const [activeTab, setActiveTab] = useState<'detalle' | 'fondeo' | 'fotos'>('detalle');
   const [estatus, setEstatus] = useState<EstatusCredito>(expediente.estatus);
   const [financiera, setFinanciera] = useState(expediente.financieraAsignada || 'CrediMóvil Auto');
-  const [tasa, setTasa] = useState(expediente.tasaInteresAnual || 14.5);
+  const [tasa] = useState(28);
   const [plazo, setPlazo] = useState(expediente.plazoMeses || 48);
-  const [enganche, setEnganche] = useState(expediente.enganche || 0);
   const [precio, setPrecio] = useState(expediente.autoPrecio || 0);
+  const [enganchePorcentaje, setEnganchePorcentaje] = useState(() => {
+    const basePrecio = Number(expediente.autoPrecio) || 0;
+    const baseEnganche = Number(expediente.enganche) || 0;
+    return basePrecio > 0
+      ? Math.min(100, Math.max(20, Math.round((baseEnganche / basePrecio) * 100)))
+      : 20;
+  });
   const [notas, setNotas] = useState(expediente.notasAsesor || '');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -62,8 +66,10 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
 
   const isPdfUrl = (url?: string | null) => Boolean(url && (/^data:application\/pdf/i.test(url) || /\.pdf(?:$|[?#])/i.test(url)));
 
-  const calcMontoFinanciar = Math.max(0, precio - enganche);
-  const tasaMensual = (tasa / 100) / 12;
+  const engancheSeguro = Math.min(100, Math.max(20, Number(enganchePorcentaje) || 20));
+  const calcEnganche = Math.round(precio * engancheSeguro / 100);
+  const calcMontoFinanciar = Math.max(0, precio - calcEnganche);
+  const tasaMensual = (28 / 100) / 12;
   const calcMensualidad =
     calcMontoFinanciar > 0 && plazo > 0
       ? Math.round(
@@ -78,9 +84,9 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
       const res = await api.updateExpediente(expediente.id, {
         estatus,
         financieraAsignada: financiera,
-        tasaInteresAnual: Number(tasa),
+        tasaInteresAnual: 28,
         plazoMeses: Number(plazo),
-        enganche: Number(enganche),
+        enganche: calcEnganche,
         autoPrecio: Number(precio),
         montoFinanciar: calcMontoFinanciar,
         mensualidadEstimada: calcMensualidad,
@@ -124,12 +130,26 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
 
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
+  if (!expediente) return null;
+
   const ine = expediente.ine || {};
   const dom = ine.domicilio || {};
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-2 sm:p-4 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-5xl bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col my-8 max-h-[92vh]">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-2 sm:p-4 backdrop-blur-md overflow-y-auto"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="relative w-full max-w-5xl bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col my-8 max-h-[92vh]">
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between px-6 py-4 bg-slate-950 border-b border-slate-800 gap-3">
           <div className="flex items-center gap-3">
@@ -299,13 +319,9 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
 
                   <div>
                     <label className="block text-slate-400 mb-1 font-semibold">Tasa Anual (%)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={tasa}
-                      onChange={(e) => setTasa(Number(e.target.value))}
-                      className="w-full py-2 px-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-red-500"
-                    />
+                    <div className="w-full py-2 px-3 bg-slate-900 border border-emerald-500/30 rounded-xl text-emerald-400 font-black">
+                      28%
+                    </div>
                   </div>
                 </div>
 
@@ -321,13 +337,22 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-slate-400 mb-1">Enganche ($MXN)</label>
+                    <label className="block text-slate-400 mb-1">Enganche (% del valor)</label>
                     <input
                       type="number"
-                      value={enganche}
-                      onChange={(e) => setEnganche(Number(e.target.value))}
+                      min={20}
+                      max={100}
+                      step={1}
+                      value={engancheSeguro}
+                      onChange={(e) => {
+                        const value = Number(e.target.value) || 20;
+                        setEnganchePorcentaje(Math.min(100, Math.max(20, value)));
+                      }}
                       className="w-full py-1.5 px-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white"
                     />
+                    <div className="text-[10px] text-slate-500 mt-1">
+                      ${calcEnganche.toLocaleString('es-MX')}{'}'} MXN • mínimo 20%
+                    </div>
                   </div>
 
                   <div>
