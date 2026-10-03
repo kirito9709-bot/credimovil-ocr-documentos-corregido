@@ -71,6 +71,8 @@ create table if not exists public.documentos (
   metadata jsonb not null default '{}'::jsonb
 );
 
+alter table public.documentos add column if not exists metadata jsonb not null default '{}'::jsonb;
+
 create index if not exists documentos_expediente_id_idx on public.documentos(expediente_id);
 create index if not exists documentos_estatus_idx on public.documentos(estatus);
 
