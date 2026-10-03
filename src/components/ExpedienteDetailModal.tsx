@@ -22,6 +22,8 @@ import {
   ExternalLink,
   Sparkles,
   Download,
+  Upload,
+  Loader2,
 } from 'lucide-react';
 import { ExpedienteCredito, EstatusCredito } from '../types';
 import { api } from '../services/api';
@@ -52,7 +54,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
     const basePrecio = Number(expediente?.autoPrecio) || 0;
     const baseEnganche = Number(expediente?.enganche) || 0;
     return basePrecio > 0
-      ? Math.min(100, Math.max(20, Math.round((baseEnganche / basePrecio) * 100)))
+      ? Math.min(100, Math.max(20, Math.round((baseEnganche / basePrecio) * 10000) / 100))
       : 20;
   });
   const [notas, setNotas] = useState(expediente?.notasAsesor || '');
@@ -64,6 +66,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
   const [reviewComment, setReviewComment] = useState('');
   const [previewDocUrl, setPreviewDocUrl] = useState<string | null>(null);
   const [previewDocTitle, setPreviewDocTitle] = useState<string>('');
+  const [uploadingDocumentType, setUploadingDocumentType] = useState<string | null>(null);
 
   const isPdfUrl = (url?: string | null) => Boolean(url && (/^data:application\/pdf/i.test(url) || /\.pdf(?:$|[?#])/i.test(url)));
 
@@ -107,6 +110,47 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
       alert(err.message || 'Error al guardar cambios');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleUploadAnalysisDocument = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    tipo: string,
+    displayName: string,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    const maxSize = 15 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert('El archivo supera el límite de 15 MB.');
+      return;
+    }
+
+    setUploadingDocumentType(tipo);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('No se pudo leer el archivo.'));
+        reader.onerror = () => reject(reader.error || new Error('No se pudo leer el archivo.'));
+        reader.readAsDataURL(file);
+      });
+
+      const res = await api.uploadExpedienteDocument(expediente.id, {
+        tipo,
+        archivoData: dataUrl,
+        archivoNombre: file.name,
+        displayName,
+      });
+
+      if (res.success && res.expediente) {
+        onUpdate(res.expediente);
+      }
+    } catch (err: any) {
+      alert(err.message || `No se pudo subir ${displayName}.`);
+    } finally {
+      setUploadingDocumentType(null);
     }
   };
 
@@ -411,7 +455,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                         type="number"
                         min={20}
                         max={100}
-                        step={1}
+                        step={0.01}
                         value={engancheSeguro}
                         onChange={(e) => {
                           const value = Number(e.target.value) || 20;
@@ -706,6 +750,50 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
 
           {activeTab === 'fotos' && (
             <div className="space-y-6">
+              <div className="p-4 rounded-2xl bg-slate-950/80 border border-emerald-500/20">
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div>
+                    <h4 className="text-xs font-black text-white uppercase tracking-wider">Agregar / Reemplazar documentos después del alta</h4>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Puedes subir posteriormente la INE, comprobante de domicilio y estados de cuenta sin crear un nuevo folio.
+                    </p>
+                  </div>
+                  <Upload className="w-5 h-5 text-emerald-400 shrink-0" />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {[
+                    ['INE_FRENTE', 'INE Frente'],
+                    ['INE_REVERSO', 'INE Reverso'],
+                    ['COMPROBANTE_DOMICILIO', 'Comprobante de domicilio'],
+                    ['ESTADO_CUENTA_MES1', 'Estado de cuenta Mes 1'],
+                    ['ESTADO_CUENTA_MES2', 'Estado de cuenta Mes 2'],
+                    ['ESTADO_CUENTA_MES3', 'Estado de cuenta Mes 3'],
+                    ['ESTADO_CUENTA_CONSOLIDADO', 'Estados de cuenta 3 meses (PDF)'],
+                  ].map(([tipo, label]) => (
+                    <div key={tipo} className="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                      <input
+                        id={`upload-doc-${tipo}`}
+                        type="file"
+                        accept="image/*,.pdf"
+                        className="hidden"
+                        onChange={(e) => handleUploadAnalysisDocument(e, tipo, label)}
+                      />
+                      <label
+                        htmlFor={`upload-doc-${tipo}`}
+                        className="w-full cursor-pointer py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center gap-2"
+                      >
+                        {uploadingDocumentType === tipo ? (
+                          <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Subiendo...</>
+                        ) : (
+                          <><Upload className="w-3.5 h-3.5 text-emerald-400" /> {label}</>
+                        )}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* 1. INE Ambos Lados */}
               <div>
                 <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
