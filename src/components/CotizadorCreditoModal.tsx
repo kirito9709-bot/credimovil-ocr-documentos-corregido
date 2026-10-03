@@ -37,6 +37,47 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
   const totalPagos = mensualidad * plazo;
   const porcentajeReal = Number(precio) > 0 ? (enganche / Number(precio)) * 100 : 0;
 
+  const capitalMensualBase = totalCapitalFinanciado > 0 ? Math.round((totalCapitalFinanciado / plazo) * 100) / 100 : 0;
+  const interesesMensualesBase = totalCapitalFinanciado > 0 ? Math.round(totalCapitalFinanciado * 0.02 * 100) / 100 : 0;
+  const ivaMensualBase = Math.round(interesesMensualesBase * 0.16 * 100) / 100;
+  const gpsMensual = 260;
+  const sddMensual = 142;
+  const monthlySchedule = useMemo(() => {
+    const rows: Array<{
+      mes: number;
+      capital: number;
+      interes: number;
+      iva: number;
+      gps: number;
+      sdd: number;
+      pago: number;
+      saldo: number;
+    }> = [];
+    let saldo = Math.max(0, totalCapitalFinanciado);
+    for (let mes = 1; mes <= plazo; mes += 1) {
+      const capital = mes === plazo
+        ? Math.round(saldo * 100) / 100
+        : capitalMensualBase;
+      saldo = Math.max(0, Math.round((saldo - capital) * 100) / 100);
+      rows.push({
+        mes,
+        capital,
+        interes: interesesMensualesBase,
+        iva: ivaMensualBase,
+        gps: gpsMensual,
+        sdd: sddMensual,
+        pago: Math.round((capital + interesesMensualesBase + ivaMensualBase + gpsMensual + sddMensual) * 100) / 100,
+        saldo,
+      });
+    }
+    return rows;
+  }, [totalCapitalFinanciado, plazo, capitalMensualBase, interesesMensualesBase, ivaMensualBase]);
+
+  const seguroResumenLabel =
+    seguroModo === 'CONTADO' ? 'Seguro de contado' :
+    seguroModo === 'FINANCIADO' ? 'Seguro financiado' :
+    'Seguro';
+
   const money = (value: number) =>
     value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 });
 
@@ -53,6 +94,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
     'Tasa anual: 28%',
     'Mensualidad estimada: ' + money(mensualidad),
     'GPS: $260 MXN | SDD: $142 MXN',
+    'Desglose mensual: Capital ' + money(capitalMensualBase) + ' + Interés ' + money(interesesMensualesBase) + ' + IVA interés ' + money(ivaMensualBase) + ' + GPS $260 + SDD $142 = ' + money(mensualidad),
   ].join('\n');
 
   const copyQuote = async () => {
@@ -83,6 +125,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
       'td{padding:11px 13px;border-bottom:1px solid #E2E8F0;font-size:12px}tr:last-child td{border-bottom:0}td:first-child{font-weight:700;width:58%;color:#294767}' +
       '.highlight td{background:#FFF4F4}.highlight td:last-child{font-size:25px;font-weight:900;color:#C81E2B}' +
       '.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:15px}' +
+      '.schedule-title{margin-top:20px;font-size:13px;font-weight:900;color:#071A33;text-transform:uppercase;letter-spacing:.8px}.schedule{font-size:8px;margin-top:8px}.schedule th{background:#071A33;color:#fff;padding:6px 5px;text-align:right}.schedule th:first-child,.schedule td:first-child{text-align:center}.schedule td{padding:5px 4px;font-size:8px;text-align:right}.schedule tr:nth-child(even) td{background:#F8FAFC}' +
       '.box{border:1px solid #D7E0E7;border-radius:12px;padding:12px;background:#F8FAFC}.box span{display:block;color:#64748B;font-size:10px;text-transform:uppercase;letter-spacing:.6px}.box strong{display:block;margin-top:5px;font-size:15px}' +
       '.note{margin-top:18px;padding:11px 12px;border-left:4px solid #C81E2B;background:#F8FAFC;color:#64748B;font-size:10px;line-height:1.45}' +
       '.footer{margin-top:24px;text-align:center;color:#94A3B8;font-size:9px}' +
@@ -102,10 +145,14 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
       '<tr class="highlight"><td>Mensualidad estimada</td><td>' + money(mensualidad) + '</td></tr>' +
       '</table>' +
       '<div class="summary">' +
-      '<div class="box"><span>GPS</span><strong>$260 MXN</strong></div>' +
-      '<div class="box"><span>SDD</span><strong>$142 MXN</strong></div>' +
-      '<div class="box"><span>Seguro contado</span><strong>' + (seguroModo === 'CONTADO' ? money(seguro) : '$0 MXN') + '</strong></div>' +
+      '<div class="box"><span>GPS mensual</span><strong>$260 MXN</strong></div>' +
+      '<div class="box"><span>SDD mensual</span><strong>$142 MXN</strong></div>' +
+      '<div class="box"><span>' + seguroResumenLabel + '</span><strong>' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro)) + '</strong></div>' +
       '</div>' +
+      '<div class="schedule-title">Desglose de pagos mensuales</div>' +
+      '<table class="schedule"><thead><tr><th>Mes</th><th>Capital</th><th>Interés</th><th>IVA interés</th><th>GPS</th><th>SDD</th><th>Pago mensual</th><th>Saldo</th></tr></thead><tbody>' +
+      monthlySchedule.map(row => '<tr><td>' + row.mes + '</td><td>' + money(row.capital) + '</td><td>' + money(row.interes) + '</td><td>' + money(row.iva) + '</td><td>$260.00</td><td>$142.00</td><td><strong>' + money(row.pago) + '</strong></td><td>' + money(row.saldo) + '</td></tr>').join('') +
+      '</tbody></table>' +
       '<div class="note">Cotización estimada sujeta a validación y aprobación final. El seguro de contado se paga por separado; el seguro financiado se incorpora al capital financiado y modifica la mensualidad. GPS y SDD están incluidos en la mensualidad estimada.</div>' +
       '<div class="footer">CrediMóvil • Tu auto, más cerca de tus planes</div>' +
       '<script>window.print();<\/script></body></html>';
@@ -115,7 +162,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm p-3 sm:p-6 flex items-center justify-center" onMouseDown={(e) => e.stopPropagation()}>
-      <div className="w-full max-w-3xl max-h-[94vh] overflow-y-auto bg-[#071A33] border border-[#18365C] rounded-3xl shadow-2xl">
+      <div className="w-full max-w-4xl max-h-[95vh] overflow-y-auto bg-gradient-to-b from-[#071A33] via-[#081D36] to-[#06162B] border border-[#284B73] rounded-3xl shadow-[0_30px_90px_rgba(0,0,0,.45)]">
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 p-4 sm:p-5 bg-[#071A33] border-b border-[#173A63]">
           <div>
             <div className="flex items-center gap-2 text-white font-black">
