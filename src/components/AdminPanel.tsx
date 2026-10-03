@@ -58,8 +58,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [stats, setStats] = useState({
     total: 0,
     nuevos: 0,
+    preAprobados: 0,
     enEvaluacion: 0,
     aprobados: 0,
+    contratos: 0,
+    gps: 0,
+    fondeo: 0,
     fondeoRevision: 0,
     fondeados: 0,
     montoTotalFinanciado: 0,
@@ -363,69 +367,44 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* Flujo de Crédito */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-            Total Capturados
-          </span>
-          <span className="text-2xl font-black text-white mt-1 block">
-            {stats.total}
-          </span>
-          <span className="text-[10px] text-slate-500 block">En base de datos</span>
+        <div className="bg-violet-500/10 border border-violet-500/20 rounded-2xl p-4">
+          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Pre-aprobado</span>
+          <span className="text-2xl font-black text-violet-400 mt-1 block">{stats.preAprobados}</span>
+          <span className="text-[10px] text-slate-500 block">Casos pre-dictaminados</span>
         </div>
-
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-            En Análisis
-          </span>
-          <span className="text-2xl font-black text-blue-400 mt-1 block">
-            {stats.enEvaluacion}
-          </span>
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4">
+          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">En Análisis</span>
+          <span className="text-2xl font-black text-blue-400 mt-1 block">{stats.enEvaluacion}</span>
           <span className="text-[10px] text-slate-500 block">Evaluando crédito</span>
         </div>
-
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-            Aprobados
-          </span>
-          <span className="text-2xl font-black text-emerald-400 mt-1 block">
-            {stats.aprobados}
-          </span>
-          <span className="text-[10px] text-slate-500 block">Listos para fondeo</span>
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4">
+          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Aprobado</span>
+          <span className="text-2xl font-black text-emerald-400 mt-1 block">{stats.aprobados}</span>
+          <span className="text-[10px] text-slate-500 block">Listos para contrato</span>
         </div>
-
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-            Fondeo en Revisión
-          </span>
-          <span className="text-2xl font-black text-amber-400 mt-1 block">
-            {stats.fondeoRevision}
-          </span>
-          <span className="text-[10px] text-slate-500 block">Papelería subida</span>
+        <div className="bg-orange-500/10 border border-orange-500/20 rounded-2xl p-4">
+          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Contrato</span>
+          <span className="text-2xl font-black text-orange-400 mt-1 block">{stats.contratos}</span>
+          <span className="text-[10px] text-slate-500 block">Contrato en proceso</span>
         </div>
-
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-            Fondeados
-          </span>
-          <span className="text-2xl font-black text-teal-400 mt-1 block">
-            {stats.fondeados}
-          </span>
-          <span className="text-[10px] text-slate-500 block">Dispersados a lote</span>
+        <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-4">
+          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">GPS</span>
+          <span className="text-2xl font-black text-cyan-400 mt-1 block">{stats.gps}</span>
+          <span className="text-[10px] text-slate-500 block">Instalación / validación</span>
         </div>
-
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 col-span-2 sm:col-span-1">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-            Total Financiado
-          </span>
-          <span className="text-xl font-black text-emerald-400 mt-1 block truncate">
-            ${(stats.montoTotalFinanciado || 0).toLocaleString('es-MX')}
-          </span>
-          <span className="text-[10px] text-slate-500 block">MXN colocados</span>
+        <div className="bg-teal-500/10 border border-teal-500/20 rounded-2xl p-4">
+          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Fondeo</span>
+          <span className="text-2xl font-black text-teal-400 mt-1 block">{stats.fondeo}</span>
+          <span className="text-[10px] text-slate-500 block">En proceso o fondeado</span>
         </div>
       </div>
-
+      <div className="flex items-center justify-end -mt-4">
+        <span className="text-[10px] text-slate-500">
+          Total de expedientes: <strong className="text-slate-300">{stats.total}</strong> • Financiado: <strong className="text-emerald-400">${(stats.montoTotalFinanciado || 0).toLocaleString('es-MX')} MXN</strong>
+        </span>
+      </div>
       {/* Filter and Search Bar */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
@@ -463,10 +442,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             >
               <option value="TODOS">Todos los Estatus</option>
               <option value="NUEVO">NUEVO</option>
-              <option value="EN_EVALUACION">EN EVALUACIÓN</option>
+              <option value="PRE_APROBADO">PRE-APROBADO</option>
+              <option value="EN_EVALUACION">EN ANÁLISIS</option>
               <option value="APROBADO">APROBADO</option>
-              <option value="FONDEO_REVISION">FONDEO EN REVISIÓN</option>
-              <option value="FONDEADO">FONDEADO</option>
+              <option value="CONTRATO">CONTRATO</option>
+              <option value="GPS">GPS</option>
+              <option value="FONDEO">FONDEO</option>
               <option value="RECHAZADO">RECHAZADO</option>
             </select>
           </div>
