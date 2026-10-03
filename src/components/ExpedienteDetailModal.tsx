@@ -157,10 +157,16 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
             </span>
             <span
               className={`px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                estatus === 'FONDEADO'
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                estatus === 'FONDEADO' || estatus === 'FONDEO'
+                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                  : estatus === 'GPS'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                  : estatus === 'CONTRATO'
+                  ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
                   : estatus === 'APROBADO'
                   ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  : estatus === 'PRE_APROBADO'
+                  ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
                   : estatus === 'FONDEO_REVISION'
                   ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                   : 'bg-slate-800 text-slate-300'
@@ -291,11 +297,14 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                       className="w-full py-2 px-3 bg-slate-900 border border-slate-700 rounded-xl text-white font-semibold focus:outline-none focus:border-red-500"
                     >
                       <option value="NUEVO">NUEVO</option>
-                      <option value="EN_EVALUACION">EN EVALUACIÓN</option>
                       <option value="PRE_APROBADO">PRE-APROBADO</option>
-                      <option value="APROBADO">APROBADO (Listo para Fondeo)</option>
+                      <option value="EN_EVALUACION">EN ANÁLISIS</option>
+                      <option value="APROBADO">APROBADO</option>
+                      <option value="CONTRATO">CONTRATO</option>
+                      <option value="GPS">GPS</option>
+                      <option value="FONDEO">FONDEO</option>
                       <option value="FONDEO_REVISION">FONDEO EN REVISIÓN</option>
-                      <option value="FONDEADO">FONDEADO (Dispersado a Lote)</option>
+                      <option value="FONDEADO">FONDEADO / DISPERSADO</option>
                       <option value="RECHAZADO">RECHAZADO</option>
                     </select>
                   </div>
