@@ -116,6 +116,7 @@ export interface ExpedienteCredito {
   casaPropiaORentada?: 'PROPIA' | 'RENTADA' | 'FAMILIAR' | '';
   tiempoEnTrabajo?: string;
   nombreUbicacionEmpleo?: string;
+  direccionEmpleo?: string;
   giroActividadEmpresa?: string;
   dependientesEconomicos?: number;
   estadoCivil?: 'SOLTERO' | 'CASADO' | 'UNION_LIBRE' | 'DIVORCIADO' | 'VIUDO' | '';
@@ -156,7 +157,7 @@ export interface ExpedienteCredito {
   notasAsesor?: string;
 }
 
-export export interface LoteUsuarioPortal {
+export interface LoteUsuarioPortal {
   id: string;
   nombre: string;
   username: string;
