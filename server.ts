@@ -497,8 +497,12 @@ function applyStoredDocumentsToExpediente(exp: any, documentRows: any[]) {
 
     const defaultDocs = result.documentosFondeo || getCredimovilDefaultDocs(Boolean(result.esVehiculoLegalizado));
     result.documentosFondeo = await Promise.all(defaultDocs.map(async (doc: any) => {
-      const stored = byType.get(`FONDEO_${doc.id}`);
-      if (!stored) return { ...doc, archivoUrl: '' };
+      const stored =
+        byType.get(`FONDEO_${doc.id}`) ||
+        byType.get(`FONDEO-${doc.id}`) ||
+        byType.get(`doc-${doc.id}`) ||
+        byType.get(String(doc.id));
+      if (!stored) return { ...doc, archivoUrl: '', estatus: doc.estatus || 'PENDIENTE' };
 
       return {
         ...doc,
@@ -515,6 +519,234 @@ function applyStoredDocumentsToExpediente(exp: any, documentRows: any[]) {
 
     return result;
   })();
+}
+
+async function getSupabaseLotes() {
+  if (!supabase) return null;
+
+  const { data: rows, error } = await supabase
+    .from('lotes')
+    .select('*')
+    .order('created_at', { ascending: true });
+
+  if (error) throw new Error(`Supabase lotes: ${error.message}`);
+
+  let users: any[] = [];
+  const { data: userRows, error: usersError } = await supabase
+    .from('lote_usuarios')
+    .select('id,nombre,username,activo,lote_id,created_at')
+    .order('created_at', { ascending: true });
+
+  if (usersError) {
+    // Keep the lot directory working even if the optional portal-user table
+    // has not been created yet.
+    console.warn('Supabase usuarios de lote no disponibles:', usersError.message);
+  } else {
+    users = userRows || [];
+  }
+
+  const usersByLot = new Map<string, any[]>();
+  for (const user of users) {
+    const list = usersByLot.get(user.lote_id) || [];
+    list.push({
+      id: user.id,
+      nombre: user.nombre,
+      username: user.username,
+      activo: user.activo !== false,
+      created_at: user.created_at,
+    });
+    usersByLot.set(user.lote_id, list);
+  }
+
+  return (rows || []).map((row: any) => ({
+    ...mapSupabaseLote(row),
+    usuariosPortal: usersByLot.get(row.id) || [],
+  }));
+}
+
+async function uploadLegacyFileToSupabase(filePath: string, dbExpedienteId: string, tipo: string, metadata: Record<string, any> = {}) {
+  const bytes = fs.readFileSync(filePath);
+  const ext = path.extname(filePath).replace('.', '').toLowerCase();
+  const mimeMap: Record<string, string> = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', pdf: 'application/pdf'
+  };
+  const mime = mimeMap[ext] || 'application/octet-stream';
+  const base64 = bytes.toString('base64');
+  return uploadDataUriToSupabase(
+    dbExpedienteId,
+    tipo,
+    `data:${mime};base64,${base64}`,
+    path.basename(filePath),
+    'SUBIDO',
+    '',
+    metadata
+  );
+}
+
+async function migrateLegacyRenderDataToSupabase() {
+  if (!supabase) return;
+
+  const legacyDir = path.join(__dirname, 'data');
+  if (!fs.existsSync(legacyDir)) return;
+
+  console.warn('Supabase: detectado almacenamiento legado de Render. Iniciando migración única...');
+
+  let complete = true;
+
+  // Legacy lotes.
+  const legacyLotesPath = path.join(legacyDir, 'lotes.json');
+  if (fs.existsSync(legacyLotesPath)) {
+    try {
+      const lotes = JSON.parse(fs.readFileSync(legacyLotesPath, 'utf8') || '[]');
+      for (const lote of Array.isArray(lotes) ? lotes : []) {
+        const nombre = String(lote?.nombre || '').trim();
+        if (!nombre) continue;
+
+        const { data: existing, error } = await supabase
+          .from('lotes')
+          .select('id')
+          .ilike('nombre', nombre)
+          .limit(1);
+
+        if (error) throw error;
+
+        if (!existing?.length) {
+          const { error: insertError } = await supabase.from('lotes').insert({
+            nombre,
+            contacto: String(lote?.contacto || ''),
+            telefono: String(lote?.telefono || ''),
+            correo: String(lote?.correo || ''),
+            direccion: String(lote?.direccion || ''),
+            ciudad: String(lote?.ciudad || 'México'),
+            cuenta_clabe_default: String(lote?.cuentaClabeDefault || ''),
+            banco_default: String(lote?.bancoDefault || ''),
+            activo: lote?.activo !== false,
+          });
+          if (insertError) throw insertError;
+        }
+      }
+    } catch (error: any) {
+      complete = false;
+      console.error('Migración legacy de lotes falló:', error?.message || error);
+    }
+  }
+
+  // Legacy advisors.
+  const legacyAdvisorsPath = path.join(legacyDir, 'asesores.json');
+  if (fs.existsSync(legacyAdvisorsPath)) {
+    try {
+      const advisors = JSON.parse(fs.readFileSync(legacyAdvisorsPath, 'utf8') || '[]');
+      for (const advisor of Array.isArray(advisors) ? advisors : []) {
+        const username = normalizeUsername(advisor?.username);
+        if (!username || !advisor?.passwordHash) continue;
+
+        const { data: existing, error } = await supabase
+          .from('asesores')
+          .select('id')
+          .eq('username', username)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (!existing) {
+          const { error: insertError } = await supabase.from('asesores').insert({
+            username,
+            nombre: String(advisor?.nombre || username),
+            password_hash: String(advisor.passwordHash),
+            activo: advisor?.active !== false,
+          });
+          if (insertError) throw insertError;
+        }
+      }
+    } catch (error: any) {
+      complete = false;
+      console.error('Migración legacy de asesores falló:', error?.message || error);
+    }
+  }
+
+  // Legacy expedientes + local binary uploads.
+  const legacyExpPath = path.join(legacyDir, 'expedientes.json');
+  if (fs.existsSync(legacyExpPath)) {
+    try {
+      const expedientes = JSON.parse(fs.readFileSync(legacyExpPath, 'utf8') || '[]');
+
+      for (const legacyExp of Array.isArray(expedientes) ? expedientes : []) {
+        try {
+          if (legacyExp?.folio) {
+            await upsertExpedienteSupabase(legacyExp);
+          }
+
+          const dbRow = await getSupabaseExpedienteRowByFolio(String(legacyExp?.folio || ''));
+          if (!dbRow) throw new Error(`No se encontró expediente migrado: ${legacyExp?.folio}`);
+
+          const uploadDir = path.join(legacyDir, 'uploads', sanitizeFileName(String(legacyExp?.id || '')));
+          if (fs.existsSync(uploadDir)) {
+            const files = fs.readdirSync(uploadDir).filter((name) => fs.statSync(path.join(uploadDir, name)).isFile());
+
+            for (const fileName of files) {
+              const filePath = path.join(uploadDir, fileName);
+              const lower = fileName.toLowerCase();
+
+              let tipo = '';
+              if (lower.includes('ine-frente')) tipo = 'INE_FRENTE';
+              else if (lower.includes('ine-reverso')) tipo = 'INE_REVERSO';
+              else if (lower.includes('comprobante-domicilio')) tipo = 'COMPROBANTE_DOMICILIO';
+              else if (lower.includes('mes1')) tipo = 'ESTADO_CUENTA_MES1';
+              else if (lower.includes('mes2')) tipo = 'ESTADO_CUENTA_MES2';
+              else if (lower.includes('mes3')) tipo = 'ESTADO_CUENTA_MES3';
+              else if (lower.includes('consolidado')) tipo = 'ESTADO_CUENTA_CONSOLIDADO';
+              else if (lower.startsWith('doc-')) {
+                const rawId = lower.replace(/^doc-/, '').split('.')[0];
+                tipo = `FONDEO_${rawId}`;
+              }
+
+              if (!tipo) {
+                complete = false;
+                console.warn(`Archivo legacy sin tipo conocido: ${fileName}`);
+                continue;
+              }
+
+              await uploadLegacyFileToSupabase(
+                filePath,
+                dbRow.id,
+                tipo,
+                {
+                  migradoDesdeRender: true,
+                  nombreOriginal: fileName,
+                  fechaMigracion: new Date().toISOString(),
+                }
+              );
+              fs.unlinkSync(filePath);
+            }
+
+            if (fs.readdirSync(uploadDir).length === 0) {
+              fs.rmSync(uploadDir, { recursive: true, force: true });
+            }
+          }
+
+          const refreshed = await getSupabaseExpedienteRowByFolio(String(legacyExp?.folio || ''));
+          if (!refreshed) complete = false;
+        } catch (expError: any) {
+          complete = false;
+          console.error(`Migración de expediente ${legacyExp?.folio || legacyExp?.id} falló:`, expError?.message || expError);
+        }
+      }
+    } catch (error: any) {
+      complete = false;
+      console.error('Migración legacy de expedientes falló:', error?.message || error);
+    }
+  }
+
+  if (complete) {
+    try {
+      fs.rmSync(legacyDir, { recursive: true, force: true });
+      console.log('Migración legacy completada. Almacenamiento local de Render eliminado.');
+    } catch (error: any) {
+      console.warn('No se pudo eliminar todo el almacenamiento legacy de Render:', error?.message || error);
+    }
+  } else {
+    console.warn('La migración legacy quedó incompleta; los archivos restantes se conservarán para no perder datos.');
+  }
 }
 
 async function migrateEmbeddedDocumentsInSupabase() {
@@ -577,10 +809,30 @@ async function getSupabaseExpedientes() {
 
   const { data, error } = await supabase
     .from('expedientes')
-    .select('*,documentos(*)')
+    .select('*')
     .order('updated_at', { ascending: false });
 
   if (error) throw new Error(`Supabase expedientes: ${error.message}`);
+
+  const expedienteIds = (data || []).map((row: any) => row.id).filter(Boolean);
+  let documentRows: any[] = [];
+
+  if (expedienteIds.length > 0) {
+    const { data: docs, error: docsError } = await supabase
+      .from('documentos')
+      .select('*')
+      .in('expediente_id', expedienteIds);
+
+    if (docsError) throw new Error(`Supabase documentos: ${docsError.message}`);
+    documentRows = docs || [];
+  }
+
+  const docsByExpediente = new Map<string, any[]>();
+  for (const doc of documentRows) {
+    const list = docsByExpediente.get(doc.expediente_id) || [];
+    list.push(doc);
+    docsByExpediente.set(doc.expediente_id, list);
+  }
 
   const result = [];
   for (const row of data || []) {
@@ -602,7 +854,7 @@ async function getSupabaseExpedientes() {
       fechaCreacion: source.fechaCreacion || row.created_at,
       fechaActualizacion: source.fechaActualizacion || row.updated_at,
     };
-    result.push(await applyStoredDocumentsToExpediente(exp, row.documentos || []));
+    result.push(await applyStoredDocumentsToExpediente(exp, docsByExpediente.get(row.id) || []));
   }
 
   return result;
@@ -1684,6 +1936,7 @@ async function startServer() {
   }
 
   console.log('Supabase configurado. CrediMóvil usará Supabase Database + Storage como única persistencia.');
+  await migrateLegacyRenderDataToSupabase();
   await migrateEmbeddedDocumentsInSupabase();
 
   if (process.env.NODE_ENV !== 'production') {
