@@ -91,6 +91,45 @@ export const api = {
     return res.json();
   },
 
+  async getLoteChat(loteId: string) {
+    const res = await fetch(`/api/lotes/${encodeURIComponent(loteId)}/chat`, {
+      headers: authHeaders(),
+    });
+    if (!res.ok) await parseError(res, 'No se pudo cargar el chat del lote.');
+    return res.json();
+  },
+
+  async sendLoteChatMessage(loteId: string, mensaje: string) {
+    const res = await fetch(`/api/lotes/${encodeURIComponent(loteId)}/chat`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ mensaje }),
+    });
+    if (!res.ok) await parseError(res, 'No se pudo enviar el mensaje.');
+    return res.json();
+  },
+
+  async getExpedienteComentarios(expedienteId: string) {
+    const res = await fetch(`/api/expedientes/${encodeURIComponent(expedienteId)}/comentarios`, {
+      headers: authHeaders(),
+    });
+    if (!res.ok) await parseError(res, 'No se pudieron cargar los comentarios.');
+    return res.json();
+  },
+
+  async addExpedienteComentario(
+    expedienteId: string,
+    payload: { comentario: string; tipo?: 'COMENTARIO' | 'SOLICITUD' }
+  ) {
+    const res = await fetch(`/api/expedientes/${encodeURIComponent(expedienteId)}/comentarios`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) await parseError(res, 'No se pudo guardar el comentario.');
+    return res.json();
+  },
+
   async scanIne(imageBase64: string, imageBackBase64?: string): Promise<{ success: boolean; data: IneData; message?: string }> {
     const res = await fetch('/api/ocr-ine', {
       method: 'POST',
