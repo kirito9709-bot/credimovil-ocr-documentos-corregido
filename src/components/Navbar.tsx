@@ -72,7 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* Navigation Tabs */}
-          <nav className={`${mobileOpen ? 'absolute left-3 right-3 top-16' : 'hidden'} md:static md:flex items-center gap-1 sm:gap-2 md:bg-transparent bg-slate-950 border md:border-0 border-slate-800 rounded-2xl p-2 md:p-0 shadow-2xl md:shadow-none z-50`}>
+          <nav className={`${mobileOpen ? 'absolute left-3 right-3 top-16' : 'hidden'} md:static md:flex items-center gap-1 sm:gap-2 md:bg-transparent bg-[#163F41] border md:border-0 border-[#2E766F] rounded-2xl p-2 md:p-0 shadow-2xl md:shadow-none z-50`}>
             <button
               onClick={() => onSelectTab('captura')}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
@@ -90,7 +90,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 relative ${
                 currentTab === 'fondeo'
                   ? 'bg-[#163F41] text-white shadow-md shadow-[#163F41]/20'
-                  : 'text-white/80 hover:text-white hover:bg-[#EAF3F3]'
+                  : 'text-white/80 hover:text-white hover:bg-white/10'
               }`}
             >
               <FolderSync className="w-4 h-4" />
@@ -129,23 +129,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="md:hidden mt-2 pt-2 border-t border-slate-800 grid grid-cols-2 gap-2">
               <button
                 onClick={() => selectTab('lotes')}
-                className="px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-200"
+                className="px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-xs font-bold text-white"
               >
-                <Building2 className="w-4 h-4 inline mr-1.5 text-red-400" />
+                <Building2 className="w-4 h-4 inline mr-1.5 text-[#79C2BB]" />
                 {activeLoteCount} Lotes
               </button>
 
               {isAdminAuth ? (
                 <button
                   onClick={onLogoutAdmin}
-                  className="px-3 py-2.5 rounded-xl bg-red-950/40 border border-red-800/40 text-xs font-bold text-red-200"
+                  className="px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-xs font-bold text-white"
                 >
                   Cerrar sesión
                 </button>
               ) : (
                 <button
                   onClick={() => { onOpenAdminAuth(); setMobileOpen(false); }}
-                  className="px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-200"
+                  className="px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-xs font-bold text-white"
                 >
                   <Lock className="w-4 h-4 inline mr-1.5 text-red-400" />
                   Acceso Asesor
@@ -158,7 +158,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="hidden md:flex items-center gap-2">
             <button
               onClick={() => selectTab('lotes')}
-              className="hidden lg:flex items-center gap-1.5 text-xs text-[#35585A] hover:text-[#163F41] px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 transition"
+              className="hidden lg:flex items-center gap-1.5 text-xs text-white/85 hover:text-white px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 transition"
               title="Directorio de Lotes Asociados"
             >
               <Building2 className="w-3.5 h-3.5 text-red-400" />
