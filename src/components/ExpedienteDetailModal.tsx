@@ -1048,7 +1048,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
         <ExpedienteComentariosModal
           isOpen={showComments}
           onClose={() => setShowComments(false)}
-          expedienteId={expediente.id}
+          expedienteId={expediente.folio}
           folio={expediente.folio}
           authUser={currentChatUser}
         />
