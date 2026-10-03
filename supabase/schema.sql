@@ -67,7 +67,8 @@ create table if not exists public.documentos (
   observaciones text not null default '',
   subido_por uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now(),
-  reviewed_at timestamptz
+  reviewed_at timestamptz,
+  metadata jsonb not null default '{}'::jsonb
 );
 
 create index if not exists documentos_expediente_id_idx on public.documentos(expediente_id);
