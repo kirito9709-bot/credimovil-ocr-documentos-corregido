@@ -610,7 +610,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
           </p>
 
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 mb-8">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
                   Folio CrediMóvil
@@ -648,7 +648,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               </div>
             </div>
 
-            <div className="border-t border-slate-200 mt-5 pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="border-t border-slate-200 mt-5 pt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
               <div>
                 <span className="text-slate-500 block">Vehículo:</span>
                 <strong className="text-slate-900 font-semibold">
@@ -674,7 +674,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
             <button
               onClick={openWhatsAppShare}
               className="py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
@@ -714,7 +714,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+    <div className="credimovil-mobile-form max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-5 sm:py-8 space-y-5 sm:space-y-8">
       {/* PROFESSIONAL EXECUTIVE HERO BANNER */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-slate-800 p-6 sm:p-8 shadow-xl">
         <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
@@ -1119,7 +1119,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               </div>
 
               {/* Selector si coincide con el INE o es diferente */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setDomicilioCoincideConIne(true)}
@@ -1355,7 +1355,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
 
               {/* Opción A: 3 Meses Separados */}
               {modoEstadosCuenta === 'individual' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Mes 1 */}
                   <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60 space-y-2">
                     <div className="flex items-center justify-between">
@@ -1632,7 +1632,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
 
           <div className="space-y-4">
             {/* Nombres y Apellidos */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                   Nombre(s) <span className="text-red-500">*</span>
@@ -1676,7 +1676,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
             </div>
 
             {/* CURP, RFC del Cliente, Fecha Nacimiento, Sexo */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                   CURP (18 Dígitos) <span className="text-red-500">*</span>
@@ -1779,7 +1779,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                 <div className="sm:col-span-2">
                   <label className="block text-[11px] font-semibold text-slate-600 mb-1">Calle</label>
                   <input
@@ -1830,7 +1830,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 mb-1">Colonia</label>
                   <input
@@ -1918,7 +1918,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 Teléfono de Contacto <span className="text-red-500">*</span>
@@ -2122,7 +2122,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 Lote Aliado Asociado <span className="text-red-500">*</span>
