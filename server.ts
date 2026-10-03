@@ -502,6 +502,61 @@ function applyStoredDocumentsToExpediente(exp: any, documentRows: any[]) {
   })();
 }
 
+async function migrateEmbeddedDocumentsInSupabase() {
+  if (!supabase) return;
+
+  const { data, error } = await supabase
+    .from('expedientes')
+    .select('id,folio,pin_fondeo,estatus,lote_id,cliente_nombre,cliente_curp,cliente_rfc,telefono,correo,auto_marca,auto_modelo,auto_ano,monto_financiar,data')
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    console.warn('Supabase: no se pudieron revisar documentos embebidos:', error.message);
+    return;
+  }
+
+  let migrated = 0;
+  for (const row of data || []) {
+    const source = row.data && typeof row.data === 'object' ? row.data : {};
+    const hasEmbeddedFile =
+      isDataUri(source.fotoIneFrente) ||
+      isDataUri(source.fotoIneReverso) ||
+      isDataUri(source.comprobanteDomicilioActualUrl) ||
+      Object.values(source.estadosCuenta || {}).some((v: any) => isDataUri(v)) ||
+      (source.documentosFondeo || []).some((d: any) => isDataUri(d?.archivoUrl));
+
+    if (!hasEmbeddedFile) continue;
+
+    try {
+      const exp = {
+        ...source,
+        id: source.id || `exp-${row.id}`,
+        supabaseId: row.id,
+        folio: row.folio,
+        pinFondeo: row.pin_fondeo,
+        estatus: row.estatus,
+        loteId: row.lote_id || source.loteId || '',
+        telefono: row.telefono || source.telefono || '',
+        correo: row.correo || source.correo || '',
+        autoMarca: row.auto_marca || source.autoMarca || '',
+        autoModelo: row.auto_modelo || source.autoModelo || '',
+        autoAno: row.auto_ano || source.autoAno || '',
+        montoFinanciar: Number(row.monto_financiar || source.montoFinanciar || 0),
+      };
+
+      await upsertExpedienteSupabase(exp);
+      migrated++;
+      console.log(`Supabase: documentos embebidos migrados a Storage para ${row.folio}`);
+    } catch (migrationError: any) {
+      console.warn(`Supabase: no se pudo migrar documentos de ${row.folio}:`, migrationError?.message || migrationError);
+    }
+  }
+
+  if (migrated > 0) {
+    console.log(`Supabase: ${migrated} expediente(s) con archivos embebidos fueron migrados a Storage privado.`);
+  }
+}
+
 async function getSupabaseExpedientes() {
   if (!supabase) return null;
 
@@ -1614,6 +1669,7 @@ async function startServer() {
   }
 
   console.log('Supabase configurado. CrediMóvil usará Supabase Database + Storage como única persistencia.');
+  await migrateEmbeddedDocumentsInSupabase();
 
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
