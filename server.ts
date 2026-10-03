@@ -2050,6 +2050,7 @@ app.post('/api/expedientes', async (req, res) => {
       loteNombre: body.loteNombre || 'Directo / Asesor',
       asesorLoteContacto: body.asesorLoteContacto || '',
       telefonoLote: body.telefonoLote || '',
+      correoLote: body.correoLote || '',
       autoMarca: body.autoMarca || '',
       autoModelo: body.autoModelo || '',
       autoAno: Number(body.autoAno) || new Date().getFullYear(),
