@@ -563,10 +563,6 @@ function sanitizeLoteForPublic(lote: any) {
   return { id: lote.id, nombre: lote.nombre, ciudad: lote.ciudad };
 }
 
-function sanitizeLoteForPublic(lote: any) {
-  return { id: lote.id, nombre: lote.nombre, ciudad: lote.ciudad };
-}
-
 // 1. Health
 app.get('/api/health', (req, res) => {
   res.json({
@@ -1099,58 +1095,29 @@ app.get('/api/lote/expedientes', async (req, res) => {
   if (!session) return;
 
   try {
-    if (supabase) {
-      const { data, error } = await supabase
-        .from('expedientes')
-        .select('id,folio,estatus,cliente_nombre,telefono,auto_marca,auto_modelo,auto_ano,monto_financiar,created_at,updated_at,data')
-        .eq('lote_id', session.loteId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw new Error(`Supabase expedientes del lote: ${error.message}`);
-
-      const expedientes = (data || []).map((row: any) => {
-        const source = row.data || {};
-        const docs = source.documentosFondeo || [];
+    const all = (await getSupabaseExpedientes()) || [];
+    const expedientes = all
+      .filter((e: any) => e.loteId === session.loteId)
+      .map((e: any) => {
+        const docs = e.documentosFondeo || [];
         const requiredDocs = docs.filter((d: any) => d.requerido);
         const uploadedRequired = requiredDocs.filter((d: any) => d.estatus === 'SUBIDO' || d.estatus === 'APROBADO');
         return {
-          id: row.id,
-          folio: row.folio,
-          estatus: row.estatus,
-          clienteNombre: row.cliente_nombre || source.ine?.nombreCompleto || source.ine?.nombre || '',
-          telefono: row.telefono || source.telefono || '',
-          autoMarca: row.auto_marca || source.autoMarca || '',
-          autoModelo: row.auto_modelo || source.autoModelo || '',
-          autoAno: row.auto_ano || source.autoAno || null,
-          montoFinanciar: Number(row.monto_financiar) || Number(source.montoFinanciar) || 0,
-          fechaCreacion: source.fechaCreacion || row.created_at,
-          fechaActualizacion: source.fechaActualizacion || row.updated_at,
+          id: e.id,
+          folio: e.folio,
+          estatus: e.estatus,
+          clienteNombre: e.ine?.nombreCompleto || e.ine?.nombre || '',
+          telefono: e.telefono || '',
+          autoMarca: e.autoMarca || '',
+          autoModelo: e.autoModelo || '',
+          autoAno: e.autoAno || null,
+          montoFinanciar: Number(e.montoFinanciar) || 0,
+          fechaCreacion: e.fechaCreacion,
+          fechaActualizacion: e.fechaActualizacion,
           docsSubidos: uploadedRequired.length,
           docsRequeridos: requiredDocs.length,
         };
       });
-
-      return res.json({ success: true, expedientes });
-    }
-
-    const local = readJson(EXPEDIENTES_FILE, []);
-    const expedientes = local
-      .filter((e: any) => e.loteId === session.loteId)
-      .map((e: any) => ({
-        id: e.id,
-        folio: e.folio,
-        estatus: e.estatus,
-        clienteNombre: e.ine?.nombreCompleto || e.ine?.nombre || '',
-        telefono: e.telefono || '',
-        autoMarca: e.autoMarca || '',
-        autoModelo: e.autoModelo || '',
-        autoAno: e.autoAno || null,
-        montoFinanciar: Number(e.montoFinanciar) || 0,
-        fechaCreacion: e.fechaCreacion,
-        fechaActualizacion: e.fechaActualizacion,
-        docsSubidos: (e.documentosFondeo || []).filter((d: any) => d.requerido && (d.estatus === 'SUBIDO' || d.estatus === 'APROBADO')).length,
-        docsRequeridos: (e.documentosFondeo || []).filter((d: any) => d.requerido).length,
-      }));
 
     res.json({ success: true, expedientes });
   } catch (error: any) {
@@ -1163,43 +1130,26 @@ app.get('/api/lote/expedientes', async (req, res) => {
 app.get('/api/lotes', async (req, res) => {
   try {
     const session = getSession(req);
-
-    if (supabaseConfigured()) {
-      const lotes = await getSupabaseLotes();
-
-      if (!session) {
-        return res.json({ success: true, lotes: (lotes || []).map(sanitizeLoteForPublic) });
-      }
-
-      // Expedientes todavía pueden estar en la migración local; conservamos sus
-      // estadísticas para no romper la pantalla mientras migramos expedientes.
-      const expedientes = readJson(EXPEDIENTES_FILE, []);
-      const lotesWithStats = (lotes || []).map((l: any) => {
-        const exps = expedientes.filter((e: any) => e.loteNombre === l.nombre || e.loteId === l.id);
-        const fondeados = exps.filter((e: any) => e.estatus === 'FONDEADO').length;
-        return { ...l, totalExpedientes: exps.length, totalFondeados: fondeados };
-      });
-
-      return res.json({ success: true, lotes: lotesWithStats });
-    }
-
-    const lotes = readJson(LOTES_FILE, DEFAULT_LOTES);
-    const expedientes = readJson(EXPEDIENTES_FILE, []);
+    const lotes = (await getSupabaseLotes()) || [];
 
     if (!session) {
       return res.json({ success: true, lotes: lotes.map(sanitizeLoteForPublic) });
     }
 
+    const expedientes = (await getSupabaseExpedientes()) || [];
     const lotesWithStats = lotes.map((l: any) => {
-      const exps = expedientes.filter((e: any) => e.loteId === l.id || e.loteNombre === l.nombre);
-      const fondeados = exps.filter((e: any) => e.estatus === 'FONDEADO').length;
-      return { ...l, totalExpedientes: exps.length, totalFondeados: fondeados };
+      const exps = expedientes.filter((e: any) => e.loteId === l.id);
+      return {
+        ...l,
+        totalExpedientes: exps.length,
+        totalFondeados: exps.filter((e: any) => e.estatus === 'FONDEADO').length,
+      };
     });
 
-    return res.json({ success: true, lotes: lotesWithStats });
+    res.json({ success: true, lotes: lotesWithStats });
   } catch (error: any) {
     console.error('GET /api/lotes error:', error);
-    return res.status(500).json({ success: false, message: error?.message || 'No se pudieron cargar los lotes.' });
+    res.status(500).json({ success: false, message: error?.message || 'No se pudieron cargar los lotes.' });
   }
 });
 
@@ -1214,60 +1164,47 @@ app.post('/api/lotes', async (req, res) => {
   }
 
   try {
-    if (supabaseConfigured()) {
-      const { data: existing, error: findError } = await supabase
-        .from('lotes')
-        .select('*')
-        .ilike('nombre', nombreLote)
-        .limit(1);
+    const { data: existing, error: findError } = await supabase
+      .from('lotes')
+      .select('*')
+      .ilike('nombre', nombreLote)
+      .limit(1);
 
-      if (findError) throw new Error(`Supabase lotes: ${findError.message}`);
-
-      if (existing && existing.length > 0) {
-        return res.status(409).json({ success: false, message: 'Ya existe un lote con ese nombre.', lote: mapSupabaseLote(existing[0]) });
-      }
-
-      const { data, error } = await supabase
-        .from('lotes')
-        .insert({
-          nombre: nombreLote,
-          contacto: String(contacto || ''),
-          telefono: String(telefono || ''),
-          correo: String(correo || ''),
-          direccion: String(direccion || ''),
-          ciudad: String(ciudad || 'México'),
-          cuenta_clabe_default: String(cuentaClabeDefault || ''),
-          banco_default: String(bancoDefault || ''),
-          activo: true,
-        })
-        .select('*')
-        .single();
-
-      if (error) throw new Error(`Supabase lotes: ${error.message}`);
-
-      const newLote = mapSupabaseLote(data);
-      return res.json({ success: true, lote: newLote, message: 'Lote registrado correctamente en Supabase.' });
+    if (findError) throw new Error(`Supabase lotes: ${findError.message}`);
+    if (existing && existing.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Ya existe un lote con ese nombre.',
+        lote: mapSupabaseLote(existing[0]),
+      });
     }
 
-    const lotes = readJson(LOTES_FILE, DEFAULT_LOTES);
-    const newLote = {
-      id: `lote-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      nombre: nombreLote,
-      contacto: contacto || '',
-      telefono: telefono || '',
-      correo: correo || '',
-      direccion: direccion || '',
-      ciudad: ciudad || 'México',
-      cuentaClabeDefault: cuentaClabeDefault || '',
-      bancoDefault: bancoDefault || '',
-    };
+    const { data, error } = await supabase
+      .from('lotes')
+      .insert({
+        nombre: nombreLote,
+        contacto: String(contacto || ''),
+        telefono: String(telefono || ''),
+        correo: String(correo || ''),
+        direccion: String(direccion || ''),
+        ciudad: String(ciudad || 'México'),
+        cuenta_clabe_default: String(cuentaClabeDefault || ''),
+        banco_default: String(bancoDefault || ''),
+        activo: true,
+      })
+      .select('*')
+      .single();
 
-    lotes.push(newLote);
-    writeJson(LOTES_FILE, lotes);
-    return res.json({ success: true, lote: newLote, message: 'Lote registrado con éxito.' });
+    if (error) throw new Error(`Supabase lotes: ${error.message}`);
+
+    res.status(201).json({
+      success: true,
+      lote: mapSupabaseLote(data),
+      message: 'Lote registrado correctamente en Supabase.',
+    });
   } catch (error: any) {
     console.error('POST /api/lotes error:', error);
-    return res.status(500).json({ success: false, message: error?.message || 'No se pudo registrar el lote.' });
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo registrar el lote.' });
   }
 });
 
@@ -1275,516 +1212,380 @@ app.delete('/api/lotes/:id', async (req, res) => {
   if (!requireStaff(req, res)) return;
 
   try {
-    if (supabaseConfigured()) {
-      const { data: lote, error: findError } = await supabase
-        .from('lotes')
-        .select('*')
-        .eq('id', req.params.id)
-        .maybeSingle();
+    const { data: lote, error: loteError } = await supabase
+      .from('lotes')
+      .select('id')
+      .eq('id', req.params.id)
+      .maybeSingle();
 
-      if (findError) throw new Error(`Supabase lotes: ${findError.message}`);
-      if (!lote) return res.status(404).json({ success: false, message: 'Lote no encontrado.' });
+    if (loteError) throw new Error(`Supabase lote: ${loteError.message}`);
+    if (!lote) return res.status(404).json({ success: false, message: 'Lote no encontrado.' });
 
-      const expedientes = readJson(EXPEDIENTES_FILE, []);
-      const hasLocalExpedientes = expedientes.some((e: any) => e.loteId === lote.id || e.loteNombre === lote.nombre);
-      if (hasLocalExpedientes) {
-        return res.status(409).json({ success: false, message: 'No puedes eliminar un lote que ya tiene expedientes asociados.' });
-      }
+    const { count, error: countError } = await supabase
+      .from('expedientes')
+      .select('id', { count: 'exact', head: true })
+      .eq('lote_id', req.params.id);
 
-      const { error } = await supabase.from('lotes').delete().eq('id', req.params.id);
-      if (error) throw new Error(`Supabase lotes: ${error.message}`);
-
-      return res.json({ success: true, message: 'Lote eliminado correctamente de Supabase.' });
-    }
-
-    const lotes = readJson(LOTES_FILE, DEFAULT_LOTES);
-    const index = lotes.findIndex((l: any) => l.id === req.params.id);
-    if (index < 0) return res.status(404).json({ success: false, message: 'Lote no encontrado.' });
-
-    const lote = lotes[index];
-    const expedientes = readJson(EXPEDIENTES_FILE, []);
-    const hasExpedientes = expedientes.some((e: any) => e.loteId === lote.id || e.loteNombre === lote.nombre);
-    if (hasExpedientes) {
+    if (countError) throw new Error(`Supabase expedientes del lote: ${countError.message}`);
+    if ((count || 0) > 0) {
       return res.status(409).json({ success: false, message: 'No puedes eliminar un lote que ya tiene expedientes asociados.' });
     }
 
-    lotes.splice(index, 1);
-    writeJson(LOTES_FILE, lotes);
-    return res.json({ success: true, message: 'Lote eliminado correctamente.' });
+    const { error } = await supabase.from('lotes').delete().eq('id', req.params.id);
+    if (error) throw new Error(`Supabase lote: ${error.message}`);
+
+    res.json({ success: true, message: 'Lote eliminado correctamente de Supabase.' });
   } catch (error: any) {
     console.error('DELETE /api/lotes error:', error);
-    return res.status(500).json({ success: false, message: error?.message || 'No se pudo eliminar el lote.' });
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo eliminar el lote.' });
   }
-});
-
-// Securely serve persisted expedition documents. Files never live inside expedientes.json.
-app.get('/api/expedientes/:id/documentos/:filename', (req, res) => {
-  const session = getSession(req);
-  const accessToken = typeof req.query.accessToken === 'string' ? req.query.accessToken : '';
-  const staffSession = session && (session.role === 'admin' || session.role === 'asesor');
-  if (!staffSession && !verifyDocumentAccessToken(accessToken, req.params.id)) {
-    return res.status(401).json({ success: false, message: 'Acceso no autorizado al documento.' });
-  }
-
-  const expedienteId = sanitizeFileName(req.params.id);
-  const filename = sanitizeFileName(req.params.filename);
-  const expDir = path.join(UPLOADS_DIR, expedienteId);
-  const filePath = path.join(expDir, filename);
-
-  if (!filePath.startsWith(expDir + path.sep) || !fs.existsSync(filePath)) {
-    return res.status(404).json({ success: false, message: 'Documento no encontrado.' });
-  }
-
-  res.sendFile(filePath);
 });
 
 // 5. Expedientes (CRUD)
 app.get('/api/expedientes', async (req, res) => {
   if (!requireStaff(req, res)) return;
-  const { q, estatus, loteId } = req.query;
-  let list = supabase ? (await getSupabaseExpedientes()) || [] : readJson(EXPEDIENTES_FILE, []);
-  let migrated = false;
-  for (const exp of list) migrated = persistExpedienteDocuments(exp) || migrated;
-  if (migrated) writeJson(EXPEDIENTES_FILE, list);
 
-  if (estatus && typeof estatus === 'string' && estatus !== 'TODOS') {
-    list = list.filter((e: any) => e.estatus === estatus);
+  try {
+    let list = (await getSupabaseExpedientes()) || [];
+    const { q, estatus, loteId } = req.query;
+
+    if (estatus && typeof estatus === 'string' && estatus !== 'TODOS') {
+      list = list.filter((e: any) => e.estatus === estatus);
+    }
+
+    if (loteId && typeof loteId === 'string' && loteId !== 'TODOS') {
+      list = list.filter((e: any) => e.loteId === loteId);
+    }
+
+    if (q && typeof q === 'string') {
+      const query = q.toLowerCase().trim();
+      list = list.filter((e: any) => {
+        const nombre = (e.ine?.nombreCompleto || '').toLowerCase();
+        const curp = (e.ine?.curp || '').toLowerCase();
+        const rfc = (e.ine?.rfc || '').toLowerCase();
+        const folio = (e.folio || '').toLowerCase();
+        const lote = (e.loteNombre || '').toLowerCase();
+        const auto = `${e.autoMarca || ''} ${e.autoModelo || ''}`.toLowerCase();
+        return nombre.includes(query) || curp.includes(query) || rfc.includes(query) ||
+          folio.includes(query) || lote.includes(query) || auto.includes(query);
+      });
+    }
+
+    list.sort((a: any, b: any) =>
+      new Date(b.fechaActualizacion || b.fechaCreacion).getTime() -
+      new Date(a.fechaActualizacion || a.fechaCreacion).getTime()
+    );
+
+    res.json({ success: true, count: list.length, expedientes: list });
+  } catch (error: any) {
+    console.error('GET /api/expedientes error:', error);
+    res.status(500).json({ success: false, message: error?.message || 'No se pudieron cargar los expedientes.' });
   }
-
-  if (loteId && typeof loteId === 'string' && loteId !== 'TODOS') {
-    list = list.filter((e: any) => e.loteId === loteId);
-  }
-
-  if (q && typeof q === 'string') {
-    const query = q.toLowerCase().trim();
-    list = list.filter((e: any) => {
-      const nombre = (e.ine?.nombreCompleto || '').toLowerCase();
-      const curp = (e.ine?.curp || '').toLowerCase();
-      const rfc = (e.ine?.rfc || '').toLowerCase();
-      const folio = (e.folio || '').toLowerCase();
-      const lote = (e.loteNombre || '').toLowerCase();
-      const auto = `${e.autoMarca || ''} ${e.autoModelo || ''}`.toLowerCase();
-      return (
-        nombre.includes(query) ||
-        curp.includes(query) ||
-        rfc.includes(query) ||
-        folio.includes(query) ||
-        lote.includes(query) ||
-        auto.includes(query)
-      );
-    });
-  }
-
-  list.sort((a: any, b: any) => new Date(b.fechaActualizacion || b.fechaCreacion).getTime() - new Date(a.fechaActualizacion || a.fechaCreacion).getTime());
-
-  list = list.map((exp: any) => decorateExpedienteDocumentUrls(exp));
-  res.json({ success: true, count: list.length, expedientes: list });
 });
 
 app.get('/api/expedientes/:id', async (req, res) => {
   if (!requireStaff(req, res)) return;
-  const expedientes = supabase ? (await getSupabaseExpedientes()) || [] : readJson(EXPEDIENTES_FILE, []);
-  const item = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
-  if (!item) {
-    return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+
+  try {
+    const list = (await getSupabaseExpedientes()) || [];
+    const item = list.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    }
+    res.json({ success: true, expediente: item });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo cargar el expediente.' });
   }
-  if (persistExpedienteDocuments(item)) writeJson(EXPEDIENTES_FILE, expedientes);
-  res.json({ success: true, expediente: decorateExpedienteDocumentUrls(item) });
 });
 
-app.post('/api/expedientes/by-folio', (req, res) => {
+app.post('/api/expedientes/by-folio', async (req, res) => {
   const { folio, pinFondeo } = req.body;
   if (!folio) {
     return res.status(400).json({ success: false, message: 'Debe ingresar el folio del expediente.' });
   }
 
-  const expedientes = readJson(EXPEDIENTES_FILE, []);
-  const item = expedientes.find(
-    (e: any) => e.folio?.toUpperCase().trim() === folio.toUpperCase().trim()
-  );
+  try {
+    const { data: row, error } = await supabase
+      .from('expedientes')
+      .select('id,folio,pin_fondeo,data')
+      .eq('folio', String(folio).trim().toUpperCase())
+      .maybeSingle();
 
-  if (!item) {
-    return res.status(404).json({ success: false, message: 'No se encontró ningún expediente con ese folio.' });
+    if (error) throw new Error(`Supabase expediente por folio: ${error.message}`);
+    if (!row) return res.status(404).json({ success: false, message: 'No se encontró ningún expediente con ese folio.' });
+
+    if (pinFondeo && row.pin_fondeo && pinFondeo.trim() !== row.pin_fondeo.trim()) {
+      return res.status(401).json({ success: false, message: 'PIN de acceso del lote incorrecto.' });
+    }
+
+    const list = (await getSupabaseExpedientes()) || [];
+    const item = list.find((e: any) => e.folio === row.folio);
+    if (!item) return res.status(404).json({ success: false, message: 'No se pudo reconstruir el expediente.' });
+
+    res.json({ success: true, expediente: item });
+  } catch (error: any) {
+    console.error('POST /api/expedientes/by-folio error:', error);
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo consultar el expediente.' });
   }
-
-  if (pinFondeo && item.pinFondeo && pinFondeo.trim() !== item.pinFondeo.trim()) {
-    return res.status(401).json({ success: false, message: 'PIN de acceso del lote incorrecto.' });
-  }
-
-  if (persistExpedienteDocuments(item)) writeJson(EXPEDIENTES_FILE, expedientes);
-  res.json({ success: true, expediente: item });
 });
 
 app.post('/api/expedientes', async (req, res) => {
-  const expedientes = supabase
-    ? ((await getSupabaseExpedientes()) || [])
-    : readJson(EXPEDIENTES_FILE, []);
+  if (!supabase) return res.status(503).json({ success: false, message: 'Supabase no está configurado.' });
 
-  // Generate the next folio from the highest existing folio, regardless of
-  // whether Render's local filesystem was reset.
-  const highestFolio = expedientes.reduce((max: number, exp: any) => {
-    const match = String(exp?.folio || '').match(/EXP-\\d{4}-(\\d+)$/);
-    const n = match ? Number(match[1]) : 0;
-    return Number.isFinite(n) ? Math.max(max, n) : max;
-  }, 1000);
-  const nextNum = highestFolio + 1;
-  const folio = `EXP-2026-${nextNum}`;
-  const pinFondeo = Math.floor(1000 + Math.random() * 9000).toString();
+  try {
+    const expedientes = (await getSupabaseExpedientes()) || [];
+    const highestFolio = expedientes.reduce((max: number, exp: any) => {
+      const match = String(exp?.folio || '').match(/^EXP-\\d{4}-(\\d+)$/);
+      const n = match ? Number(match[1]) : 0;
+      return Number.isFinite(n) ? Math.max(max, n) : max;
+    }, 1000);
 
-  const body = req.body;
-  const now = new Date().toISOString();
-  const esLegalizado = Boolean(body.esVehiculoLegalizado);
+    const nextNum = highestFolio + 1;
+    const folio = `EXP-2026-${nextNum}`;
+    const pinFondeo = Math.floor(1000 + Math.random() * 9000).toString();
+    const body = req.body || {};
+    const now = new Date().toISOString();
+    const esLegalizado = Boolean(body.esVehiculoLegalizado);
+    const docsFondeo = body.documentosFondeo || getCredimovilDefaultDocs(esLegalizado);
 
-  // Initialize CrediMóvil checklist
-  const docsFondeo = getCredimovilDefaultDocs(esLegalizado);
+    const newExpediente = {
+      id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      folio,
+      pinFondeo,
+      fechaCreacion: now,
+      fechaActualizacion: now,
+      estatus: body.estatus || 'NUEVO',
+      ine: body.ine || {},
+      fotoIneFrente: body.fotoIneFrente || '',
+      fotoIneReverso: body.fotoIneReverso || '',
+      domicilioCoincideConIne: body.domicilioCoincideConIne !== undefined ? Boolean(body.domicilioCoincideConIne) : true,
+      comprobanteDomicilioActualUrl: body.comprobanteDomicilioActualUrl || '',
+      comprobanteDomicilioActualNombre: body.comprobanteDomicilioActualNombre || '',
+      tipoComprobanteDomicilio: body.tipoComprobanteDomicilio || 'CFE_LUZ',
+      estadosCuenta: body.estadosCuenta || {},
+      telefono: body.telefono || '',
+      correo: body.correo || '',
+      ingresoMensualAprox: Number(body.ingresoMensualAprox) || 0,
+      tiempoViviendoDomicilio: body.tiempoViviendoDomicilio || '',
+      casaPropiaORentada: body.casaPropiaORentada || '',
+      tiempoEnTrabajo: body.tiempoEnTrabajo || '',
+      nombreUbicacionEmpleo: body.nombreUbicacionEmpleo || '',
+      giroActividadEmpresa: body.giroActividadEmpresa || '',
+      dependientesEconomicos: Number(body.dependientesEconomicos) || 0,
+      estadoCivil: body.estadoCivil || '',
+      referenciasPersonales: body.referenciasPersonales || [],
+      loteId: body.loteId || null,
+      loteNombre: body.loteNombre || 'Directo / Asesor',
+      asesorLoteContacto: body.asesorLoteContacto || '',
+      telefonoLote: body.telefonoLote || '',
+      autoMarca: body.autoMarca || '',
+      autoModelo: body.autoModelo || '',
+      autoAno: Number(body.autoAno) || new Date().getFullYear(),
+      autoVersion: body.autoVersion || '',
+      autoPrecio: Number(body.autoPrecio) || 0,
+      autoVin: body.autoVin || '',
+      esVehiculoLegalizado: esLegalizado,
+      enganche: Number(body.enganche) || 0,
+      engancheModo: body.engancheModo || 'PORCENTAJE',
+      enganchePorcentaje: Number(body.enganchePorcentaje) || 20,
+      montoFinanciar: Number(body.montoFinanciar) || Math.max(0, (Number(body.autoPrecio) || 0) - (Number(body.enganche) || 0)),
+      plazoMeses: Number(body.plazoMeses) || 48,
+      tasaInteresAnual: 28,
+      mensualidadEstimada: Number(body.mensualidadEstimada) || 0,
+      financieraAsignada: body.financieraAsignada || 'CrediMóvil Auto',
+      documentosFondeo: docsFondeo,
+      cuentaClabeLote: body.cuentaClabeLote || '',
+      bancoLote: body.bancoLote || '',
+      notasAsesor: body.notasAsesor || 'Expediente registrado en CrediMóvil para análisis.',
+    };
 
-  const newExpediente = {
-    id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-    folio,
-    pinFondeo,
-    fechaCreacion: now,
-    fechaActualizacion: now,
-    estatus: body.estatus || 'NUEVO',
+    await upsertExpedienteSupabase(newExpediente);
+    const saved = (await getSupabaseExpedientes())?.find((e: any) => e.folio === folio);
 
-    // 1. INE
-    ine: body.ine || {},
-    fotoIneFrente: '',
-    fotoIneReverso: '',
-
-    // 2. Comprobante de Domicilio
-    domicilioCoincideConIne: body.domicilioCoincideConIne !== undefined ? Boolean(body.domicilioCoincideConIne) : true,
-    comprobanteDomicilioActualUrl: '',
-    comprobanteDomicilioActualNombre: body.comprobanteDomicilioActualNombre || '',
-    tipoComprobanteDomicilio: body.tipoComprobanteDomicilio || 'CFE_LUZ',
-
-    // 3. Estados de Cuenta de 3 meses para Análisis
-    estadosCuenta: body.estadosCuenta || {},
-
-    // 4. CrediMóvil Inicio de Crédito
-    telefono: body.telefono || '',
-    correo: body.correo || '',
-    ingresoMensualAprox: Number(body.ingresoMensualAprox) || 0,
-    tiempoViviendoDomicilio: body.tiempoViviendoDomicilio || '',
-    casaPropiaORentada: body.casaPropiaORentada || '',
-    tiempoEnTrabajo: body.tiempoEnTrabajo || '',
-    nombreUbicacionEmpleo: body.nombreUbicacionEmpleo || '',
-    giroActividadEmpresa: body.giroActividadEmpresa || '',
-    dependientesEconomicos: Number(body.dependientesEconomicos) || 0,
-    estadoCivil: body.estadoCivil || '',
-    referenciasPersonales: body.referenciasPersonales || [],
-
-    // 5. Lote
-    loteId: body.loteId || '',
-    loteNombre: body.loteNombre || 'Directo / Asesor',
-    asesorLoteContacto: body.asesorLoteContacto || '',
-    telefonoLote: body.telefonoLote || '',
-
-    // 6. Vehículo
-    autoMarca: body.autoMarca || '',
-    autoModelo: body.autoModelo || '',
-    autoAno: Number(body.autoAno) || new Date().getFullYear(),
-    autoVersion: body.autoVersion || '',
-    autoPrecio: Number(body.autoPrecio) || 0,
-    autoVin: body.autoVin || '',
-    esVehiculoLegalizado: esLegalizado,
-
-    // 7. Términos
-    enganche: Number(body.enganche) || 0,
-    montoFinanciar: Number(body.montoFinanciar) || Math.max(0, (Number(body.autoPrecio) || 0) - (Number(body.enganche) || 0)),
-    plazoMeses: Number(body.plazoMeses) || 48,
-    tasaInteresAnual: 28,
-    mensualidadEstimada: Number(body.mensualidadEstimada) || 0,
-    financieraAsignada: body.financieraAsignada || 'CrediMóvil Auto',
-
-    // 8. Checklist de Fondeo y Trámite
-    documentosFondeo: (() => {
-      const docs = body.documentosFondeo || docsFondeo;
-      if (body.comprobanteDomicilioActualUrl) {
-        const docDom = docs.find((d: any) => d.id === 'doc-domicilio');
-        if (docDom) {
-          docDom.estatus = 'SUBIDO';
-          docDom.archivoUrl = body.comprobanteDomicilioActualUrl;
-          docDom.archivoNombre = body.comprobanteDomicilioActualNombre || 'Comprobante_Domicilio_Agua_Luz';
-          docDom.fechaSubida = now;
-          docDom.subidoPor = 'Cliente / Solicitud Inicial';
-        }
-      }
-      if (body.estadosCuenta) {
-        const ec = body.estadosCuenta;
-        const mainUrl = ec.archivoConsolidadoUrl || ec.mes1Url || ec.mes2Url || ec.mes3Url;
-        const mainName = ec.archivoConsolidadoNombre || ec.mes1Nombre || 'Estados_de_Cuenta_3_Meses';
-        if (mainUrl) {
-          const docIng = docs.find((d: any) => d.id === 'doc-ingresos');
-          if (docIng) {
-            docIng.estatus = 'SUBIDO';
-            docIng.archivoUrl = mainUrl;
-            docIng.archivoNombre = mainName;
-            docIng.fechaSubida = now;
-            docIng.subidoPor = 'Cliente / Solicitud Inicial';
-          }
-        }
-      }
-      return docs;
-    })(),
-    cuentaClabeLote: body.cuentaClabeLote || '',
-    bancoLote: body.bancoLote || '',
-    notasAsesor: body.notasAsesor || 'Expediente registrado en CrediMóvil para análisis.',
-  };
-
-  // Persist uploaded files immediately and keep only stable URLs in JSON.
-  newExpediente.fotoIneFrente = persistIncomingDocument(newExpediente.id, body.fotoIneFrente || '', 'ine-frente', 'INE_Frente.jpg');
-  newExpediente.fotoIneReverso = persistIncomingDocument(newExpediente.id, body.fotoIneReverso || '', 'ine-reverso', 'INE_Reverso.jpg');
-  newExpediente.comprobanteDomicilioActualUrl = persistIncomingDocument(newExpediente.id, body.comprobanteDomicilioActualUrl || '', 'comprobante-domicilio', newExpediente.comprobanteDomicilioActualNombre || 'Comprobante_Domicilio');
-
-  for (const key of ['mes1Url', 'mes2Url', 'mes3Url', 'archivoConsolidadoUrl']) {
-    const nameKey = key.replace(/Url$/, 'Nombre');
-    if (newExpediente.estadosCuenta?.[key]) {
-      newExpediente.estadosCuenta[key] = persistIncomingDocument(newExpediente.id, newExpediente.estadosCuenta[key], key.replace(/Url$/, ''), newExpediente.estadosCuenta[nameKey] || `${key}.pdf`);
-    }
+    res.status(201).json({
+      success: true,
+      message: 'Expediente guardado exitosamente en CrediMóvil y Supabase.',
+      expediente: saved || newExpediente,
+    });
+  } catch (error: any) {
+    console.error('POST /api/expedientes error:', error);
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo guardar el expediente.' });
   }
-  persistExpedienteDocuments(newExpediente);
-
-  expedientes.unshift(newExpediente);
-  writeJson(EXPEDIENTES_FILE, expedientes);
-  if (supabase) {
-    try {
-      await upsertExpedienteSupabase(newExpediente);
-    } catch (syncError: any) {
-      console.error('Supabase: error al guardar expediente nuevo:', syncError?.message || syncError);
-      return res.status(500).json({ success: false, message: 'El expediente se guardó localmente, pero no pudo sincronizarse con Supabase.' });
-    }
-  }
-
-  res.status(201).json({
-    success: true,
-    message: 'Expediente guardado exitosamente en CrediMóvil.',
-    expediente: decorateExpedienteDocumentUrls(newExpediente),
-  });
 });
 
 app.put('/api/expedientes/:id', async (req, res) => {
   if (!requireStaff(req, res)) return;
-  const expedientes = supabase
-    ? ((await getSupabaseExpedientes()) || [])
-    : readJson(EXPEDIENTES_FILE, []);
-  const index = expedientes.findIndex((e: any) => e.id === req.params.id || e.folio === req.params.id);
-  if (index === -1) {
-    return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
-  }
 
-  const existing = expedientes[index];
-  const updated = {
-    ...existing,
-    ...req.body,
-    tasaInteresAnual: 28,
-    id: existing.id,
-    folio: existing.folio,
-    pinFondeo: existing.pinFondeo,
-    fechaActualizacion: new Date().toISOString(),
-  };
+  try {
+    const expedientes = (await getSupabaseExpedientes()) || [];
+    const existing = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
+    if (!existing) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
 
-  if (!updated.documentosFondeo || updated.documentosFondeo.length === 0) {
-    updated.documentosFondeo = getCredimovilDefaultDocs(Boolean(updated.esVehiculoLegalizado));
-  }
+    const updated = {
+      ...existing,
+      ...req.body,
+      tasaInteresAnual: 28,
+      id: existing.id,
+      folio: existing.folio,
+      pinFondeo: existing.pinFondeo,
+      fechaActualizacion: new Date().toISOString(),
+    };
 
-  // If any document arrives from a legacy client as base64, persist it before writing JSON.
-  persistExpedienteDocuments(updated);
-
-  expedientes[index] = updated;
-  if (!supabase) {
-    writeJson(EXPEDIENTES_FILE, expedientes);
-  }
-  if (supabase) {
-    try {
-      await upsertExpedienteSupabase(updated);
-    } catch (syncError: any) {
-      console.error('Supabase: error al sincronizar expediente actualizado:', syncError?.message || syncError);
+    if (!updated.documentosFondeo || updated.documentosFondeo.length === 0) {
+      updated.documentosFondeo = getCredimovilDefaultDocs(Boolean(updated.esVehiculoLegalizado));
     }
-  }
 
-  res.json({ success: true, expediente: decorateExpedienteDocumentUrls(updated), message: 'Expediente actualizado exitosamente.' });
+    await upsertExpedienteSupabase(updated);
+    const saved = (await getSupabaseExpedientes())?.find((e: any) => e.folio === existing.folio);
+
+    res.json({ success: true, expediente: saved || updated, message: 'Expediente actualizado exitosamente.' });
+  } catch (error: any) {
+    console.error('PUT /api/expedientes/:id error:', error);
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo actualizar el expediente.' });
+  }
 });
 
 app.delete('/api/expedientes/:id', async (req, res) => {
   if (!requireStaff(req, res)) return;
-  let expedientes = supabase
-    ? ((await getSupabaseExpedientes()) || [])
-    : readJson(EXPEDIENTES_FILE, []);
-  const initialLen = expedientes.length;
-  const original = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
-  expedientes = expedientes.filter((e: any) => e.id !== req.params.id && e.folio !== req.params.id);
 
-  if (expedientes.length === initialLen) {
-    return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
-  }
+  try {
+    const expedientes = (await getSupabaseExpedientes()) || [];
+    const original = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
+    if (!original) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
 
-  if (!supabase) {
-    writeJson(EXPEDIENTES_FILE, expedientes);
-  }
-  if (supabase && original?.folio) {
-    try {
-      const { error: deleteError } = await supabase.from('expedientes').delete().eq('folio', original.folio);
-      if (deleteError) {
-        console.error('Supabase: error al eliminar expediente:', deleteError.message);
-      }
-    } catch (syncError: any) {
-      console.error('Supabase: error al eliminar expediente:', syncError?.message || syncError);
+    const { data: row, error: rowError } = await supabase
+      .from('expedientes')
+      .select('id,folio')
+      .eq('folio', original.folio)
+      .maybeSingle();
+    if (rowError) throw new Error(`Supabase expediente: ${rowError.message}`);
+
+    if (row?.id) {
+      const { data: docs } = await supabase.from('documentos').select('storage_path').eq('expediente_id', row.id);
+      const paths = (docs || []).map((d: any) => d.storage_path).filter(Boolean);
+      if (paths.length) await supabase.storage.from(SUPABASE_BUCKET).remove(paths);
+      await supabase.from('documentos').delete().eq('expediente_id', row.id);
     }
+
+    const { error: deleteError } = await supabase.from('expedientes').delete().eq('folio', original.folio);
+    if (deleteError) throw new Error(`Supabase expediente: ${deleteError.message}`);
+
+    res.json({ success: true, message: 'Expediente y documentos eliminados de Supabase.' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo eliminar el expediente.' });
   }
-  const uploadDir = path.join(UPLOADS_DIR, sanitizeFileName(req.params.id));
-  if (fs.existsSync(uploadDir)) fs.rmSync(uploadDir, { recursive: true, force: true });
-  res.json({ success: true, message: 'Expediente eliminado con éxito.' });
 });
 
-// 6. Subida de Documentos (PNG, JPG, PDF)
-app.post('/api/expedientes/:id/fondeo-doc', (req, res) => {
+app.post('/api/expedientes/:id/fondeo-doc', async (req, res) => {
   if (!requireStaff(req, res)) return;
-  const { docId, archivoUrl, archivoNombre, archivoTamano, subidoPor } = req.body;
-  const expedientes = supabase
-    ? ((await getSupabaseExpedientes()) || [])
-    : readJson(EXPEDIENTES_FILE, []);
-  const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
+  try {
+    const { docId, archivoUrl, archivoNombre, archivoTamano, subidoPor } = req.body;
+    const expedientes = (await getSupabaseExpedientes()) || [];
+    const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
+    if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
 
-  if (!exp) {
-    return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
-  }
+    if (!exp.documentosFondeo) exp.documentosFondeo = getCredimovilDefaultDocs(Boolean(exp.esVehiculoLegalizado));
+    const doc = exp.documentosFondeo.find((d: any) => d.id === docId);
+    if (!doc) return res.status(404).json({ success: false, message: 'Tipo de documento no encontrado en el checklist.' });
 
-  if (!exp.documentosFondeo) {
-    exp.documentosFondeo = getCredimovilDefaultDocs(Boolean(exp.esVehiculoLegalizado));
-  }
-
-  const doc = exp.documentosFondeo.find((d: any) => d.id === docId);
-  if (!doc) {
-    return res.status(404).json({ success: false, message: 'Tipo de documento no encontrado en el checklist.' });
-  }
-
-  // Detect type and persist the binary outside expedientes.json.
-  let archivoTipo = 'imagen';
-  if (archivoUrl?.startsWith('data:application/pdf') || /\.pdf(?:$|[?#])/i.test(archivoUrl || '')) {
-    archivoTipo = 'pdf';
-  } else if (archivoUrl?.startsWith('data:image/png') || /\.png(?:$|[?#])/i.test(archivoUrl || '')) {
-    archivoTipo = 'png';
-  } else if (archivoUrl?.startsWith('data:image/webp') || /\.webp(?:$|[?#])/i.test(archivoUrl || '')) {
-    archivoTipo = 'webp';
-  } else {
-    archivoTipo = 'jpeg';
-  }
-
-  const persistedUrl = persistIncomingDocument(exp.id, archivoUrl, `doc-${docId}`, archivoNombre || docId);
-
-  doc.estatus = 'SUBIDO';
-  doc.archivoUrl = persistedUrl;
-  doc.archivoNombre = archivoNombre;
-  doc.archivoTipo = archivoTipo;
-  doc.archivoTamano = archivoTamano || 'Cargado';
-  doc.fechaSubida = new Date().toISOString();
-  doc.subidoPor = subidoPor || exp.loteNombre || 'Lote de Autos';
-  doc.observaciones = '';
-
-  if (exp.estatus === 'APROBADO' || exp.estatus === 'FONDEO_PENDIENTE') {
-    exp.estatus = 'FONDEO_REVISION';
-  }
-  exp.fechaActualizacion = new Date().toISOString();
-
-  if (supabase) {
-    try {
-      await upsertExpedienteSupabase(exp);
-    } catch (syncError: any) {
-      console.error('Supabase: error al sincronizar documento de fondeo:', syncError?.message || syncError);
+    if (isDataUri(archivoUrl)) {
+      doc.archivoUrl = archivoUrl;
+      doc.archivoNombre = archivoNombre || doc.id;
+      doc.archivoTamano = archivoTamano || 'Cargado';
+      doc.archivoTipo = extractMimeAndBase64(archivoUrl).mimeType;
     }
-  } else {
-    writeJson(EXPEDIENTES_FILE, expedientes);
-  }
+    doc.estatus = 'SUBIDO';
+    doc.subidoPor = subidoPor || exp.loteNombre || 'Lote de Autos';
+    doc.observaciones = '';
 
-  res.json({
-    success: true,
-    message: `Documento "${doc.nombre}" subido exitosamente en CrediMóvil.`,
-    documentosFondeo: exp.documentosFondeo,
-    expedienteEstatus: exp.estatus,
-  });
+    if (exp.estatus === 'APROBADO' || exp.estatus === 'FONDEO_PENDIENTE') {
+      exp.estatus = 'FONDEO_REVISION';
+    }
+    exp.fechaActualizacion = new Date().toISOString();
+
+    await upsertExpedienteSupabase(exp);
+    const saved = (await getSupabaseExpedientes())?.find((e: any) => e.folio === exp.folio);
+
+    res.json({
+      success: true,
+      message: `Documento "${doc.nombre}" subido exitosamente en CrediMóvil.`,
+      documentosFondeo: saved?.documentosFondeo || exp.documentosFondeo,
+      expedienteEstatus: saved?.estatus || exp.estatus,
+    });
+  } catch (error: any) {
+    console.error('POST /api/expedientes/:id/fondeo-doc error:', error);
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo subir el documento.' });
+  }
 });
 
-// 7. Asesor aprueba o rechaza documento
-app.put('/api/expedientes/:id/fondeo-doc-review', (req, res) => {
+app.put('/api/expedientes/:id/fondeo-doc-review', async (req, res) => {
   if (!requireStaff(req, res)) return;
-  const { docId, estatus, observaciones } = req.body;
-  const expedientes = supabase
-    ? ((await getSupabaseExpedientes()) || [])
-    : readJson(EXPEDIENTES_FILE, []);
-  const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
+  try {
+    const { docId, estatus, observaciones } = req.body;
+    const expedientes = (await getSupabaseExpedientes()) || [];
+    const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
+    if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
 
-  if (!exp) {
-    return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    const doc = exp.documentosFondeo?.find((d: any) => d.id === docId);
+    if (!doc) return res.status(404).json({ success: false, message: 'Documento no encontrado.' });
+
+    doc.estatus = estatus;
+    doc.observaciones = observaciones || '';
+    doc.fechaRevision = new Date().toISOString();
+    exp.fechaActualizacion = new Date().toISOString();
+
+    await upsertExpedienteSupabase(exp);
+    const saved = (await getSupabaseExpedientes())?.find((e: any) => e.folio === exp.folio);
+
+    res.json({
+      success: true,
+      message: `Estatus del documento actualizado a ${estatus}.`,
+      expediente: saved || exp,
+    });
+  } catch (error: any) {
+    console.error('PUT /api/expedientes/:id/fondeo-doc-review error:', error);
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo actualizar el documento.' });
   }
-
-  const doc = exp.documentosFondeo?.find((d: any) => d.id === docId);
-  if (!doc) {
-    return res.status(404).json({ success: false, message: 'Documento no encontrado.' });
-  }
-
-  doc.estatus = estatus;
-  doc.observaciones = observaciones || '';
-  doc.fechaRevision = new Date().toISOString();
-
-  exp.fechaActualizacion = new Date().toISOString();
-  if (supabase) {
-    try {
-      await upsertExpedienteSupabase(exp);
-    } catch (syncError: any) {
-      console.error('Supabase: error al sincronizar revisión de documento:', syncError?.message || syncError);
-    }
-  } else {
-    writeJson(EXPEDIENTES_FILE, expedientes);
-  }
-
-  res.json({
-    success: true,
-    message: `Estatus del documento actualizado a ${estatus}.`,
-    expediente: decorateExpedienteDocumentUrls(exp),
-  });
 });
 
-// 8. Estadísticas
 app.get('/api/stats', async (req, res) => {
   if (!requireStaff(req, res)) return;
-  const expedientes = supabase ? (await getSupabaseExpedientes()) || [] : readJson(EXPEDIENTES_FILE, []);
 
-  const total = expedientes.length;
-  const nuevos = expedientes.filter((e: any) => e.estatus === 'NUEVO').length;
-  const preAprobados = expedientes.filter((e: any) => e.estatus === 'PRE_APROBADO').length;
-  const enEvaluacion = expedientes.filter((e: any) => e.estatus === 'EN_EVALUACION').length;
-  const aprobados = expedientes.filter((e: any) => e.estatus === 'APROBADO').length;
-  const contratos = expedientes.filter((e: any) => e.estatus === 'CONTRATO').length;
-  const gps = expedientes.filter((e: any) => e.estatus === 'GPS').length;
-  const fondeo = expedientes.filter((e: any) =>
-    e.estatus === 'FONDEO' ||
-    e.estatus === 'FONDEO_PENDIENTE' ||
-    e.estatus === 'FONDEO_REVISION' ||
-    e.estatus === 'FONDEADO'
-  ).length;
-  const fondeoRevision = expedientes.filter((e: any) => e.estatus === 'FONDEO_REVISION' || e.estatus === 'FONDEO_PENDIENTE').length;
-  const fondeados = expedientes.filter((e: any) => e.estatus === 'FONDEADO').length;
+  try {
+    const expedientes = (await getSupabaseExpedientes()) || [];
+    const total = expedientes.length;
+    const nuevos = expedientes.filter((e: any) => e.estatus === 'NUEVO').length;
+    const preAprobados = expedientes.filter((e: any) => e.estatus === 'PRE_APROBADO').length;
+    const enEvaluacion = expedientes.filter((e: any) => e.estatus === 'EN_EVALUACION').length;
+    const aprobados = expedientes.filter((e: any) => e.estatus === 'APROBADO').length;
+    const contratos = expedientes.filter((e: any) => e.estatus === 'CONTRATO').length;
+    const gps = expedientes.filter((e: any) => e.estatus === 'GPS').length;
+    const fondeo = expedientes.filter((e: any) =>
+      e.estatus === 'FONDEO' || e.estatus === 'FONDEO_PENDIENTE' || e.estatus === 'FONDEO_REVISION' || e.estatus === 'FONDEADO'
+    ).length;
+    const fondeados = expedientes.filter((e: any) => e.estatus === 'FONDEADO').length;
+    const montoTotalFinanciado = expedientes
+      .filter((e: any) => e.estatus === 'FONDEADO' || e.estatus === 'APROBADO')
+      .reduce((acc: number, curr: any) => acc + (Number(curr.montoFinanciar) || 0), 0);
 
-  const montoTotalFinanciado = expedientes
-    .filter((e: any) => e.estatus === 'FONDEADO' || e.estatus === 'APROBADO')
-    .reduce((acc: number, curr: any) => acc + (Number(curr.montoFinanciar) || 0), 0);
-
-  res.json({
-    success: true,
-    stats: {
-      total,
-      nuevos,
-      preAprobados,
-      enEvaluacion,
-      aprobados,
-      contratos,
-      gps,
-      fondeo,
-      fondeoRevision,
-      fondeados,
-      montoTotalFinanciado,
-    },
-  });
+    res.json({
+      success: true,
+      stats: {
+        total,
+        nuevos,
+        preAprobados,
+        enEvaluacion,
+        aprobados,
+        contratos,
+        gps,
+        fondeo,
+        fondeados,
+        montoTotalFinanciado,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || 'No se pudieron cargar las estadísticas.' });
+  }
 });
 
 // Dev Server & Static Files
