@@ -116,3 +116,18 @@ create table if not exists public.lote_usuarios (
 create index if not exists lote_usuarios_lote_id_idx on public.lote_usuarios(lote_id);
 alter table public.lote_usuarios enable row level security;
 
+
+create table if not exists public.asesores (
+  id uuid primary key default gen_random_uuid(),
+  username text not null unique,
+  nombre text not null,
+  password_hash text not null,
+  activo boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists asesores_username_idx on public.asesores(lower(username));
+alter table public.asesores enable row level security;
+
+create unique index if not exists documentos_exp_tipo_unique_idx
+  on public.documentos(expediente_id, tipo);
