@@ -34,14 +34,20 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 }
 
 // Initialize Gemini Client
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    },
-  },
-});
+const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim();
+
+// Always authenticate explicitly with an API key. If the variable is absent,
+// never let the SDK fall back to Google Application Default Credentials.
+const ai = GEMINI_API_KEY
+  ? new GoogleGenAI({
+      apiKey: GEMINI_API_KEY,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'credimovil-ocr',
+        },
+      },
+    })
+  : null;
 
 // Helper: extract exact MIME type and raw Base64 string from data URI
 function extractMimeAndBase64(dataUriOrRaw: string): { mimeType: string; base64: string } {
@@ -352,6 +358,8 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     name: 'CrediMóvil OCR & Fondeo API',
+    geminiConfigured: Boolean(GEMINI_API_KEY),
+    geminiKeySource: process.env.GEMINI_API_KEY ? 'GEMINI_API_KEY' : (process.env.GOOGLE_API_KEY ? 'GOOGLE_API_KEY' : 'none'),
   });
 });
 
@@ -404,7 +412,11 @@ async function callGeminiWithResilience(
   purpose: string
 ): Promise<string> {
   // Ordered by speed, quota availability, and multimodal OCR accuracy
-  const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+  const candidateModels = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash-lite'];
+
+  if (!ai) {
+    throw new Error('GEMINI_API_KEY no está configurada en el servidor. Configúrala en Render → Environment.');
+  }
   let lastError: any = null;
 
   for (const modelName of candidateModels) {
