@@ -110,51 +110,79 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
   const printQuote = () => {
     const popup = window.open('', '_blank', 'width=900,height=700');
     if (!popup) return;
+    const schedulePages: string[] = [];
+    for (let pageStart = 0; pageStart < monthlySchedule.length; pageStart += 24) {
+      const pageRows = monthlySchedule.slice(pageStart, pageStart + 24);
+      schedulePages.push(
+        '<section class="schedule-page">' +
+          '<div class="schedule-header">' +
+            '<div><div class="schedule-brand">CREDI<span>MÓVIL</span></div><div class="schedule-sub">Desglose de pagos mensuales</div></div>' +
+            '<div class="schedule-meta">Folio <strong>' + (expediente.folio || '—') + '</strong><br><span>Hoja ' + (schedulePages.length + 1) + '</span></div>' +
+          '</div>' +
+          '<table class="schedule"><thead><tr><th>Mes</th><th>Capital</th><th>Interés</th><th>IVA interés</th><th>GPS</th><th>SDD</th><th>Pago mensual</th><th>Saldo</th></tr></thead><tbody>' +
+          pageRows.map(row =>
+            '<tr>' +
+              '<td class="center">' + row.mes + '</td>' +
+              '<td>' + money(row.capital) + '</td>' +
+              '<td>' + money(row.interes) + '</td>' +
+              '<td>' + money(row.iva) + '</td>' +
+              '<td>$260.00</td>' +
+              '<td>$142.00</td>' +
+              '<td class="payment">' + money(row.pago) + '</td>' +
+              '<td class="balance">' + money(row.saldo) + '</td>' +
+            '</tr>'
+          ).join('') +
+          '</tbody></table>' +
+          '<div class="schedule-footer">Cliente: <strong>' + (expediente.ine?.nombreCompleto || expediente.ine?.nombre || '—') + '</strong> · ' +
+            [expediente.autoMarca, expediente.autoModelo, expediente.autoAno].filter(Boolean).join(' ') +
+          '</div>' +
+        '</section>'
+      );
+    }
+
     const html =
       '<html><head><title>Cotización CrediMóvil</title>' +
       '<style>' +
-      '@page{size:A4;margin:14mm}' +
-      'body{font-family:Arial,Helvetica,sans-serif;margin:0;color:#071A33;background:#fff}' +
-      '.header{background:#071A33;color:#fff;border-radius:14px;padding:18px 22px;margin-bottom:22px;border-bottom:5px solid #C81E2B;display:flex;justify-content:space-between;align-items:center}' +
-      '.brand{font-size:27px;font-weight:900;letter-spacing:-.5px}.brand b{color:#E3262F}' +
-      '.tag{font-size:10px;color:#B9C7DA;text-transform:uppercase;letter-spacing:1.4px;margin-top:4px}' +
-      '.folio{font-size:11px;color:#D7E0E7;text-align:right}.folio strong{display:block;color:#fff;font-size:15px;margin-top:3px}' +
-      '.client{background:#F1F5F9;border:1px solid #D7E0E7;border-radius:12px;padding:14px 16px;margin-bottom:18px}' +
-      '.client strong{font-size:14px}.vehicle{color:#46617D;font-size:12px;margin-top:4px}' +
-      'table{width:100%;border-collapse:separate;border-spacing:0;margin-top:8px;border:1px solid #D7E0E7;border-radius:12px;overflow:hidden}' +
-      'td{padding:11px 13px;border-bottom:1px solid #E2E8F0;font-size:12px}tr:last-child td{border-bottom:0}td:first-child{font-weight:700;width:58%;color:#294767}' +
-      '.highlight td{background:#FFF4F4}.highlight td:last-child{font-size:25px;font-weight:900;color:#C81E2B}' +
-      '.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:15px}' +
-      '.schedule-title{margin-top:20px;font-size:13px;font-weight:900;color:#071A33;text-transform:uppercase;letter-spacing:.8px}.schedule{font-size:8px;margin-top:8px}.schedule th{background:#071A33;color:#fff;padding:6px 5px;text-align:right}.schedule th:first-child,.schedule td:first-child{text-align:center}.schedule td{padding:5px 4px;font-size:8px;text-align:right}.schedule tr:nth-child(even) td{background:#F8FAFC}' +
-      '.insurance-box{border-color:#C81E2B;background:#FFF4F4}.box{border:1px solid #D7E0E7;border-radius:12px;padding:12px;background:#F8FAFC}.box span{display:block;color:#64748B;font-size:10px;text-transform:uppercase;letter-spacing:.6px}.box strong{display:block;margin-top:5px;font-size:15px}' +
-      '.note{margin-top:18px;padding:11px 12px;border-left:4px solid #C81E2B;background:#F8FAFC;color:#64748B;font-size:10px;line-height:1.45}' +
-      '.footer{margin-top:24px;text-align:center;color:#94A3B8;font-size:9px}' +
+      '@page{size:A4 landscape;margin:10mm}' +
+      'html,body{margin:0;padding:0;background:#fff}' +
+      'body{font-family:Arial,Helvetica,sans-serif;color:#071A33;font-size:11px}' +
+      '.header{background:#071A33;color:#fff;border-radius:12px;padding:15px 18px;margin-bottom:14px;border-bottom:4px solid #C81E2B;display:flex;justify-content:space-between;align-items:center}' +
+      '.brand{font-size:24px;font-weight:900}.brand span{color:#E3262F}' +
+      '.tag{font-size:9px;color:#B9C7DA;text-transform:uppercase;letter-spacing:1.2px;margin-top:3px}' +
+      '.folio{font-size:9px;color:#D7E0E7;text-align:right}.folio strong{display:block;color:#fff;font-size:13px;margin-top:2px}' +
+      '.client{background:#F1F5F9;border:1px solid #D7E0E7;border-radius:10px;padding:10px 12px;margin-bottom:12px}.client strong{font-size:12px}.vehicle{color:#46617D;font-size:10px;margin-top:3px}' +
+      'table.quote{width:100%;border-collapse:collapse;border:1px solid #D7E0E7;border-radius:10px;overflow:hidden}.quote td{padding:7px 9px;border-bottom:1px solid #E2E8F0;font-size:10px}.quote tr:last-child td{border-bottom:0}.quote td:first-child{font-weight:700;width:52%;color:#294767}.highlight td{background:#FFF4F4}.highlight td:last-child{font-size:20px;font-weight:900;color:#C81E2B}' +
+      '.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.box{border:1px solid #D7E0E7;border-radius:10px;padding:9px;background:#F8FAFC}.box span{display:block;color:#64748B;font-size:8px;text-transform:uppercase;letter-spacing:.5px}.box strong{display:block;margin-top:3px;font-size:12px}' +
+      '.note{margin-top:10px;padding:9px 10px;border-left:4px solid #C81E2B;background:#F8FAFC;color:#64748B;font-size:8px;line-height:1.35}' +
+      '.cover-footer{text-align:center;color:#94A3B8;font-size:8px;margin-top:10px}' +
+      '.schedule-page{page-break-before:always;min-height:180mm;display:flex;flex-direction:column}.schedule-header{background:#071A33;color:#fff;border-bottom:4px solid #C81E2B;border-radius:12px 12px 0 0;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}.schedule-brand{font-size:20px;font-weight:900}.schedule-brand span{color:#E3262F}.schedule-sub{font-size:9px;color:#B9C7DA;margin-top:2px}.schedule-meta{font-size:9px;text-align:right;color:#B9C7DA}.schedule-meta strong{color:#fff;font-size:12px}.schedule-meta span{font-size:8px}' +
+      '.schedule{width:100%;border-collapse:collapse;border:1px solid #D7E0E7;border-top:0;table-layout:fixed}.schedule th{background:#18365C;color:#fff;padding:6px 5px;font-size:8px;text-align:right}.schedule th:first-child{text-align:center;width:6%}.schedule th:nth-child(2){width:14%}.schedule th:nth-child(3),.schedule th:nth-child(4),.schedule th:nth-child(5),.schedule th:nth-child(6){width:11%}.schedule th:nth-child(7){width:14%}.schedule th:nth-child(8){width:14%}.schedule td{padding:6px 5px;border-bottom:1px solid #E2E8F0;font-size:8px;text-align:right;white-space:nowrap}.schedule td.center{text-align:center;font-weight:800;color:#294767}.schedule tr:nth-child(even) td{background:#F8FAFC}.schedule tr:last-child td{border-bottom:0}.schedule td.payment{font-weight:900;color:#C81E2B}.schedule td.balance{font-weight:700;color:#047857}.schedule-footer{margin-top:auto;padding-top:8px;color:#94A3B8;font-size:8px;border-top:1px solid #E2E8F0}' +
       '</style></head><body>' +
-      '<div class="header"><div><div class="brand">CREDI<span>MÓVIL</span></div><div class="tag">Cotización de crédito automotriz</div></div>' +
-      '<div class="folio">Folio<strong>' + (expediente.folio || '—') + '</strong></div></div>' +
-      '<div class="client"><strong>' + (expediente.ine?.nombreCompleto || expediente.ine?.nombre || 'Cliente sin nombre') + '</strong><div class="vehicle">' +
-      [expediente.autoMarca, expediente.autoModelo, expediente.autoAno].filter(Boolean).join(' ') + '</div></div>' +
-      '<table>' +
-      '<tr><td>Precio del vehículo</td><td>' + money(Number(precio) || 0) + '</td></tr>' +
-      '<tr><td>Enganche</td><td>' + money(enganche) + ' (' + porcentajeReal.toFixed(2) + '%)</td></tr>' +
-      '<tr><td>Monto base a financiar</td><td>' + money(montoFinanciar) + '</td></tr>' +
-      '<tr><td>Total capital financiado</td><td>' + money(totalCapitalFinanciado) + '</td></tr>' +
-      '<tr><td>Plazo</td><td>' + plazo + ' meses</td></tr>' +
-      '<tr><td>Tasa anual</td><td>28%</td></tr>' +
-      '<tr class="highlight"><td>Mensualidad estimada</td><td>' + money(mensualidad) + '</td></tr>' +
-      '</table>' +
-      '<div class="summary">' +
-      '<div class="box"><span>GPS mensual</span><strong>$260 MXN</strong></div>' +
-      '<div class="box"><span>SDD mensual</span><strong>$142 MXN</strong></div>' +
-      '<div class="box insurance-box"><span>' + seguroResumenLabel + '</span><strong>' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro)) + '</strong></div>' +
-      '</div>' +
-      '<div class="schedule-title">Desglose de pagos mensuales</div>' +
-      '<table class="schedule"><thead><tr><th>Mes</th><th>Capital</th><th>Interés</th><th>IVA interés</th><th>GPS</th><th>SDD</th><th>Pago mensual</th><th>Saldo</th></tr></thead><tbody>' +
-      monthlySchedule.map(row => '<tr><td>' + row.mes + '</td><td>' + money(row.capital) + '</td><td>' + money(row.interes) + '</td><td>' + money(row.iva) + '</td><td>$260.00</td><td>$142.00</td><td><strong>' + money(row.pago) + '</strong></td><td>' + money(row.saldo) + '</td></tr>').join('') +
-      '</tbody></table>' +
-      '<div class="note">Cotización estimada sujeta a validación y aprobación final. El seguro de contado se paga por separado; el seguro financiado se incorpora al capital financiado y modifica la mensualidad. GPS y SDD están incluidos en la mensualidad estimada.</div>' +
-      '<div class="footer">CrediMóvil • Tu auto, más cerca de tus planes</div>' +
-      '<script>window.print();<\/script></body></html>';
+      '<section>' +
+        '<div class="header"><div><div class="brand">CREDI<span>MÓVIL</span></div><div class="tag">Cotización de crédito automotriz</div></div>' +
+        '<div class="folio">Folio<strong>' + (expediente.folio || '—') + '</strong></div></div>' +
+        '<div class="client"><strong>' + (expediente.ine?.nombreCompleto || expediente.ine?.nombre || 'Cliente sin nombre') + '</strong><div class="vehicle">' + [expediente.autoMarca, expediente.autoModelo, expediente.autoAno].filter(Boolean).join(' ') + '</div></div>' +
+        '<table class="quote">' +
+          '<tr><td>Precio del vehículo</td><td>' + money(Number(precio) || 0) + '</td></tr>' +
+          '<tr><td>Enganche</td><td>' + money(enganche) + ' (' + porcentajeReal.toFixed(2) + '%)</td></tr>' +
+          '<tr><td>Monto base a financiar</td><td>' + money(montoFinanciar) + '</td></tr>' +
+          '<tr><td>' + seguroResumenLabel + '</td><td>' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro)) + '</td></tr>' +
+          '<tr><td>Total capital financiado</td><td>' + money(totalCapitalFinanciado) + '</td></tr>' +
+          '<tr><td>Plazo</td><td>' + plazo + ' meses</td></tr>' +
+          '<tr><td>Tasa anual</td><td>28%</td></tr>' +
+          '<tr class="highlight"><td>Mensualidad estimada</td><td>' + money(mensualidad) + '</td></tr>' +
+        '</table>' +
+        '<div class="summary">' +
+          '<div class="box"><span>Capital mensual</span><strong>' + money(capitalMensualBase) + '</strong></div>' +
+          '<div class="box"><span>Interés mensual</span><strong>' + money(interesesMensualesBase) + '</strong></div>' +
+          '<div class="box"><span>IVA interés</span><strong>' + money(ivaMensualBase) + '</strong></div>' +
+          '<div class="box"><span>GPS + SDD</span><strong>$402.00 MXN</strong></div>' +
+        '</div>' +
+        '<div class="note">Cotización estimada sujeta a validación y aprobación final. El seguro financiado se incorpora al capital; el seguro de contado se paga por separado. GPS $260 + SDD $142 están incluidos en la mensualidad.</div>' +
+        '<div class="cover-footer">CrediMóvil · Tu auto, más cerca de tus planes</div>' +
+      '</section>' +
+      schedulePages.join('') +
+      '</body></html>';
     popup.document.write(html);
     popup.document.close();
   };
