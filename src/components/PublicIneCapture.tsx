@@ -2235,7 +2235,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     type="number"
                     min={engancheMinimoPesos}
                     max={precioSeguro}
-                    step={1000}
+                    step={1}
                     value={engancheMonto === '' ? engancheMinimoPesos : engancheMonto}
                     onChange={(e) => {
                       const value = Number(e.target.value) || engancheMinimoPesos;
