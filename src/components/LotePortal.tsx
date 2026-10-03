@@ -30,7 +30,6 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
   const [error, setError] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
   const [commentTarget, setCommentTarget] = useState<{ id: string; folio: string } | null>(null);
-  const [quoteTarget, setQuoteTarget] = useState<LoteExpediente | null>(null);
   const [showNewQuote, setShowNewQuote] = useState(false);
 
   const load = async () => {
@@ -80,9 +79,6 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
           <button onClick={() => setShowChat(true)} className='inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-600/20 border border-emerald-500/20 text-emerald-300 text-xs font-bold hover:bg-emerald-600/30'>
             <MessageCircle className='w-4 h-4' /> Chat con CrediMóvil
           </button>
-          <button onClick={() => setShowNewQuote(true)} className='self-start lg:self-auto inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-red-600 border border-red-500 text-white text-xs font-bold hover:bg-red-500 shadow-md'>
-            <Calculator className='w-4 h-4' /> Nueva cotización
-          </button>
           <button onClick={load} className='self-start lg:self-auto inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs font-bold hover:bg-slate-800'>
             <RefreshCw className={loading ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} /> Actualizar
           </button>
@@ -106,6 +102,28 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
 
       {error && <div className='p-4 rounded-xl bg-rose-950/30 border border-rose-800/50 text-rose-200 text-sm'>{error}</div>}
 
+      <section className='bg-[#071A33] border border-[#18365C] rounded-2xl p-5 sm:p-6 shadow-lg'>
+        <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
+          <div className='flex items-start gap-3'>
+            <div className='w-11 h-11 rounded-xl bg-red-600/15 border border-red-500/20 flex items-center justify-center shrink-0'>
+              <Calculator className='w-5 h-5 text-red-400' />
+            </div>
+            <div>
+              <h2 className='text-base sm:text-lg font-black text-white'>Cotizador de créditos</h2>
+              <p className='text-xs sm:text-sm text-slate-400 mt-1'>
+                Crea cotizaciones independientes para cualquier cliente y vehículo. No crea ni modifica un crédito.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowNewQuote(true)}
+            className='inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 border border-red-500 text-white text-xs font-bold hover:bg-red-500 shadow-md shrink-0'
+          >
+            <Calculator className='w-4 h-4' /> Abrir cotizador
+          </button>
+        </div>
+      </section>
+
       <div className='bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden'>
         <div className='px-5 py-4 border-b border-slate-800 flex items-center justify-between'><div className='flex items-center gap-2 text-sm font-bold text-white'><FileText className='w-4 h-4 text-red-400' /> Mis créditos</div><span className='text-xs text-slate-500'>{filtered.length} registros</span></div>
         {filtered.length === 0 ? (
@@ -124,12 +142,6 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
                     </div>
                   </div>
                   <div className='flex items-center gap-3 shrink-0'>
-                    <button
-                      onClick={() => setQuoteTarget(e)}
-                      className='inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-600 border border-red-500 text-white text-xs font-bold hover:bg-red-500'
-                    >
-                      <Calculator className='w-3.5 h-3.5' /> Cotizar
-                    </button>
                     <button
                       onClick={() => setCommentTarget({ id: e.folio, folio: e.folio })}
                       className='inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold hover:text-white hover:bg-slate-700'
@@ -158,46 +170,6 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
         lotes={[]}
         initialLoteId={authUser.loteId}
       />
-
-      {quoteTarget && (
-        <CotizadorCreditoModal
-          expediente={{
-            id: quoteTarget.id,
-            folio: quoteTarget.folio,
-            pinFondeo: '',
-            fechaCreacion: quoteTarget.fechaCreacion,
-            fechaActualizacion: quoteTarget.fechaActualizacion || quoteTarget.fechaCreacion,
-            estatus: quoteTarget.estatus as any,
-            ine: {
-              nombre: '',
-              primerApellido: '',
-              segundoApellido: '',
-              nombreCompleto: quoteTarget.clienteNombre || '',
-              curp: '',
-              rfc: '',
-              fechaNacimiento: '',
-              sexo: '',
-              domicilio: { calle: '', numExterior: '', numInterior: '', colonia: '', codigoPostal: '', municipio: '', estado: '', domicilioCompleto: '' },
-              vigencia: { emision: '', vigenciaHasta: '', seccion: '' },
-            },
-            telefono: quoteTarget.telefono || '',
-            correo: '',
-            loteNombre: authUser.nombre,
-            autoMarca: quoteTarget.autoMarca || '',
-            autoModelo: quoteTarget.autoModelo || '',
-            autoAno: Number(quoteTarget.autoAno) || new Date().getFullYear(),
-            autoPrecio: 0,
-            esVehiculoLegalizado: false,
-            enganche: 0,
-            montoFinanciar: Number(quoteTarget.montoFinanciar) || 0,
-            plazoMeses: 48,
-            documentosFondeo: [],
-          } as any}
-          onClose={() => setQuoteTarget(null)}
-          customerMode
-          showRate={false}
-        />
-      )}
 
       {showNewQuote && (
         <CotizadorCreditoModal
