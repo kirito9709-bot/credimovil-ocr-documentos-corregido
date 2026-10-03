@@ -67,11 +67,11 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
   };
 
   return (
-    <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6'>
+    <div className='min-h-[calc(100vh-64px)] bg-[#9EADBF] px-3 sm:px-6 py-5 sm:py-8'><div className='max-w-7xl mx-auto space-y-5 sm:space-y-6'>
       <div className='flex flex-col lg:flex-row lg:items-center justify-between gap-4'>
         <div>
-          <div className='flex items-center gap-2'><Building2 className='w-6 h-6 text-red-400' /><h1 className='text-2xl sm:text-3xl font-black text-white'>Portal del Lote</h1></div>
-          <p className='text-sm text-slate-400 mt-1'>Sesión: <strong className='text-slate-200'>{authUser.nombre}</strong> • Control de créditos enviados por tu lote</p>
+          <div className='flex items-center gap-2'><Building2 className='w-6 h-6 text-red-400' /><h1 className='text-2xl sm:text-3xl font-black text-[#071A33]'>Portal del Lote</h1></div>
+          <p className='text-sm text-[#294767] mt-1'>Sesión: <strong className='text-slate-200'>{authUser.nombre}</strong> • Control de créditos enviados por tu lote</p>
         </div>
         <div className='flex items-center gap-2'>
           <button onClick={() => setShowChat(true)} className='inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-600/20 border border-emerald-500/20 text-emerald-300 text-xs font-bold hover:bg-emerald-600/30'>
@@ -156,6 +156,7 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
           authUser={authUser}
         />
       )}
+      </div>
     </div>
   );
 };
