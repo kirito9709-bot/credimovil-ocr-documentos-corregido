@@ -88,7 +88,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
     'Precio: ' + money(Number(precio) || 0),
     'Enganche: ' + money(enganche) + ' (' + porcentajeReal.toFixed(2) + '%)',
     'Monto a financiar: ' + money(montoFinanciar),
-    'Seguro: ' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro) + (seguroModo === 'CONTADO' ? ' contado' : ' financiado')),
+    seguroResumenLabel + ': ' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro)),
     'Total capital financiado: ' + money(totalCapitalFinanciado),
     'Plazo: ' + plazo + ' meses',
     'Tasa anual: 28%',
@@ -126,7 +126,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
       '.highlight td{background:#FFF4F4}.highlight td:last-child{font-size:25px;font-weight:900;color:#C81E2B}' +
       '.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:15px}' +
       '.schedule-title{margin-top:20px;font-size:13px;font-weight:900;color:#071A33;text-transform:uppercase;letter-spacing:.8px}.schedule{font-size:8px;margin-top:8px}.schedule th{background:#071A33;color:#fff;padding:6px 5px;text-align:right}.schedule th:first-child,.schedule td:first-child{text-align:center}.schedule td{padding:5px 4px;font-size:8px;text-align:right}.schedule tr:nth-child(even) td{background:#F8FAFC}' +
-      '.box{border:1px solid #D7E0E7;border-radius:12px;padding:12px;background:#F8FAFC}.box span{display:block;color:#64748B;font-size:10px;text-transform:uppercase;letter-spacing:.6px}.box strong{display:block;margin-top:5px;font-size:15px}' +
+      '.insurance-box{border-color:#C81E2B;background:#FFF4F4}.box{border:1px solid #D7E0E7;border-radius:12px;padding:12px;background:#F8FAFC}.box span{display:block;color:#64748B;font-size:10px;text-transform:uppercase;letter-spacing:.6px}.box strong{display:block;margin-top:5px;font-size:15px}' +
       '.note{margin-top:18px;padding:11px 12px;border-left:4px solid #C81E2B;background:#F8FAFC;color:#64748B;font-size:10px;line-height:1.45}' +
       '.footer{margin-top:24px;text-align:center;color:#94A3B8;font-size:9px}' +
       '</style></head><body>' +
@@ -138,7 +138,6 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
       '<tr><td>Precio del vehículo</td><td>' + money(Number(precio) || 0) + '</td></tr>' +
       '<tr><td>Enganche</td><td>' + money(enganche) + ' (' + porcentajeReal.toFixed(2) + '%)</td></tr>' +
       '<tr><td>Monto base a financiar</td><td>' + money(montoFinanciar) + '</td></tr>' +
-      '<tr><td>Seguro</td><td>' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro) + (seguroModo === 'CONTADO' ? ' — contado' : ' — financiado')) + '</td></tr>' +
       '<tr><td>Total capital financiado</td><td>' + money(totalCapitalFinanciado) + '</td></tr>' +
       '<tr><td>Plazo</td><td>' + plazo + ' meses</td></tr>' +
       '<tr><td>Tasa anual</td><td>28%</td></tr>' +
@@ -147,7 +146,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
       '<div class="summary">' +
       '<div class="box"><span>GPS mensual</span><strong>$260 MXN</strong></div>' +
       '<div class="box"><span>SDD mensual</span><strong>$142 MXN</strong></div>' +
-      '<div class="box"><span>' + seguroResumenLabel + '</span><strong>' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro)) + '</strong></div>' +
+      '<div class="box insurance-box"><span>' + seguroResumenLabel + '</span><strong>' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro)) + '</strong></div>' +
       '</div>' +
       '<div class="schedule-title">Desglose de pagos mensuales</div>' +
       '<table class="schedule"><thead><tr><th>Mes</th><th>Capital</th><th>Interés</th><th>IVA interés</th><th>GPS</th><th>SDD</th><th>Pago mensual</th><th>Saldo</th></tr></thead><tbody>' +
