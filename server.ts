@@ -1609,13 +1609,11 @@ function resolveDistPath() {
 }
 
 async function startServer() {
-  if (supabaseConfigured()) {
-    console.log('Supabase configurado. Sincronizando lotes locales...');
-    await ensureLegacyLotesMigrated();
-    await ensureLegacyExpedientesMigrated();
-  } else {
-    console.warn('Supabase no configurado: usando persistencia local de lotes.');
+  if (!supabaseConfigured()) {
+    throw new Error('Supabase es obligatorio para CrediMóvil. Configura SUPABASE_URL y SUPABASE_SECRET_KEY en Render.');
   }
+
+  console.log('Supabase configurado. CrediMóvil usará Supabase Database + Storage como única persistencia.');
 
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
