@@ -46,6 +46,8 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
   const [financiera, setFinanciera] = useState(expediente?.financieraAsignada || 'CrediMóvil Auto');
   const [plazo, setPlazo] = useState(expediente?.plazoMeses || 48);
   const [precio, setPrecio] = useState(expediente?.autoPrecio || 0);
+  const [engancheModo, setEngancheModo] = useState<'PORCENTAJE' | 'MONTO'>(expediente?.engancheModo || 'PORCENTAJE');
+  const [engancheMonto, setEngancheMonto] = useState<number | ''>(expediente?.enganche || '');
   const [enganchePorcentaje, setEnganchePorcentaje] = useState(() => {
     const basePrecio = Number(expediente?.autoPrecio) || 0;
     const baseEnganche = Number(expediente?.enganche) || 0;
@@ -65,9 +67,14 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
 
   const isPdfUrl = (url?: string | null) => Boolean(url && (/^data:application\/pdf/i.test(url) || /\.pdf(?:$|[?#])/i.test(url)));
 
+  const engancheMinimoPesos = Math.round((Number(precio) || 0) * 0.20);
   const engancheSeguro = Math.min(100, Math.max(20, Number(enganchePorcentaje) || 20));
-  const calcEnganche = Math.round(precio * engancheSeguro / 100);
-  const calcMontoFinanciar = Math.max(0, precio - calcEnganche);
+  const engancheMontoSeguro = Math.min(Number(precio) || 0, Math.max(engancheMinimoPesos, Number(engancheMonto) || engancheMinimoPesos));
+  const calcEnganche = engancheModo === 'PORCENTAJE'
+    ? Math.round((Number(precio) || 0) * engancheSeguro / 100)
+    : engancheMontoSeguro;
+  const calcEnganchePorcentajeReal = Number(precio) > 0 ? Math.round((calcEnganche / Number(precio)) * 10000) / 100 : 0;
+  const calcMontoFinanciar = Math.max(0, Number(precio) - calcEnganche);
   const tasaMensual = (28 / 100) / 12;
   const calcMensualidad =
     calcMontoFinanciar > 0 && plazo > 0
@@ -143,6 +150,8 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
     setActiveTab('detalle');
     setEstatus(expediente.estatus);
     setFinanciera(expediente.financieraAsignada || 'CrediMóvil Auto');
+    setEngancheModo(expediente.engancheModo || 'PORCENTAJE');
+    setEngancheMonto(expediente.enganche || '');
     setPlazo(expediente.plazoMeses || 48);
     setPrecio(expediente.autoPrecio || 0);
     const basePrecio = Number(expediente.autoPrecio) || 0;
@@ -366,21 +375,66 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-slate-400 mb-1">Enganche (% del valor)</label>
-                    <input
-                      type="number"
-                      min={20}
-                      max={100}
-                      step={1}
-                      value={engancheSeguro}
-                      onChange={(e) => {
-                        const value = Number(e.target.value) || 20;
-                        setEnganchePorcentaje(Math.min(100, Math.max(20, value)));
-                      }}
-                      className="w-full py-1.5 px-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                    />
+                    <label className="block text-slate-400 mb-1">Enganche</label>
+                    <div className="flex gap-2 mb-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEngancheModo('PORCENTAJE');
+                          if (!enganchePorcentaje) setEnganchePorcentaje(20);
+                        }}
+                        className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold border ${
+                          engancheModo === 'PORCENTAJE'
+                            ? 'bg-red-600 text-white border-red-600'
+                            : 'bg-slate-900 text-slate-400 border-slate-700'
+                        }`}
+                      >
+                        Porcentaje
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEngancheModo('MONTO');
+                          setEngancheMonto(calcEnganche);
+                        }}
+                        className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold border ${
+                          engancheModo === 'MONTO'
+                            ? 'bg-red-600 text-white border-red-600'
+                            : 'bg-slate-900 text-slate-400 border-slate-700'
+                        }`}
+                      >
+                        Efectivo
+                      </button>
+                    </div>
+                    {engancheModo === 'PORCENTAJE' ? (
+                      <input
+                        type="number"
+                        min={20}
+                        max={100}
+                        step={1}
+                        value={engancheSeguro}
+                        onChange={(e) => {
+                          const value = Number(e.target.value) || 20;
+                          setEnganchePorcentaje(Math.min(100, Math.max(20, value)));
+                        }}
+                        className="w-full py-1.5 px-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                      />
+                    ) : (
+                      <input
+                        type="number"
+                        min={engancheMinimoPesos}
+                        max={Number(precio) || 0}
+                        step={1000}
+                        value={engancheMonto === '' ? engancheMinimoPesos : engancheMonto}
+                        onChange={(e) => {
+                          const value = Number(e.target.value) || engancheMinimoPesos;
+                          setEngancheMonto(Math.min(Number(precio) || 0, Math.max(engancheMinimoPesos, value)));
+                        }}
+                        className="w-full py-1.5 px-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                      />
+                    )}
                     <div className="text-[10px] text-slate-500 mt-1">
-                      ${calcEnganche.toLocaleString('es-MX')} MXN • mínimo 20%
+                      Mínimo 20%: ${engancheMinimoPesos.toLocaleString('es-MX')} • Equivale a {calcEnganchePorcentajeReal}%
                     </div>
                   </div>
 
