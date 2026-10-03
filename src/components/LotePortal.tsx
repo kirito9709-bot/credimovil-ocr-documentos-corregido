@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Building2, Car, Clock3, FileText, RefreshCw, Search, ShieldCheck, Wallet, MessageCircle } from 'lucide-react';
+import { Building2, Car, Clock3, FileText, RefreshCw, Search, ShieldCheck, Wallet, MessageCircle, Calculator } from 'lucide-react';
 import { api } from '../services/api';
 import { ChatLoteModal } from './ChatLoteModal';
 import { ExpedienteComentariosModal } from './ExpedienteComentariosModal';
+import { CotizadorCreditoModal } from './CotizadorCreditoModal';
 
 interface LotePortalProps {
   authUser: { username: string; role: 'lote'; nombre: string; loteId?: string | null };
@@ -29,6 +30,8 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
   const [error, setError] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
   const [commentTarget, setCommentTarget] = useState<{ id: string; folio: string } | null>(null);
+  const [quoteTarget, setQuoteTarget] = useState<LoteExpediente | null>(null);
+  const [showNewQuote, setShowNewQuote] = useState(false);
 
   const load = async () => {
     setLoading(true); setError(null);
@@ -77,6 +80,9 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
           <button onClick={() => setShowChat(true)} className='inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-600/20 border border-emerald-500/20 text-emerald-300 text-xs font-bold hover:bg-emerald-600/30'>
             <MessageCircle className='w-4 h-4' /> Chat con CrediMóvil
           </button>
+          <button onClick={() => setShowNewQuote(true)} className='self-start lg:self-auto inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-red-600 border border-red-500 text-white text-xs font-bold hover:bg-red-500 shadow-md'>
+            <Calculator className='w-4 h-4' /> Nueva cotización
+          </button>
           <button onClick={load} className='self-start lg:self-auto inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs font-bold hover:bg-slate-800'>
             <RefreshCw className={loading ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} /> Actualizar
           </button>
@@ -119,6 +125,12 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
                   </div>
                   <div className='flex items-center gap-3 shrink-0'>
                     <button
+                      onClick={() => setQuoteTarget(e)}
+                      className='inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-600 border border-red-500 text-white text-xs font-bold hover:bg-red-500'
+                    >
+                      <Calculator className='w-3.5 h-3.5' /> Cotizar
+                    </button>
+                    <button
                       onClick={() => setCommentTarget({ id: e.folio, folio: e.folio })}
                       className='inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold hover:text-white hover:bg-slate-700'
                     >
@@ -146,6 +158,86 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
         lotes={[]}
         initialLoteId={authUser.loteId}
       />
+
+      {quoteTarget && (
+        <CotizadorCreditoModal
+          expediente={{
+            id: quoteTarget.id,
+            folio: quoteTarget.folio,
+            pinFondeo: '',
+            fechaCreacion: quoteTarget.fechaCreacion,
+            fechaActualizacion: quoteTarget.fechaActualizacion || quoteTarget.fechaCreacion,
+            estatus: quoteTarget.estatus as any,
+            ine: {
+              nombre: '',
+              primerApellido: '',
+              segundoApellido: '',
+              nombreCompleto: quoteTarget.clienteNombre || '',
+              curp: '',
+              rfc: '',
+              fechaNacimiento: '',
+              sexo: '',
+              domicilio: { calle: '', numExterior: '', numInterior: '', colonia: '', codigoPostal: '', municipio: '', estado: '', domicilioCompleto: '' },
+              vigencia: { emision: '', vigenciaHasta: '', seccion: '' },
+            },
+            telefono: quoteTarget.telefono || '',
+            correo: '',
+            loteNombre: authUser.nombre,
+            autoMarca: quoteTarget.autoMarca || '',
+            autoModelo: quoteTarget.autoModelo || '',
+            autoAno: Number(quoteTarget.autoAno) || new Date().getFullYear(),
+            autoPrecio: 0,
+            esVehiculoLegalizado: false,
+            enganche: 0,
+            montoFinanciar: Number(quoteTarget.montoFinanciar) || 0,
+            plazoMeses: 48,
+            documentosFondeo: [],
+          } as any}
+          onClose={() => setQuoteTarget(null)}
+          customerMode
+          showRate={false}
+        />
+      )}
+
+      {showNewQuote && (
+        <CotizadorCreditoModal
+          expediente={{
+            id: 'cotizacion-' + Date.now(),
+            folio: 'COTIZACIÓN',
+            pinFondeo: '',
+            fechaCreacion: new Date().toISOString(),
+            fechaActualizacion: new Date().toISOString(),
+            estatus: 'NUEVO',
+            ine: {
+              nombre: '',
+              primerApellido: '',
+              segundoApellido: '',
+              nombreCompleto: '',
+              curp: '',
+              rfc: '',
+              fechaNacimiento: '',
+              sexo: '',
+              domicilio: { calle: '', numExterior: '', numInterior: '', colonia: '', codigoPostal: '', municipio: '', estado: '', domicilioCompleto: '' },
+              vigencia: { emision: '', vigenciaHasta: '', seccion: '' },
+            },
+            telefono: '',
+            correo: '',
+            loteNombre: authUser.nombre,
+            autoMarca: '',
+            autoModelo: '',
+            autoAno: new Date().getFullYear(),
+            autoPrecio: 0,
+            esVehiculoLegalizado: false,
+            enganche: 0,
+            montoFinanciar: 0,
+            plazoMeses: 48,
+            documentosFondeo: [],
+          } as any}
+          onClose={() => setShowNewQuote(false)}
+          customerMode
+          showRate={false}
+        />
+      )}
 
       {commentTarget && (
         <ExpedienteComentariosModal
