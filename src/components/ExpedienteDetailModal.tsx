@@ -25,10 +25,12 @@ import {
   Upload,
   Loader2,
   MessageSquare,
+  Calculator,
 } from 'lucide-react';
 import { ExpedienteCredito, EstatusCredito } from '../types';
 import { api } from '../services/api';
 import { ExpedienteComentariosModal } from './ExpedienteComentariosModal';
+import { CotizadorCreditoModal } from './CotizadorCreditoModal';
 
 interface ExpedienteDetailModalProps {
   expediente: ExpedienteCredito | null;
@@ -70,6 +72,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
   const [previewDocTitle, setPreviewDocTitle] = useState<string>('');
   const [uploadingDocumentType, setUploadingDocumentType] = useState<string | null>(null);
   const [showComments, setShowComments] = useState(false);
+  const [showQuote, setShowQuote] = useState(false);
 
   const isPdfUrl = (url?: string | null) => Boolean(url && (/^data:application\/pdf/i.test(url) || /\.pdf(?:$|[?#])/i.test(url)));
 
@@ -274,7 +277,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
       <div
         className="relative w-full max-w-5xl bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col my-8 max-h-[92vh]">
         {/* Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-6 py-4 bg-slate-950 border-b border-slate-800 gap-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-slate-950 border-b border-slate-800 gap-3">
           <div className="flex items-center gap-3">
             <span className="text-xl font-mono font-black text-red-500">
               {expediente.folio}
@@ -303,7 +306,16 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setShowQuote(true)}
+              className="py-1.5 px-3 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-red-900/25"
+              title="Cotizar crédito"
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              <span>Cotizar</span>
+            </button>
+
             <button
               onClick={() => onOpenPrint(expediente)}
               className="py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-medium transition flex items-center gap-1.5 border border-slate-700"
@@ -354,7 +366,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
         </div>
 
         {/* Sub-navigation tabs */}
-        <div className="flex items-center gap-2 px-6 py-2 bg-slate-900 border-b border-slate-800">
+        <div className="flex items-center gap-2 px-3 sm:px-6 py-2 bg-slate-900 border-b border-slate-800 overflow-x-auto">
           <button
             onClick={() => setActiveTab('detalle')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
@@ -401,7 +413,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-6">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5 sm:space-y-6">
           {activeTab === 'detalle' && (
             <>
               {/* Dictamen panel */}
@@ -1153,6 +1165,13 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
           )}
         </div>
       </div>
+
+      {showQuote && (
+        <CotizadorCreditoModal
+          expediente={expediente}
+          onClose={() => setShowQuote(false)}
+        />
+      )}
 
       {showComments && (
         <ExpedienteComentariosModal
