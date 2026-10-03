@@ -16,7 +16,21 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-const SUPABASE_URL = (process.env.SUPABASE_URL || '').trim();
+function normalizeSupabaseUrl(raw: string) {
+  const value = String(raw || '').trim();
+  if (!value) return '';
+
+  try {
+    const url = new URL(value);
+    // Supabase JS expects the project root URL, not /rest/v1, /auth/v1, etc.
+    // Normalize common accidental suffixes entered in Render.
+    return url.origin;
+  } catch {
+    return value.replace(/\\/g, '').replace(/\\/+$/, '').replace(/\\/(?:rest|auth|storage)\\/v1(?:\\/.*)?$/i, '');
+  }
+}
+
+const SUPABASE_URL = normalizeSupabaseUrl(process.env.SUPABASE_URL || '');
 const SUPABASE_SECRET_KEY = (
   process.env.SUPABASE_SECRET_KEY ||
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
@@ -511,6 +525,8 @@ app.get('/api/health', (req, res) => {
     name: 'CrediMóvil OCR & Fondeo API',
     geminiConfigured: Boolean(GEMINI_API_KEY),
     geminiKeySource: process.env.GEMINI_API_KEY ? 'GEMINI_API_KEY' : (process.env.GOOGLE_API_KEY ? 'GOOGLE_API_KEY' : 'none'),
+    supabaseConfigured: Boolean(supabase),
+    supabaseUrl: SUPABASE_URL || null,
   });
 });
 
