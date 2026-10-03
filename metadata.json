@@ -1,0 +1,8 @@
+{
+  "name": "Remix CrediMóvil - OCR INE \u0026 Fondeo Automotriz",
+  "description": "Plataforma oficial CrediMóvil: OCR de INE para crédito automotriz, portal para lotes de autos, checklist de documentación y módulo de fondeo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
