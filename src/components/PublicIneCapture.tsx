@@ -568,8 +568,8 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         esVehiculoLegalizado,
         cuentaClabeLote: selectedLote?.cuentaClabeDefault || '',
         bancoLote: selectedLote?.bancoDefault || '',
-        estatus: 'EN_EVALUACION',
-        notasAsesor: `Expediente enviado a análisis con ${docsCompletadosCount} de 3 documentos reglamentarios.`,
+        estatus: 'NUEVO',
+        notasAsesor: `Expediente enviado directamente al asesor con ${docsCompletadosCount} de 3 documentos reglamentarios.`,
       };
 
       const res = await api.createExpediente(payload);
@@ -595,7 +595,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const openWhatsAppShare = () => {
     if (!savedExpediente) return;
     const text =
-      `*CrediMóvil - Expediente Enviado a Análisis*\n` +
+      `*CrediMóvil - Expediente Enviado al Asesor*\n` +
       `Folio: *${savedExpediente.folio}*\n` +
       `Cliente: *${savedExpediente.ine?.nombreCompleto || savedExpediente.ine?.nombre}*\n` +
       `RFC: *${savedExpediente.ine?.rfc || 'Generado'}*\n` +
@@ -698,7 +698,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-black text-center text-slate-900 mb-2">
-            ¡Expediente Guardado y Enviado a Análisis!
+            ¡Expediente Guardado y Enviado al Asesor!
           </h2>
           <p className="text-center text-slate-600 text-sm max-w-xl mx-auto mb-8">
             La información del cliente, su identificación INE, comprobante de domicilio y estados de cuenta bancarios han sido guardados con seguridad en la base de datos de CrediMóvil.
@@ -2552,7 +2552,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 sticky bottom-4 z-20">
           <div className="text-xs text-slate-600">
             <span className="font-bold text-slate-900 block">
-              Envío directo a análisis sin intermediarios
+              Envío directo a asesor
             </span>
             <span>
               {docsCompletadosCount === 3
@@ -2583,7 +2583,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               ) : (
                 <>
                   <Shield className="w-4 h-4 text-emerald-400" />
-                  Guardar y Enviar a Análisis
+                  Guardar y Enviar a Asesor
                 </>
               )}
             </button>
