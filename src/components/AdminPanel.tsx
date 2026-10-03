@@ -34,6 +34,7 @@ interface AdminPanelProps {
   onOpenPrint: (expediente: ExpedienteCredito) => void;
   onOpenLotesManager: () => void;
   onGoToCaptura: () => void;
+  authUser?: { username: string; role: 'admin' | 'asesor'; nombre: string } | null;
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
@@ -45,6 +46,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onOpenPrint,
   onOpenLotesManager,
   onGoToCaptura,
+  authUser,
 }) => {
   const [expedientes, setExpedientes] = useState<ExpedienteCredito[]>([]);
   const [loading, setLoading] = useState(false);
@@ -63,12 +65,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     montoTotalFinanciado: 0,
   });
 
-  // Change PIN modal
-  const [showConfigModal, setShowConfigModal] = useState(false);
-  const [currentPin, setCurrentPin] = useState('');
-  const [newPin, setNewPin] = useState('');
-  const [asesorNombre, setAsesorNombre] = useState('Asesor CrediMóvil');
-  const [pinMessage, setPinMessage] = useState<string | null>(null);
+  const [showAdvisorModal, setShowAdvisorModal] = useState(false);
+  const [asesores, setAsesores] = useState<any[]>([]);
+  const [newAdvisorName, setNewAdvisorName] = useState('');
+  const [newAdvisorUsername, setNewAdvisorUsername] = useState('');
+  const [newAdvisorPassword, setNewAdvisorPassword] = useState('');
+  const [advisorMessage, setAdvisorMessage] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -98,6 +100,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   }, [isAdminAuth, selectedEstatus, selectedLoteId]);
 
   useEffect(() => {
+    if (authUser?.role === 'admin') loadAsesores();
+  }, [authUser?.role]);
+
+  useEffect(() => {
     if (!isAdminAuth) return;
     const timer = setTimeout(() => {
       loadData();
@@ -105,26 +111,44 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const handleChangePin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPinMessage(null);
+  const loadAsesores = async () => {
+    if (authUser?.role !== 'admin') return;
     try {
-      const res = await api.updateAdminConfig({
-        currentPin,
-        newPin: newPin || undefined,
-        asesorNombre,
+      const res = await api.getAsesores();
+      if (res.success) setAsesores(res.asesores || []);
+    } catch (err: any) {
+      setAdvisorMessage(err.message || 'No se pudieron cargar los asesores.');
+    }
+  };
+
+  const handleCreateAdvisor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdvisorMessage(null);
+    try {
+      const res = await api.createAsesor({
+        nombre: newAdvisorName.trim(),
+        username: newAdvisorUsername.trim(),
+        password: newAdvisorPassword,
       });
       if (res.success) {
-        setPinMessage('Configuración actualizada con éxito.');
-        setCurrentPin('');
-        setNewPin('');
-        setTimeout(() => {
-          setShowConfigModal(false);
-          setPinMessage(null);
-        }, 1500);
+        setAdvisorMessage('Asesor creado correctamente.');
+        setNewAdvisorName('');
+        setNewAdvisorUsername('');
+        setNewAdvisorPassword('');
+        loadAsesores();
       }
     } catch (err: any) {
-      setPinMessage(err.message || 'Error al actualizar PIN');
+      setAdvisorMessage(err.message || 'No se pudo crear el asesor.');
+    }
+  };
+
+  const handleDeleteAdvisor = async (id: string, nombre: string) => {
+    if (!confirm(`¿Eliminar el acceso de ${nombre}?`)) return;
+    try {
+      await api.deleteAsesor(id);
+      loadAsesores();
+    } catch (err: any) {
+      alert(err.message || 'No se pudo eliminar el asesor.');
     }
   };
 
@@ -250,13 +274,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <span>Lotes ({lotes.length})</span>
           </button>
 
-          <button
-            onClick={() => setShowConfigModal(true)}
-            className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-medium transition flex items-center gap-1.5"
-          >
-            <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-            <span>PIN</span>
-          </button>
+          {authUser?.role === 'admin' && (
+            <button
+              onClick={() => setShowAdvisorModal(true)}
+              className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-medium transition flex items-center gap-1.5"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+              <span>Asesores</span>
+            </button>
+          )}
 
           <button
             onClick={loadData}
@@ -553,79 +579,82 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
       </div>
 
-      {/* Config Modal */}
-      {showConfigModal && (
+      {showAdvisorModal && authUser?.role === 'admin' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-sm bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl">
-            <h3 className="text-base font-bold text-white mb-1 flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-red-400" />
-              Configuración Asesor CrediMóvil
-            </h3>
-            <p className="text-xs text-slate-400 mb-4">
-              Cambia tu PIN de acceso o datos de contacto
-            </p>
-
-            <form onSubmit={handleChangePin} className="space-y-3 text-xs">
+          <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
               <div>
-                <label className="block text-slate-400 mb-1">Nombre del Asesor</label>
-                <input
-                  type="text"
-                  value={asesorNombre}
-                  onChange={(e) => setAsesorNombre(e.target.value)}
-                  className="w-full py-2 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white"
-                />
+                <h3 className="text-lg font-bold text-white">Usuarios de Asesor</h3>
+                <p className="text-xs text-slate-400">Crea accesos individuales para que cada asesor vea expedientes y documentos sin compartir contraseña.</p>
               </div>
+              <button
+                onClick={() => setShowAdvisorModal(false)}
+                className="py-1.5 px-3 text-slate-400 hover:text-white"
+              >
+                Cerrar
+              </button>
+            </div>
 
-              <div>
-                <label className="block text-slate-400 mb-1">PIN Actual (Predeterminado: 1234)</label>
-                <input
-                  type="password"
-                  required
-                  maxLength={8}
-                  value={currentPin}
-                  onChange={(e) => setCurrentPin(e.target.value)}
-                  placeholder="PIN actual"
-                  className="w-full py-2 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 mb-1">Nuevo PIN (Mínimo 4 dígitos)</label>
-                <input
-                  type="password"
-                  maxLength={8}
-                  value={newPin}
-                  onChange={(e) => setNewPin(e.target.value)}
-                  placeholder="Nuevo PIN"
-                  className="w-full py-2 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono"
-                />
-              </div>
-
-              {pinMessage && (
-                <div className="p-2.5 rounded-lg bg-red-950/40 border border-red-800/40 text-red-300">
-                  {pinMessage}
-                </div>
-              )}
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowConfigModal(false)}
-                  className="py-1.5 px-3 text-slate-400 hover:text-white"
-                >
-                  Cerrar
-                </button>
-                <button
-                  type="submit"
-                  className="py-1.5 px-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl"
-                >
-                  Guardar
-                </button>
-              </div>
+            <form onSubmit={handleCreateAdvisor} className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs mb-6">
+              <input
+                required
+                value={newAdvisorName}
+                onChange={(e) => setNewAdvisorName(e.target.value)}
+                placeholder="Nombre del asesor"
+                className="py-2.5 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white"
+              />
+              <input
+                required
+                value={newAdvisorUsername}
+                onChange={(e) => setNewAdvisorUsername(e.target.value)}
+                placeholder="usuario"
+                autoComplete="off"
+                className="py-2.5 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white"
+              />
+              <input
+                required
+                minLength={8}
+                type="password"
+                value={newAdvisorPassword}
+                onChange={(e) => setNewAdvisorPassword(e.target.value)}
+                placeholder="Contraseña (8+)"
+                autoComplete="new-password"
+                className="py-2.5 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white"
+              />
+              <button
+                type="submit"
+                className="sm:col-span-3 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl"
+              >
+                Crear Usuario de Asesor
+              </button>
             </form>
+
+            {advisorMessage && (
+              <div className="mb-4 p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300">
+                {advisorMessage}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {asesores.length === 0 ? (
+                <div className="text-xs text-slate-500 py-5 text-center">Aún no hay asesores adicionales.</div>
+              ) : asesores.map((asesor) => (
+                <div key={asesor.id} className="flex items-center justify-between gap-3 p-3 bg-slate-950 border border-slate-800 rounded-xl">
+                  <div>
+                    <div className="text-sm font-bold text-white">{asesor.nombre}</div>
+                    <div className="text-[11px] text-slate-400">@{asesor.username}</div>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteAdvisor(asesor.id, asesor.nombre)}
+                    className="py-1.5 px-3 bg-rose-950/40 border border-rose-800/50 text-rose-300 rounded-lg text-xs"
+                  >
+                    Eliminar acceso
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      )}
-    </div>
+      )}    </div>
   );
 };
