@@ -312,10 +312,22 @@ function readJson(filePath: string, fallback: any) {
       fs.writeFileSync(filePath, JSON.stringify(fallback, null, 2), 'utf-8');
       return fallback;
     }
-    const raw = fs.readFileSync(filePath, 'utf-8');
+
+    const raw = fs.readFileSync(filePath, 'utf-8').trim();
+    if (!raw) {
+      fs.writeFileSync(filePath, JSON.stringify(fallback, null, 2), 'utf-8');
+      console.warn(`Archivo JSON vacío reparado: ${filePath}`);
+      return fallback;
+    }
+
     return JSON.parse(raw);
   } catch (err) {
-    console.error(`Error reading ${filePath}:`, err);
+    console.warn(`Archivo JSON corrupto, se reconstruye con valores seguros: ${filePath}`, err);
+    try {
+      fs.writeFileSync(filePath, JSON.stringify(fallback, null, 2), 'utf-8');
+    } catch (writeErr) {
+      console.warn(`No se pudo reparar ${filePath}:`, writeErr);
+    }
     return fallback;
   }
 }
