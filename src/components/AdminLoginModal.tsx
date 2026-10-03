@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
-import { Lock, KeyRound, X, AlertCircle, ShieldCheck, Check } from 'lucide-react';
+import { X, AlertCircle, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { api } from '../services/api';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (admin: any) => void;
+  onSuccess: (user: any) => void;
 }
 
-export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
-  isOpen,
-  onClose,
-  onSuccess,
-}) => {
-  const [pin, setPin] = useState('');
+export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,25 +19,19 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pin.trim()) return;
-
     setLoading(true);
     setError(null);
     try {
-      const res = await api.verifyAdminPin(pin.trim());
-      if (res.success) {
-        onSuccess(res.admin);
-        onClose();
-      }
+      const res = await api.login(username.trim(), password);
+      localStorage.setItem('credimovil_auth_token', res.token);
+      localStorage.setItem('credimovil_auth_user', JSON.stringify(res.user));
+      onSuccess(res.user);
+      onClose();
     } catch (err: any) {
-      setError(err.message || 'PIN incorrecto. Intente de nuevo.');
+      setError(err.message || 'No fue posible iniciar sesión.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleUseDefault = () => {
-    setPin('1234');
   };
 
   return (
@@ -48,35 +40,56 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+          aria-label="Cerrar"
         >
           <X className="w-5 h-5" />
         </button>
 
         <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-500 flex items-center justify-center mb-4 mx-auto">
-          <KeyRound className="w-6 h-6" />
+          <ShieldCheck className="w-6 h-6" />
         </div>
 
         <h3 className="text-xl font-black text-center text-white mb-1">
           Credi<span className="text-red-500">Móvil</span> Asesor
         </h3>
         <p className="text-xs text-center text-slate-400 mb-6">
-          Ingresa tu PIN de seguridad para consultar y dictaminar los expedientes de crédito
+          Inicia sesión para acceder a expedientes y documentos privados.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 text-center">
-              PIN de Acceso
-            </label>
+            <label className="block text-xs font-semibold text-slate-300 mb-2">Usuario</label>
             <input
-              type="password"
-              maxLength={8}
               autoFocus
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              placeholder="••••"
-              className="w-full text-center text-2xl tracking-[0.4em] py-3 px-4 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
+              type="text"
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="usuario.asesor"
+              className="w-full py-3 px-4 bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-2">Contraseña</label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full py-3 pl-4 pr-12 bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-2 top-2.5 p-1.5 text-slate-400 hover:text-white"
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           {error && (
@@ -88,28 +101,15 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
 
           <button
             type="submit"
-            disabled={loading || pin.length < 3}
+            disabled={loading || !username.trim() || !password}
             className="w-full py-3 px-4 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition shadow-lg shadow-red-900/30 flex items-center justify-center gap-2"
           >
             {loading ? (
               <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
-              <>
-                <ShieldCheck className="w-4 h-4" />
-                Ingresar al Panel
-              </>
+              <><ShieldCheck className="w-4 h-4" /> Ingresar</>
             )}
           </button>
-
-          <div className="pt-2 text-center">
-            <button
-              type="button"
-              onClick={handleUseDefault}
-              className="text-[11px] text-slate-400 hover:text-red-400 underline underline-offset-2 transition"
-            >
-              Usar PIN inicial predeterminado (1234)
-            </button>
-          </div>
         </form>
       </div>
     </div>
