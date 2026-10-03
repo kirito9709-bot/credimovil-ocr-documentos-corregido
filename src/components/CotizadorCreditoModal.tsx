@@ -108,17 +108,20 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
   };
 
   const printQuote = () => {
-    const popup = window.open('', '_blank', 'width=900,height=700');
+    const popup = window.open('', '_blank', 'width=1200,height=900');
     if (!popup) return;
+
     const schedulePages: string[] = [];
-    for (let pageStart = 0; pageStart < monthlySchedule.length; pageStart += 24) {
-      const pageRows = monthlySchedule.slice(pageStart, pageStart + 24);
+    const rowsPerPage = 12;
+    for (let pageStart = 0; pageStart < monthlySchedule.length; pageStart += rowsPerPage) {
+      const pageRows = monthlySchedule.slice(pageStart, pageStart + rowsPerPage);
       schedulePages.push(
-        '<section class="schedule-page">' +
-          '<div class="schedule-header">' +
-            '<div><div class="schedule-brand">CREDI<span>MÓVIL</span></div><div class="schedule-sub">Desglose de pagos mensuales</div></div>' +
-            '<div class="schedule-meta">Folio <strong>' + (expediente.folio || '—') + '</strong><br><span>Hoja ' + (schedulePages.length + 1) + '</span></div>' +
+        '<section class="print-page schedule-page">' +
+          '<div class="print-header">' +
+            '<div><div class="brand">CREDI<span>MÓVIL</span></div><div class="subtitle">Desglose de pagos mensuales</div></div>' +
+            '<div class="meta">Folio<strong>' + (expediente.folio || '—') + '</strong><span>Hoja ' + (Math.floor(pageStart / rowsPerPage) + 2) + '</span></div>' +
           '</div>' +
+          '<div class="schedule-title">Plan de pagos</div>' +
           '<table class="schedule"><thead><tr><th>Mes</th><th>Capital</th><th>Interés</th><th>IVA interés</th><th>GPS</th><th>SDD</th><th>Pago mensual</th><th>Saldo</th></tr></thead><tbody>' +
           pageRows.map(row =>
             '<tr>' +
@@ -133,7 +136,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
             '</tr>'
           ).join('') +
           '</tbody></table>' +
-          '<div class="schedule-footer">Cliente: <strong>' + (expediente.ine?.nombreCompleto || expediente.ine?.nombre || '—') + '</strong> · ' +
+          '<div class="page-footer">Cliente: ' + (expediente.ine?.nombreCompleto || expediente.ine?.nombre || '—') + ' · ' +
             [expediente.autoMarca, expediente.autoModelo, expediente.autoAno].filter(Boolean).join(' ') +
           '</div>' +
         '</section>'
@@ -143,26 +146,28 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
     const html =
       '<html><head><title>Cotización CrediMóvil</title>' +
       '<style>' +
-      '@page{size:A4 landscape;margin:10mm}' +
-      '*{ -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
-      'html,body{margin:0;padding:0;background:#071A33}' +
-      'body{font-family:Arial,Helvetica,sans-serif;color:#fff;font-size:11px;background:#071A33}' +
-      '.header{background:#071A33;color:#fff;border-radius:12px;padding:15px 18px;margin-bottom:14px;border-bottom:4px solid #C81E2B;display:flex;justify-content:space-between;align-items:center}' +
-      '.brand{font-size:24px;font-weight:900}.brand span{color:#E3262F}' +
-      '.tag{font-size:9px;color:#B9C7DA;text-transform:uppercase;letter-spacing:1.2px;margin-top:3px}' +
-      '.folio{font-size:9px;color:#D7E0E7;text-align:right}.folio strong{display:block;color:#fff;font-size:13px;margin-top:2px}' +
-      '.client{background:#102A43;border:1px solid #294767;border-radius:10px;padding:10px 12px;margin-bottom:12px}.client strong{font-size:12px}.vehicle{color:#46617D;font-size:10px;margin-top:3px}' +
-      'table.quote{width:100%;border-collapse:collapse;border:1px solid #D7E0E7;border-radius:10px;overflow:hidden}.quote td{padding:7px 9px;border-bottom:1px solid #E2E8F0;font-size:10px}.quote tr:last-child td{border-bottom:0}.quote td:first-child{font-weight:700;width:52%;color:#294767}.highlight td{background:#FFF4F4}.highlight td:last-child{font-size:20px;font-weight:900;color:#C81E2B}' +
-      '.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.box{border:1px solid #294767;border-radius:10px;padding:9px;background:#102A43}.box span{display:block;color:#8FA8C0;font-size:8px;text-transform:uppercase;letter-spacing:.5px}.box strong{display:block;margin-top:3px;font-size:12px}' +
-      '.note{margin-top:10px;padding:9px 10px;border-left:4px solid #C81E2B;background:#0B213E;color:#B9C7DA;font-size:8px;line-height:1.35}' +
-      '.cover-footer{text-align:center;color:#8FA8C0;font-size:8px;margin-top:10px}' +
-      '.schedule-page{page-break-before:always;min-height:180mm;display:flex;flex-direction:column}.schedule-header{background:#071A33;color:#fff;border-bottom:4px solid #C81E2B;border-radius:12px 12px 0 0;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}.schedule-brand{font-size:20px;font-weight:900}.schedule-brand span{color:#E3262F}.schedule-sub{font-size:9px;color:#B9C7DA;margin-top:2px}.schedule-meta{font-size:9px;text-align:right;color:#B9C7DA}.schedule-meta strong{color:#fff;font-size:12px}.schedule-meta span{font-size:8px}' +
-      '.schedule{width:100%;border-collapse:collapse;border:1px solid #D7E0E7;border-top:0;table-layout:fixed}.schedule th{background:#18365C;color:#fff;padding:6px 5px;font-size:8px;text-align:right}.schedule th:first-child{text-align:center;width:6%}.schedule th:nth-child(2){width:14%}.schedule th:nth-child(3),.schedule th:nth-child(4),.schedule th:nth-child(5),.schedule th:nth-child(6){width:11%}.schedule th:nth-child(7){width:14%}.schedule th:nth-child(8){width:14%}.schedule td{padding:6px 5px;border-bottom:1px solid #E2E8F0;font-size:8px;text-align:right;white-space:nowrap}.schedule td.center{text-align:center;font-weight:800;color:#294767}.schedule tr:nth-child(even) td{background:#F8FAFC}.schedule tr:last-child td{border-bottom:0}.schedule td.payment{font-weight:900;color:#C81E2B}.schedule td.balance{font-weight:700;color:#047857}.schedule-footer{margin-top:auto;padding-top:8px;color:#94A3B8;font-size:8px;border-top:1px solid #E2E8F0}' +
+      '@page{size:A4 portrait;margin:10mm}' +
+      '*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}' +
+      'html,body{margin:0;padding:0;background:#fff;color:#071A33}' +
+      'body{font-family:Arial,Helvetica,sans-serif;font-size:11px}' +
+      '.print-page{width:100%;page-break-after:always}' +
+      '.print-page:last-child{page-break-after:auto}' +
+      '.print-header{background:#071A33;color:#fff;border-bottom:5px solid #C81E2B;border-radius:12px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}' +
+      '.brand{font-size:25px;font-weight:900;letter-spacing:-.3px}.brand span{color:#E3262F}.subtitle{font-size:9px;color:#B9C7DA;text-transform:uppercase;letter-spacing:1.2px;margin-top:3px}.meta{font-size:9px;color:#B9C7DA;text-align:right}.meta strong{display:block;font-size:13px;color:#fff;margin:2px 0}.meta span{display:block;color:#8FA8C0;font-size:8px}' +
+      '.client{background:#EEF3F8;border:1px solid #CBD7E3;border-radius:12px;padding:12px 14px;margin-bottom:12px}.client-name{font-size:14px;font-weight:800;color:#071A33}.vehicle{font-size:10px;color:#46617D;margin-top:4px}' +
+      '.quote{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #CBD7E3;border-radius:12px;overflow:hidden}.quote td{padding:9px 10px;border-bottom:1px solid #D9E2EB;font-size:10px}.quote tr:last-child td{border-bottom:0}.quote td:first-child{font-weight:800;color:#294767;width:52%}.quote td:last-child{color:#071A33}.highlight td{background:#FFF1F2}.highlight td:last-child{font-size:24px;font-weight:900;color:#C81E2B}' +
+      '.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.box{border:1px solid #CBD7E3;border-radius:10px;padding:10px;background:#F6F8FB}.box span{display:block;color:#60778E;font-size:8px;text-transform:uppercase;letter-spacing:.5px}.box strong{display:block;margin-top:4px;font-size:12px;color:#071A33}' +
+      '.note{margin-top:10px;padding:10px 12px;border-left:4px solid #C81E2B;background:#F6F8FB;color:#536B83;font-size:8px;line-height:1.45}' +
+      '.cover-footer{text-align:center;color:#8092A5;font-size:8px;margin-top:12px}' +
+      '.schedule-page{min-height:275mm}.schedule-title{font-size:13px;font-weight:900;color:#071A33;text-transform:uppercase;letter-spacing:.8px;margin:2px 0 8px}' +
+      '.schedule{width:100%;border-collapse:collapse;border:1px solid #CBD7E3}.schedule th{background:#18365C;color:#fff;padding:8px 6px;font-size:8px;text-align:right}.schedule th:first-child{text-align:center}.schedule td{padding:8px 6px;border-bottom:1px solid #D9E2EB;font-size:9px;text-align:right;white-space:nowrap;color:#18365C}.schedule tr:nth-child(even) td{background:#F6F8FB}.schedule td.center{text-align:center;font-weight:800}.schedule td.payment{font-weight:900;color:#C81E2B}.schedule td.balance{font-weight:800;color:#047857}.page-footer{margin-top:12px;padding-top:8px;border-top:1px solid #CBD7E3;color:#8092A5;font-size:8px}' +
       '</style></head><body>' +
-      '<section>' +
-        '<div class="header"><div><div class="brand">CREDI<span>MÓVIL</span></div><div class="tag">Cotización de crédito automotriz</div></div>' +
-        '<div class="folio">Folio<strong>' + (expediente.folio || '—') + '</strong></div></div>' +
-        '<div class="client"><strong>' + (expediente.ine?.nombreCompleto || expediente.ine?.nombre || 'Cliente sin nombre') + '</strong><div class="vehicle">' + [expediente.autoMarca, expediente.autoModelo, expediente.autoAno].filter(Boolean).join(' ') + '</div></div>' +
+
+      '<section class="print-page">' +
+        '<div class="print-header"><div><div class="brand">CREDI<span>MÓVIL</span></div><div class="subtitle">Cotización de crédito automotriz</div></div>' +
+        '<div class="meta">Folio<strong>' + (expediente.folio || '—') + '</strong></div></div>' +
+        '<div class="client"><div class="client-name">' + (expediente.ine?.nombreCompleto || expediente.ine?.nombre || 'Cliente sin nombre') + '</div><div class="vehicle">' +
+        [expediente.autoMarca, expediente.autoModelo, expediente.autoAno].filter(Boolean).join(' ') + '</div></div>' +
         '<table class="quote">' +
           '<tr><td>Precio del vehículo</td><td>' + money(Number(precio) || 0) + '</td></tr>' +
           '<tr><td>Enganche</td><td>' + money(enganche) + ' (' + porcentajeReal.toFixed(2) + '%)</td></tr>' +
@@ -184,6 +189,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
       '</section>' +
       schedulePages.join('') +
       '</body></html>';
+
     popup.document.open();
     popup.document.write(html);
     popup.document.close();
@@ -194,9 +200,8 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
       } catch {
         // El usuario puede imprimir manualmente desde la ventana abierta.
       }
-    }, 700);
+    }, 900);
   };
-
   return (
     <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm p-3 sm:p-6 flex items-center justify-center" onMouseDown={(e) => e.stopPropagation()}>
       <div className="w-full max-w-4xl max-h-[95vh] overflow-y-auto bg-gradient-to-b from-[#071A33] via-[#081D36] to-[#06162B] border border-[#284B73] rounded-3xl shadow-[0_30px_90px_rgba(0,0,0,.45)]">
