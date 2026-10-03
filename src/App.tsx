@@ -7,6 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { PublicIneCapture } from './components/PublicIneCapture';
 import { LoteFondeoPortal } from './components/LoteFondeoPortal';
+import { LotePortal } from './components/LotePortal';
+import { LoteLoginModal } from './components/LoteLoginModal';
 import { AdminPanel } from './components/AdminPanel';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { ExpedienteDetailModal } from './components/ExpedienteDetailModal';
@@ -17,7 +19,7 @@ import { ExpedienteCredito, LoteAuto } from './types';
 import { ShieldCheck, Phone, CheckCircle2, Car, Sparkles, Building2 } from 'lucide-react';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<'captura' | 'fondeo' | 'admin' | 'lotes'>('captura');
+  const [currentTab, setCurrentTab] = useState<'captura' | 'fondeo' | 'admin' | 'lotes' | 'loteportal'>('captura');
   const [lotes, setLotes] = useState<LoteAuto[]>([]);
   const [isAdminAuth, setIsAdminAuth] = useState(false);
   const [authUser, setAuthUser] = useState<any>(null);
@@ -28,6 +30,7 @@ export default function App() {
 
   // Modals
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLoteLoginModal, setShowLoteLoginModal] = useState(false);
   const [selectedExpediente, setSelectedExpediente] = useState<ExpedienteCredito | null>(null);
   const [printExpediente, setPrintExpediente] = useState<ExpedienteCredito | null>(null);
   const [showLotesModal, setShowLotesModal] = useState(false);
@@ -82,7 +85,14 @@ export default function App() {
   const handleAdminLoginSuccess = (user: any) => {
     setIsAdminAuth(true);
     setAuthUser(user);
-    setCurrentTab('admin');
+    setCurrentTab(user?.role === 'lote' ? 'loteportal' : 'admin');
+  };
+
+  const handleLoteLoginSuccess = (user: any) => {
+    setIsAdminAuth(true);
+    setAuthUser(user);
+    setShowLoteLoginModal(false);
+    setCurrentTab('loteportal');
   };
 
   const handleAdminLogout = async () => {
@@ -142,6 +152,8 @@ export default function App() {
         isAdminAuth={isAdminAuth}
         onOpenAdminAuth={() => setShowLoginModal(true)}
         onLogoutAdmin={handleAdminLogout}
+        onOpenLoteAuth={() => setShowLoteLoginModal(true)}
+        authUser={authUser}
         activeLoteCount={lotes.length}
       />
 
@@ -160,6 +172,10 @@ export default function App() {
             initialFolio={urlFolio}
             initialPin={urlPin}
           />
+        )}
+
+        {currentTab === 'loteportal' && authUser?.role === 'lote' && (
+          <LotePortal authUser={authUser} />
         )}
 
         {currentTab === 'admin' && (
@@ -208,6 +224,12 @@ export default function App() {
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
         onSuccess={handleAdminLoginSuccess}
+      />
+
+      <LoteLoginModal
+        isOpen={showLoteLoginModal}
+        onClose={() => setShowLoteLoginModal(false)}
+        onSuccess={handleLoteLoginSuccess}
       />
 
       <ExpedienteDetailModal
