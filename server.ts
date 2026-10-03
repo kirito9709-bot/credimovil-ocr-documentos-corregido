@@ -206,7 +206,21 @@ async function getExpedienteRowByIdOrFolio(identifier: string) {
     .maybeSingle();
 
   if (byFolio.error) throw new Error(`Supabase expediente por folio: ${byFolio.error.message}`);
-  return byFolio.data || null;
+  if (byFolio.data) return byFolio.data;
+
+  // Older records created before Supabase became the only source kept
+  // the app's legacy id inside the JSON data column. Accept that id too.
+  const byLegacyId = await supabase
+    .from('expedientes')
+    .select('id,folio,lote_id')
+    .eq('data->>id', value)
+    .maybeSingle();
+
+  if (byLegacyId.error) {
+    throw new Error(`Supabase expediente por id legado: ${byLegacyId.error.message}`);
+  }
+
+  return byLegacyId.data || null;
 }
 
 function canAccessLote(session: any, loteId: string) {
