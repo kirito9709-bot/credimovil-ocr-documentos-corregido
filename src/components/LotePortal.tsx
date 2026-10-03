@@ -13,8 +13,9 @@ type LoteExpediente = {
 };
 
 const statusLabel: Record<string, string> = {
-  NUEVO: 'Nuevo', EN_EVALUACION: 'En análisis', PRE_APROBADO: 'Pre-aprobado',
-  APROBADO: 'Aprobado', FONDEO_PENDIENTE: 'Fondeo pendiente', FONDEO_REVISION: 'Fondeo en revisión',
+  NUEVO: 'Nuevo', PRE_APROBADO: 'Pre-aprobado', EN_EVALUACION: 'En análisis',
+  APROBADO: 'Aprobado', CONTRATO: 'Contrato', GPS: 'GPS', FONDEO: 'Fondeo',
+  FONDEO_PENDIENTE: 'Fondeo pendiente', FONDEO_REVISION: 'Fondeo en revisión',
   FONDEADO: 'Fondeado', RECHAZADO: 'Rechazado',
 };
 
