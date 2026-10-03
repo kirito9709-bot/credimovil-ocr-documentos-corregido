@@ -229,6 +229,7 @@ export default function App() {
         lotes={lotes}
         onLoteCreated={handleLoteCreated}
         onLoteDeleted={handleLoteDeleted}
+        canManage={isAdminAuth}
       />
     </div>
   );
