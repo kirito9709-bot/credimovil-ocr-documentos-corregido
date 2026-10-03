@@ -196,7 +196,7 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
   };
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-[#DCE5F2] px-3 sm:px-6 py-8 sm:py-10">
+    <div className="min-h-[calc(100vh-64px)] bg-[#B9C7DA] px-3 sm:px-6 py-8 sm:py-10">
       {/* Header */}
       <div className="max-w-5xl mx-auto text-center mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 text-xs font-bold mb-3">
@@ -206,7 +206,7 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
         <h1 className="text-3xl sm:text-4xl font-black text-[#102A43] tracking-tight">
           Carga de Documentos para <span className="text-red-500">Fondeo de Vehículo</span>
         </h1>
-        <p className="text-sm sm:text-base text-[#46617D] max-w-2xl mx-auto mt-2">
+        <p className="text-sm sm:text-base text-[#294767] max-w-2xl mx-auto mt-2">
           Cuando el crédito de tu cliente es aprobado, el lote sube directamente los documentos (PNG o PDF) para que se libere el pago de fondeo a tu cuenta sin intermediarios.
         </p>
       </div>
