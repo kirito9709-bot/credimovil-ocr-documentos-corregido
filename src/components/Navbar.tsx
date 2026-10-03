@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Car,
   Scan,
   FolderSync,
   ShieldCheck,
@@ -40,7 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#d9e7e7] shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand: CrediMóvil */}
@@ -48,15 +47,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center gap-3 cursor-pointer group"
             onClick={() => selectTab('captura')}
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 to-rose-500 flex items-center justify-center shadow-lg shadow-red-500/25 group-hover:scale-105 transition">
-              <Car className="w-5 h-5 text-white font-bold" />
+            <div className="w-[132px] sm:w-[150px] flex items-center justify-center group-hover:scale-[1.02] transition">
+              <img
+                src="https://credimovil.mx/wp-content/uploads/2024/05/logo-white-170px.png"
+                alt="CrediMóvil"
+                className="w-full h-auto object-contain"
+              />
             </div>
-            <div>
+            <div className="hidden xl:block">
               <div className="flex items-center gap-2">
-                <span className="text-xl font-black tracking-tight text-white">
-                  Credi<span className="text-red-500">Móvil</span>
+                <span className="text-sm font-extrabold tracking-wide text-[#163F41]">
+                  CREDIMÓVIL
                 </span>
-                <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded bg-red-500/10 text-red-400 border border-red-500/20">
+                <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded bg-red-500/10 text-[#4E9B92] border border-red-500/20">
                   OCR & Fondeo
                 </span>
               </div>
@@ -70,7 +73,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={() => setMobileOpen((open) => !open)}
-            className="md:hidden p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-200"
+            className="md:hidden p-2 rounded-xl bg-slate-900 border border-slate-800 text-[#163F41]"
             aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -82,8 +85,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => onSelectTab('captura')}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
                 currentTab === 'captura'
-                  ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  ? 'bg-[#163F41] text-white shadow-md shadow-[#163F41]/20'
+                  : 'text-[#35585A] hover:text-[#163F41] hover:bg-[#EAF3F3]'
               }`}
             >
               <Scan className="w-4 h-4" />
@@ -94,8 +97,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => selectTab('fondeo')}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 relative ${
                 currentTab === 'fondeo'
-                  ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  ? 'bg-[#163F41] text-white shadow-md shadow-[#163F41]/20'
+                  : 'text-[#35585A] hover:text-[#163F41] hover:bg-[#EAF3F3]'
               }`}
             >
               <FolderSync className="w-4 h-4" />
@@ -107,8 +110,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => selectTab('admin')}
                 className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
                   currentTab === 'admin'
-                    ? 'bg-slate-100 text-slate-950'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                    ? 'bg-[#163F41] text-white'
+                    : 'text-[#35585A] hover:text-[#163F41] hover:bg-[#EAF3F3]'
                 }`}
               >
                 {isAdminAuth ? (
@@ -124,8 +127,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => authUser?.role === 'lote' ? selectTab('loteportal') : onOpenLoteAuth()}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
                 currentTab === 'loteportal'
-                  ? 'bg-emerald-500 text-slate-950'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  ? 'bg-[#4E9B92] text-white'
+                  : 'text-[#35585A] hover:text-[#163F41] hover:bg-[#EAF3F3]'
               }`}
             >
               <UserRound className="w-4 h-4" />
@@ -163,7 +166,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="hidden md:flex items-center gap-2">
             <button
               onClick={() => selectTab('lotes')}
-              className="hidden lg:flex items-center gap-1.5 text-xs text-slate-300 hover:text-red-400 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 transition"
+              className="hidden lg:flex items-center gap-1.5 text-xs text-[#35585A] hover:text-[#163F41] px-3 py-1.5 rounded-lg bg-[#F3F8F8] hover:bg-[#EAF3F3] border border-[#d9e7e7] transition"
               title="Directorio de Lotes Asociados"
             >
               <Building2 className="w-3.5 h-3.5 text-red-400" />
@@ -177,7 +180,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
                 <button
                   onClick={onLogoutAdmin}
-                  className="text-xs px-2.5 py-1.5 text-red-300 hover:text-white hover:bg-red-950/40 rounded-lg border border-red-800/40 transition"
+                  className="text-xs px-2.5 py-1.5 text-[#7c3f3f] hover:text-[#163F41] hover:bg-[#F8ECEC] rounded-lg border border-[#ead7d7] transition"
                 >
                   Cerrar Sesión
                 </button>
