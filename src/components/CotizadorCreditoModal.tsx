@@ -5,9 +5,11 @@ import { ExpedienteCredito } from '../types';
 interface CotizadorCreditoModalProps {
   expediente: ExpedienteCredito;
   onClose: () => void;
+  customerMode?: boolean;
+  showRate?: boolean;
 }
 
-export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ expediente, onClose }) => {
+export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ expediente, onClose, customerMode = false, showRate = true }) => {
   const [precio, setPrecio] = useState<number>(Number(expediente.autoPrecio) || 0);
   const [modoEnganche, setModoEnganche] = useState<'PORCENTAJE' | 'MONTO'>(expediente.engancheModo || 'MONTO');
   const [engancheMonto, setEngancheMonto] = useState<number>(Number(expediente.enganche) || 0);
@@ -17,6 +19,10 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
   );
   const [plazo, setPlazo] = useState<number>([12, 24, 36, 48].includes(Number(expediente.plazoMeses)) ? Number(expediente.plazoMeses) : 48);
   const [copied, setCopied] = useState(false);
+  const [clienteNombre, setClienteNombre] = useState(expediente.ine?.nombreCompleto || expediente.ine?.nombre || '');
+  const [vehiculoMarca, setVehiculoMarca] = useState(expediente.autoMarca || '');
+  const [vehiculoModelo, setVehiculoModelo] = useState(expediente.autoModelo || '');
+  const [vehiculoAno, setVehiculoAno] = useState(String(expediente.autoAno || ''));
   const [seguroModo, setSeguroModo] = useState<'NINGUNO' | 'CONTADO' | 'FINANCIADO'>('NINGUNO');
   const [seguroMonto, setSeguroMonto] = useState<number>(0);
 
@@ -91,7 +97,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
     seguroResumenLabel + ': ' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro)),
     'Total capital financiado: ' + money(totalCapitalFinanciado),
     'Plazo: ' + plazo + ' meses',
-    'Tasa anual: 28%',
+    ...(showRate ? ['Tasa anual: 28%'] : []),
     'Mensualidad estimada: ' + money(mensualidad),
     'GPS: $260 MXN | SDD: $142 MXN',
     'Desglose mensual: Capital ' + money(capitalMensualBase) + ' + Interés ' + money(interesesMensualesBase) + ' + IVA interés ' + money(ivaMensualBase) + ' + GPS $260 + SDD $142 = ' + money(mensualidad),
@@ -136,8 +142,8 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
             '</tr>'
           ).join('') +
           '</tbody></table>' +
-          '<div class="page-footer">Cliente: ' + (expediente.ine?.nombreCompleto || expediente.ine?.nombre || '—') + ' · ' +
-            [expediente.autoMarca, expediente.autoModelo, expediente.autoAno].filter(Boolean).join(' ') +
+          '<div class="page-footer">Cliente: ' + (clienteNombre || '—') + ' · ' +
+            [vehiculoMarca, vehiculoModelo, vehiculoAno].filter(Boolean).join(' ') +
           '</div>' +
         '</section>'
       );
@@ -166,8 +172,8 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
       '<section class="print-page">' +
         '<div class="print-header"><div><div class="brand">CREDI<span>MÓVIL</span></div><div class="subtitle">Cotización de crédito automotriz</div></div>' +
         '<div class="meta">Folio<strong>' + (expediente.folio || '—') + '</strong></div></div>' +
-        '<div class="client"><div class="client-name">' + (expediente.ine?.nombreCompleto || expediente.ine?.nombre || 'Cliente sin nombre') + '</div><div class="vehicle">' +
-        [expediente.autoMarca, expediente.autoModelo, expediente.autoAno].filter(Boolean).join(' ') + '</div></div>' +
+        '<div class="client"><div class="client-name">' + (clienteNombre || 'Cliente sin nombre') + '</div><div class="vehicle">' +
+        [vehiculoMarca, vehiculoModelo, vehiculoAno].filter(Boolean).join(' ') + '</div></div>' +
         '<table class="quote">' +
           '<tr><td>Precio del vehículo</td><td>' + money(Number(precio) || 0) + '</td></tr>' +
           '<tr><td>Enganche</td><td>' + money(enganche) + ' (' + porcentajeReal.toFixed(2) + '%)</td></tr>' +
@@ -175,7 +181,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
           '<tr><td>' + seguroResumenLabel + '</td><td>' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro)) + '</td></tr>' +
           '<tr><td>Total capital financiado</td><td>' + money(totalCapitalFinanciado) + '</td></tr>' +
           '<tr><td>Plazo</td><td>' + plazo + ' meses</td></tr>' +
-          '<tr><td>Tasa anual</td><td>28%</td></tr>' +
+          (showRate ? '<tr><td>Tasa anual</td><td>28%</td></tr>' : '') +
           '<tr class="highlight"><td>Mensualidad estimada</td><td>' + money(mensualidad) + '</td></tr>' +
         '</table>' +
         '<div class="summary">' +
@@ -218,12 +224,24 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
         </div>
 
         <div className="p-4 sm:p-6 space-y-6">
-          <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
-            <div className="text-xs text-slate-400">Cliente</div>
-            <div className="text-sm font-bold text-white mt-1">{expediente.ine?.nombreCompleto || expediente.ine?.nombre || 'Sin nombre'}</div>
-            <div className="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
-              <Car className="w-3.5 h-3.5" />
-              {[expediente.autoMarca, expediente.autoModelo, expediente.autoAno].filter(Boolean).join(' ')}
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-4 sm:p-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="text-xs font-bold text-slate-300 uppercase">
+                Cliente
+                <input value={clienteNombre} onChange={(e) => setClienteNombre(e.target.value)} placeholder="Nombre del cliente" className="mt-1.5 w-full rounded-xl bg-[#F5F8FC] text-[#102A43] border border-[#C5D1DF] px-3 py-2.5 text-sm" />
+              </label>
+              <label className="text-xs font-bold text-slate-300 uppercase">
+                Marca
+                <input value={vehiculoMarca} onChange={(e) => setVehiculoMarca(e.target.value)} placeholder="Ej. Kia" className="mt-1.5 w-full rounded-xl bg-[#F5F8FC] text-[#102A43] border border-[#C5D1DF] px-3 py-2.5 text-sm" />
+              </label>
+              <label className="text-xs font-bold text-slate-300 uppercase">
+                Modelo / versión
+                <input value={vehiculoModelo} onChange={(e) => setVehiculoModelo(e.target.value)} placeholder="Ej. Sorento" className="mt-1.5 w-full rounded-xl bg-[#F5F8FC] text-[#102A43] border border-[#C5D1DF] px-3 py-2.5 text-sm" />
+              </label>
+              <label className="text-xs font-bold text-slate-300 uppercase">
+                Año
+                <input value={vehiculoAno} onChange={(e) => setVehiculoAno(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="Ej. 2026" inputMode="numeric" className="mt-1.5 w-full rounded-xl bg-[#F5F8FC] text-[#102A43] border border-[#C5D1DF] px-3 py-2.5 text-sm" />
+              </label>
             </div>
           </div>
 
@@ -257,10 +275,10 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
               </select>
             </label>
 
-            <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-4">
+            {showRate &&             <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-4">
               <div className="text-xs font-bold text-red-300 uppercase">Tasa anual</div>
               <div className="text-2xl font-black text-white mt-1">28%</div>
-            </div>
+            </div>}
           </div>
 
 
