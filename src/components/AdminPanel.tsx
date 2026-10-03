@@ -562,11 +562,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       <td className="py-3.5 px-4">
                         <span
                           className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                            exp.estatus === 'FONDEADO'
+                            exp.estatus === 'FONDEADO' || exp.estatus === 'FONDEO'
                               ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                              : exp.estatus === 'GPS'
+                              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                              : exp.estatus === 'CONTRATO'
+                              ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
                               : exp.estatus === 'APROBADO'
                               ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                              : exp.estatus === 'FONDEO_REVISION'
+                              : exp.estatus === 'PRE_APROBADO'
+                              ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
+                              : exp.estatus === 'FONDEO_REVISION' || exp.estatus === 'FONDEO_PENDIENTE'
                               ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                               : exp.estatus === 'EN_EVALUACION'
                               ? 'bg-blue-500/20 text-blue-300'
@@ -575,7 +581,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               : 'bg-slate-800 text-slate-400'
                           }`}
                         >
-                          {exp.estatus}
+                          {exp.estatus === 'EN_EVALUACION' ? 'EN ANÁLISIS'
+                            : exp.estatus === 'PRE_APROBADO' ? 'PRE-APROBADO'
+                            : exp.estatus === 'FONDEO_PENDIENTE' ? 'FONDEO'
+                            : exp.estatus === 'FONDEO_REVISION' ? 'FONDEO'
+                            : exp.estatus}
                         </span>
                       </td>
 
