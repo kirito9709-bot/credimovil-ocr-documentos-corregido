@@ -1,25 +1,37 @@
 @theme {
-  --color-red-300: #6FA7A4;
-  --color-red-400: #4E9B92;
-  --color-red-500: #2E766F;
-  --color-red-600: #163F41;
-  --color-red-700: #123638;
-  --color-red-800: #0F2E30;
-  --color-red-900: #092528;
-  --color-red-950: #061D1F;
+  --color-slate-950: #041329;
+  --color-slate-900: #071A33;
+  --color-slate-800: #0F2A4D;
+  --color-slate-700: #294767;
+  --color-slate-600: #46617D;
+  --color-slate-500: #647B92;
+  --color-slate-400: #8DA0B3;
+  --color-slate-300: #B8C5D1;
+  --color-slate-200: #D7E0E7;
+  --color-slate-100: #EAF0F4;
+  --color-slate-50: #F5F8FA;
 
-  --color-rose-300: #78B0AD;
-  --color-rose-400: #5FA39E;
-  --color-rose-500: #3E8F87;
-  --color-rose-600: #2E766F;
-  --color-rose-700: #255F5A;
-  --color-rose-950: #0B2A2A;
+  --color-red-300: #F87171;
+  --color-red-400: #F05252;
+  --color-red-500: #DC2626;
+  --color-red-600: #C81E2B;
+  --color-red-700: #A91521;
+  --color-red-800: #8A111B;
+  --color-red-900: #6F0E15;
+  --color-red-950: #43080D;
 
-  --color-emerald-300: #79C2BB;
-  --color-emerald-400: #5DAEA6;
-  --color-emerald-500: #4E9B92;
-  --color-emerald-600: #3B847D;
-  --color-emerald-700: #2F6B66;
+  --color-rose-300: #FB7185;
+  --color-rose-400: #F43F5E;
+  --color-rose-500: #E11D48;
+  --color-rose-600: #BE123C;
+  --color-rose-700: #9F1239;
+  --color-rose-950: #4C0519;
+
+  --color-emerald-300: #6EE7B7;
+  --color-emerald-400: #34D399;
+  --color-emerald-500: #10B981;
+  --color-emerald-600: #059669;
+  --color-emerald-700: #047857;
 }
 
 @import "tailwindcss";
@@ -73,7 +85,7 @@ body {
   margin: 0;
   overflow-x: hidden;
   overscroll-behavior-x: none;
-  background: #F7FAFA;
+  background: #F4F7FB;
 }
 
 button,
