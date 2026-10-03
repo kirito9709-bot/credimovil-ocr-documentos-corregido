@@ -78,14 +78,16 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
     : engancheMontoSeguro;
   const calcEnganchePorcentajeReal = Number(precio) > 0 ? Math.round((calcEnganche / Number(precio)) * 10000) / 100 : 0;
   const calcMontoFinanciar = Math.max(0, Number(precio) - calcEnganche);
-  const tasaMensual = (28 / 100) / 12;
-  const calcMensualidad =
-    calcMontoFinanciar > 0 && plazo > 0
-      ? Math.round(
-          (calcMontoFinanciar * (tasaMensual * Math.pow(1 + tasaMensual, plazo))) /
-            (Math.pow(1 + tasaMensual, plazo) - 1)
-        )
-      : 0;
+  // Mensualidad según las cotizaciones proporcionadas:
+  // capital mensual + 2.00% interés + 16% IVA sobre interés + GPS $260 + SDD $142.
+  const capitalMensual = calcMontoFinanciar > 0 && plazo > 0
+    ? Math.round((calcMontoFinanciar / plazo) * 100) / 100
+    : 0;
+  const interesMensual = Math.round(calcMontoFinanciar * 0.02 * 100) / 100;
+  const ivaInteres = Math.round(interesMensual * 0.16 * 100) / 100;
+  const calcMensualidad = calcMontoFinanciar > 0
+    ? Math.round((capitalMensual + interesMensual + ivaInteres + 260 + 142) * 100) / 100
+    : 0;
 
   const handleSaveTerms = async () => {
     setIsSaving(true);
