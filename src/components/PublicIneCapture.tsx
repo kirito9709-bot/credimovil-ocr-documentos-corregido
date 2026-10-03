@@ -2214,7 +2214,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     type="number"
                     min={20}
                     max={100}
-                    step={1}
+                    step={0.01}
                     value={enganchePorcentajeSeguro}
                     onChange={(e) => {
                       const value = Number(e.target.value) || 20;
