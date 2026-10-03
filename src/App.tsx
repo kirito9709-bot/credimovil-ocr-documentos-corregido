@@ -20,6 +20,7 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState<'captura' | 'fondeo' | 'admin' | 'lotes'>('captura');
   const [lotes, setLotes] = useState<LoteAuto[]>([]);
   const [isAdminAuth, setIsAdminAuth] = useState(false);
+  const [authUser, setAuthUser] = useState<any>(null);
 
   // Deep linking URL query parameters
   const [urlFolio, setUrlFolio] = useState<string>('');
@@ -34,9 +35,17 @@ export default function App() {
   // Initial load
   useEffect(() => {
     // Check local storage for auth token
-    const token = localStorage.getItem('autocred_admin_token');
-    if (token) {
-      setIsAdminAuth(true);
+    const token = localStorage.getItem('credimovil_auth_token');
+    const savedUser = localStorage.getItem('credimovil_auth_user');
+    if (token && savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        setIsAdminAuth(true);
+        setAuthUser(user);
+      } catch {
+        localStorage.removeItem('credimovil_auth_token');
+        localStorage.removeItem('credimovil_auth_user');
+      }
     }
 
     // Load initial lotes
@@ -70,18 +79,17 @@ export default function App() {
     }
   };
 
-  const handleAdminLoginSuccess = (admin: any) => {
+  const handleAdminLoginSuccess = (user: any) => {
     setIsAdminAuth(true);
-    localStorage.setItem('autocred_admin_token', 'logged_in');
+    setAuthUser(user);
     setCurrentTab('admin');
   };
 
-  const handleAdminLogout = () => {
+  const handleAdminLogout = async () => {
+    await api.logout();
     setIsAdminAuth(false);
-    localStorage.removeItem('autocred_admin_token');
-    if (currentTab === 'admin') {
-      setCurrentTab('captura');
-    }
+    setAuthUser(null);
+    if (currentTab === 'admin') setCurrentTab('captura');
   };
 
   const handleExpedienteCreated = (newExp: ExpedienteCredito) => {
@@ -154,6 +162,7 @@ export default function App() {
           <AdminPanel
             isAdminAuth={isAdminAuth}
             onOpenAuth={() => setShowLoginModal(true)}
+            authUser={authUser}
             onLogout={handleAdminLogout}
             lotes={lotes}
             onOpenExpediente={(exp) => setSelectedExpediente(exp)}
