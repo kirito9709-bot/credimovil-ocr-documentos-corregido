@@ -19,6 +19,14 @@ export const PrintCaratulaModal: React.FC<PrintCaratulaModalProps> = ({
 
   const ine = expediente.ine || {};
   const dom = ine.domicilio || {};
+  const montoCotizado = Math.max(0, Number(expediente.montoFinanciar) || 0);
+  const plazoCotizado = Math.max(1, Number(expediente.plazoMeses) || 48);
+  const capitalMensualCotizado = Math.round((montoCotizado / plazoCotizado) * 100) / 100;
+  const interesMensualCotizado = Math.round(montoCotizado * 0.02 * 100) / 100;
+  const ivaInteresCotizado = Math.round(interesMensualCotizado * 0.16 * 100) / 100;
+  const mensualidadCotizada = montoCotizado > 0
+    ? Math.round((capitalMensualCotizado + interesMensualCotizado + ivaInteresCotizado + 260 + 142) * 100) / 100
+    : 0;
 
   return (
     <div
@@ -217,7 +225,7 @@ export const PrintCaratulaModal: React.FC<PrintCaratulaModalProps> = ({
                   </td>
                   <td className="py-2 px-3">{expediente.plazoMeses} meses</td>
                   <td className="py-2 px-3">28%</td>
-                  <td className="py-2 px-3 font-bold">${(expediente.mensualidadEstimada || 0).toLocaleString('es-MX')} MXN</td>
+                  <td className="py-2 px-3 font-bold">${mensualidadCotizada.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</td>
                 </tr>
               </tbody>
             </table>
