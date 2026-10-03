@@ -50,6 +50,16 @@ const supabase = SUPABASE_URL && SUPABASE_SECRET_KEY
     })
   : null;
 
+const GEMINI_API_KEY = (
+  process.env.GEMINI_API_KEY ||
+  process.env.GOOGLE_API_KEY ||
+  ''
+).trim();
+
+const ai = GEMINI_API_KEY
+  ? new GoogleGenAI({ apiKey: GEMINI_API_KEY })
+  : null;
+
 function supabaseConfigured() {
   return Boolean(supabase);
 }
