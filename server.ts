@@ -379,6 +379,16 @@ function requireAdmin(req: any, res: any) {
   }
   return session;
 }
+
+function requireStaff(req: any, res: any) {
+  const session = requireAuth(req, res);
+  if (!session) return null;
+  if (session.role !== 'admin' && session.role !== 'asesor') {
+    res.status(403).json({ success: false, message: 'Esta función es exclusiva del equipo CrediMóvil.' });
+    return null;
+  }
+  return session;
+}
 function advisorRecords() { return readJson(ASESORES_FILE, []); }
 function writeAdvisorRecords(records: any[]) { writeJson(ASESORES_FILE, records); }
 
@@ -420,7 +430,7 @@ function expedienteToSupabasePayload(exp: any) {
     folio: String(exp?.folio || ''),
     pin_fondeo: String(exp?.pinFondeo || ''),
     estatus: String(exp?.estatus || 'NUEVO'),
-    lote_id: exp?.loteId || null,
+    lote_id: typeof exp?.loteId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(exp.loteId) ? exp.loteId : null,
     asesor_id: null,
     cliente_nombre: String(ine?.nombreCompleto || ine?.nombre || ''),
     cliente_curp: String(ine?.curp || ''),
@@ -1227,7 +1237,7 @@ app.get('/api/lotes', async (req, res) => {
 });
 
 app.post('/api/lotes', async (req, res) => {
-  if (!requireAuth(req, res)) return;
+  if (!requireStaff(req, res)) return;
 
   const { nombre, contacto, telefono, correo, direccion, ciudad, cuentaClabeDefault, bancoDefault } = req.body;
   const nombreLote = String(nombre || '').trim();
@@ -1295,7 +1305,7 @@ app.post('/api/lotes', async (req, res) => {
 });
 
 app.delete('/api/lotes/:id', async (req, res) => {
-  if (!requireAuth(req, res)) return;
+  if (!requireStaff(req, res)) return;
 
   try {
     if (supabaseConfigured()) {
@@ -1344,7 +1354,8 @@ app.delete('/api/lotes/:id', async (req, res) => {
 app.get('/api/expedientes/:id/documentos/:filename', (req, res) => {
   const session = getSession(req);
   const accessToken = typeof req.query.accessToken === 'string' ? req.query.accessToken : '';
-  if (!session && !verifyDocumentAccessToken(accessToken, req.params.id)) {
+  const staffSession = session && (session.role === 'admin' || session.role === 'asesor');
+  if (!staffSession && !verifyDocumentAccessToken(accessToken, req.params.id)) {
     return res.status(401).json({ success: false, message: 'Acceso no autorizado al documento.' });
   }
 
@@ -1362,7 +1373,7 @@ app.get('/api/expedientes/:id/documentos/:filename', (req, res) => {
 
 // 5. Expedientes (CRUD)
 app.get('/api/expedientes', (req, res) => {
-  if (!requireAuth(req, res)) return;
+  if (!requireStaff(req, res)) return;
   const { q, estatus, loteId } = req.query;
   let list = readJson(EXPEDIENTES_FILE, []);
   let migrated = false;
@@ -1404,7 +1415,7 @@ app.get('/api/expedientes', (req, res) => {
 });
 
 app.get('/api/expedientes/:id', (req, res) => {
-  if (!requireAuth(req, res)) return;
+  if (!requireStaff(req, res)) return;
   const expedientes = readJson(EXPEDIENTES_FILE, []);
   const item = expedientes.find((e: any) => e.id === req.params.id);
   if (!item) {
@@ -1577,7 +1588,7 @@ app.post('/api/expedientes', async (req, res) => {
 });
 
 app.put('/api/expedientes/:id', async (req, res) => {
-  if (!requireAuth(req, res)) return;
+  if (!requireStaff(req, res)) return;
   const expedientes = readJson(EXPEDIENTES_FILE, []);
   const index = expedientes.findIndex((e: any) => e.id === req.params.id);
   if (index === -1) {
@@ -1615,7 +1626,7 @@ app.put('/api/expedientes/:id', async (req, res) => {
 });
 
 app.delete('/api/expedientes/:id', async (req, res) => {
-  if (!requireAuth(req, res)) return;
+  if (!requireStaff(req, res)) return;
   let expedientes = readJson(EXPEDIENTES_FILE, []);
   const initialLen = expedientes.length;
   const original = expedientes.find((e: any) => e.id === req.params.id);
@@ -1643,7 +1654,7 @@ app.delete('/api/expedientes/:id', async (req, res) => {
 
 // 6. Subida de Documentos (PNG, JPG, PDF)
 app.post('/api/expedientes/:id/fondeo-doc', (req, res) => {
-  if (!requireAuth(req, res)) return;
+  if (!requireStaff(req, res)) return;
   const { docId, archivoUrl, archivoNombre, archivoTamano, subidoPor } = req.body;
   const expedientes = readJson(EXPEDIENTES_FILE, []);
   const exp = expedientes.find((e: any) => e.id === req.params.id);
@@ -1701,7 +1712,7 @@ app.post('/api/expedientes/:id/fondeo-doc', (req, res) => {
 
 // 7. Asesor aprueba o rechaza documento
 app.put('/api/expedientes/:id/fondeo-doc-review', (req, res) => {
-  if (!requireAuth(req, res)) return;
+  if (!requireStaff(req, res)) return;
   const { docId, estatus, observaciones } = req.body;
   const expedientes = readJson(EXPEDIENTES_FILE, []);
   const exp = expedientes.find((e: any) => e.id === req.params.id);
@@ -1731,7 +1742,7 @@ app.put('/api/expedientes/:id/fondeo-doc-review', (req, res) => {
 
 // 8. Estadísticas
 app.get('/api/stats', (req, res) => {
-  if (!requireAuth(req, res)) return;
+  if (!requireStaff(req, res)) return;
   const expedientes = readJson(EXPEDIENTES_FILE, []);
 
   const total = expedientes.length;
