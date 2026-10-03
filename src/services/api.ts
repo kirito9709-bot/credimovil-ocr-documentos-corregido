@@ -1,11 +1,6 @@
 import { ExpedienteCredito, IneData, LoteAuto } from '../types';
 
-const getAuthToken = () => localStorage.getItem('credimovil_auth_token') || '';
-
-const authHeaders = (extra: Record<string, string> = {}) => {
-  const token = getAuthToken();
-  return token ? { ...extra, Authorization: `Bearer ${token}` } : extra;
-};
+const authHeaders = (extra: Record<string, string> = {}) => ({ ...extra });
 
 const parseError = async (res: Response, fallback: string) => {
   const err = await res.json().catch(() => ({}));
@@ -20,7 +15,7 @@ export const api = {
       body: JSON.stringify({ username, password }),
     });
     if (!res.ok) await parseError(res, 'Usuario o contraseña incorrectos.');
-    return res.json() as Promise<{ success: boolean; token: string; user: { username: string; role: 'admin' | 'asesor' | 'lote'; nombre: string; loteId?: string | null } }>;
+    return res.json() as Promise<{ success: boolean; user: { username: string; role: 'admin' | 'asesor' | 'lote'; nombre: string; loteId?: string | null } }>;
   },
 
   async getMe() {
@@ -31,7 +26,6 @@ export const api = {
 
   async logout() {
     await fetch('/api/auth/logout', { method: 'POST', headers: authHeaders() }).catch(() => {});
-    localStorage.removeItem('credimovil_auth_token');
     localStorage.removeItem('credimovil_auth_user');
   },
 
