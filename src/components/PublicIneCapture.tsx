@@ -242,6 +242,22 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     });
   }, [ineData.curp]);
 
+  const updateDomicilioField = (field: keyof IneData['domicilio'], value: string) => {
+    setIneData((prev) => {
+      const domicilio = { ...prev.domicilio, [field]: value };
+      domicilio.domicilioCompleto = [
+        domicilio.calle,
+        domicilio.numExterior ? `#${domicilio.numExterior}` : '',
+        domicilio.numInterior ? `Int. ${domicilio.numInterior}` : '',
+        domicilio.colonia ? `Col. ${domicilio.colonia}` : '',
+        domicilio.codigoPostal ? `C.P. ${domicilio.codigoPostal}` : '',
+        domicilio.municipio,
+        domicilio.estado,
+      ].filter(Boolean).join(', ');
+      return { ...prev, domicilio };
+    });
+  };
+
   // Handle Photo Capture from modal
   const handleCapture = (base64: string) => {
     if (cameraSide === 'frente') {
@@ -607,6 +623,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         loteNombre: loteNombreFinal,
         asesorLoteContacto: contactoVendedorLote || selectedLote?.contacto || '',
         telefonoLote: selectedLote?.telefono || '',
+        correoLote: selectedLote?.correo || '',
         autoMarca,
         autoModelo,
         autoAno,
@@ -1888,18 +1905,88 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
             </div>
 
             <div className="lg:col-span-4">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Domicilio actual</label>
-              <textarea
-                rows={2}
-                value={ineData.domicilio?.domicilioCompleto || ''}
-                onChange={(e) => setIneData((prev) => ({
-                  ...prev,
-                  domicilio: { ...prev.domicilio, domicilioCompleto: e.target.value },
-                }))}
-                placeholder="Calle, número, colonia, municipio, estado y C.P."
-                className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm resize-none focus:border-red-500 focus:outline-none"
-              />
-              <p className="text-[10px] text-slate-500 mt-1">El domicilio se puede ajustar manualmente después del OCR.</p>
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Domicilio actual</label>
+                  <p className="text-[10px] text-slate-500 mt-1">El OCR lo separa automáticamente y puedes corregir cada campo.</p>
+                </div>
+                <MapPin className="w-4 h-4 text-red-600 shrink-0" />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="lg:col-span-2">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Calle</label>
+                  <input
+                    type="text"
+                    value={ineData.domicilio?.calle || ''}
+                    onChange={(e) => updateDomicilioField('calle', e.target.value)}
+                    placeholder="Calle"
+                    className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">No. exterior</label>
+                  <input
+                    type="text"
+                    value={ineData.domicilio?.numExterior || ''}
+                    onChange={(e) => updateDomicilioField('numExterior', e.target.value)}
+                    placeholder="No."
+                    className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">No. interior</label>
+                  <input
+                    type="text"
+                    value={ineData.domicilio?.numInterior || ''}
+                    onChange={(e) => updateDomicilioField('numInterior', e.target.value)}
+                    placeholder="Int."
+                    className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div className="lg:col-span-2">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Colonia</label>
+                  <input
+                    type="text"
+                    value={ineData.domicilio?.colonia || ''}
+                    onChange={(e) => updateDomicilioField('colonia', e.target.value)}
+                    placeholder="Colonia / fraccionamiento"
+                    className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Código postal</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={5}
+                    value={ineData.domicilio?.codigoPostal || ''}
+                    onChange={(e) => updateDomicilioField('codigoPostal', e.target.value.replace(/\D/g, '').slice(0, 5))}
+                    placeholder="C.P."
+                    className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Municipio / Alcaldía</label>
+                  <input
+                    type="text"
+                    value={ineData.domicilio?.municipio || ''}
+                    onChange={(e) => updateDomicilioField('municipio', e.target.value)}
+                    placeholder="Municipio"
+                    className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Estado</label>
+                  <input
+                    type="text"
+                    value={ineData.domicilio?.estado || ''}
+                    onChange={(e) => updateDomicilioField('estado', e.target.value)}
+                    placeholder="Estado"
+                    className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
