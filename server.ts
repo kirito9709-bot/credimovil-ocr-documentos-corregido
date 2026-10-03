@@ -314,7 +314,8 @@ async function uploadDataUriToSupabase(
   dataUri: string,
   originalName = '',
   estatus = 'SUBIDO',
-  observaciones = ''
+  observaciones = '',
+  metadata: Record<string, any> = {}
 ) {
   if (!supabase) throw new Error('Supabase no está configurado.');
   if (!isDataUri(dataUri)) return null;
@@ -367,6 +368,7 @@ async function uploadDataUriToSupabase(
       estatus,
       observaciones,
       subido_por: null,
+      metadata,
     }, {
       onConflict: 'expediente_id,tipo',
     });
@@ -425,7 +427,10 @@ async function storeExpedienteDocuments(exp: any, dbExpedienteId: string) {
           dbExpedienteId,
           documentTypeForStateKey(key),
           value,
-          working.estadosCuenta[nameKey] || key
+          working.estadosCuenta[nameKey] || key,
+          'SUBIDO',
+          '',
+          { origen: 'Solicitud inicial', fechaSubida: new Date().toISOString() }
         );
         working.estadosCuenta[key] = '';
       } else if (isSignedOrApiDocumentUrl(value)) {
@@ -443,7 +448,11 @@ async function storeExpedienteDocuments(exp: any, dbExpedienteId: string) {
         doc.archivoUrl,
         doc.archivoNombre || doc.id,
         doc.estatus || 'SUBIDO',
-        doc.observaciones || ''
+        doc.observaciones || '',
+        {
+          subidoPor: doc.subidoPor || '',
+          fechaSubida: doc.fechaSubida || new Date().toISOString(),
+        }
       );
       doc.archivoUrl = '';
     } else if (isSignedOrApiDocumentUrl(doc.archivoUrl)) {
@@ -494,7 +503,8 @@ function applyStoredDocumentsToExpediente(exp: any, documentRows: any[]) {
         archivoTipo: stored.mime_type || doc.archivoTipo,
         archivoTamano: stored.tamano || doc.archivoTamano,
         observaciones: stored.observaciones || '',
-        fechaSubida: stored.created_at || doc.fechaSubida,
+        fechaSubida: stored.metadata?.fechaSubida || stored.created_at || doc.fechaSubida,
+        subidoPor: stored.metadata?.subidoPor || doc.subidoPor,
       };
     }));
 
