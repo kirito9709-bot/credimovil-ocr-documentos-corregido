@@ -1517,7 +1517,7 @@ app.post('/api/expedientes', async (req, res) => {
     enganche: Number(body.enganche) || 0,
     montoFinanciar: Number(body.montoFinanciar) || Math.max(0, (Number(body.autoPrecio) || 0) - (Number(body.enganche) || 0)),
     plazoMeses: Number(body.plazoMeses) || 48,
-    tasaInteresAnual: Number(body.tasaInteresAnual) || 14.5,
+    tasaInteresAnual: 28,
     mensualidadEstimada: Number(body.mensualidadEstimada) || 0,
     financieraAsignada: body.financieraAsignada || 'CrediMóvil Auto',
 
@@ -1599,6 +1599,7 @@ app.put('/api/expedientes/:id', async (req, res) => {
   const updated = {
     ...existing,
     ...req.body,
+    tasaInteresAnual: 28,
     id: existing.id,
     folio: existing.folio,
     pinFondeo: existing.pinFondeo,
