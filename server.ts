@@ -16,6 +16,11 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
+// Parse JSON/form requests before any API route.
+// Keep the limit high enough for document uploads sent as data URIs.
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
 function normalizeSupabaseUrl(raw: string) {
   const value = String(raw || '').trim();
   if (!value) return '';
