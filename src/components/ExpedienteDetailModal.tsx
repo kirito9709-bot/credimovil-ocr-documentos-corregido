@@ -633,6 +633,53 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                   </p>
                 </div>
               </div>
+
+              {expediente.obligadoSolidario?.requerido && (
+                <div className="mt-5 p-5 rounded-2xl bg-amber-950/20 border border-amber-500/30">
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <div>
+                      <h4 className="text-sm font-black text-white flex items-center gap-2">
+                        <Users className="w-4 h-4 text-amber-400" />
+                        Obligado Solidario
+                      </h4>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        {expediente.obligadoSolidario.nombre || 'Sin nombre capturado'} • documentación adjunta al mismo expediente
+                      </p>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[10px] font-bold">
+                      REQUERIDO
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {[
+                      ['INE Frente', expediente.obligadoSolidario.fotoIneFrente],
+                      ['INE Reverso', expediente.obligadoSolidario.fotoIneReverso],
+                      ['Comprobante Domicilio', expediente.obligadoSolidario.comprobanteDomicilioUrl],
+                      ['Estados Mes 1', expediente.obligadoSolidario.estadosCuenta?.mes1Url],
+                      ['Estados Mes 2', expediente.obligadoSolidario.estadosCuenta?.mes2Url],
+                      ['Estados Mes 3', expediente.obligadoSolidario.estadosCuenta?.mes3Url],
+                      ['Estados 3 Meses Consolidado', expediente.obligadoSolidario.estadosCuenta?.archivoConsolidadoUrl],
+                    ].filter(([, url]) => Boolean(url)).map(([label, url]) => (
+                      <button
+                        key={String(label)}
+                        type="button"
+                        onClick={() => {
+                          setPreviewDocUrl(String(url));
+                          setPreviewDocTitle(`Obligado Solidario - ${label}`);
+                        }}
+                        className="p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/40 text-left transition"
+                      >
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-amber-400" />
+                          <span className="text-xs font-bold text-slate-200">{label}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-500 mt-1 block">Ver documento</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
