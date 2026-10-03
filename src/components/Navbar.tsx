@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Car,
   Scan,
@@ -7,6 +7,8 @@ import {
   Lock,
   Building2,
   UserRound,
+  Menu,
+  X,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -30,6 +32,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   authUser,
   activeLoteCount,
 }) => {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const selectTab = (tab: 'captura' | 'fondeo' | 'admin' | 'lotes' | 'loteportal') => {
+    onSelectTab(tab);
+    setMobileOpen(false);
+  };
+
   return (
     <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -37,7 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Logo & Brand: CrediMóvil */}
           <div
             className="flex items-center gap-3 cursor-pointer group"
-            onClick={() => onSelectTab('captura')}
+            onClick={() => selectTab('captura')}
           >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 to-rose-500 flex items-center justify-center shadow-lg shadow-red-500/25 group-hover:scale-105 transition">
               <Car className="w-5 h-5 text-white font-bold" />
@@ -57,8 +66,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
+          {/* Mobile menu trigger */}
+          <button
+            type="button"
+            onClick={() => setMobileOpen((open) => !open)}
+            className="md:hidden p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-200"
+            aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
+          >
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+
           {/* Navigation Tabs */}
-          <nav className="flex items-center gap-1 sm:gap-2">
+          <nav className={`${mobileOpen ? 'absolute left-3 right-3 top-16' : 'hidden'} md:static md:flex items-center gap-1 sm:gap-2 md:bg-transparent bg-slate-950 border md:border-0 border-slate-800 rounded-2xl p-2 md:p-0 shadow-2xl md:shadow-none z-50`}>
             <button
               onClick={() => onSelectTab('captura')}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
@@ -72,7 +91,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             <button
-              onClick={() => onSelectTab('fondeo')}
+              onClick={() => selectTab('fondeo')}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 relative ${
                 currentTab === 'fondeo'
                   ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
@@ -85,7 +104,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {authUser?.role !== 'lote' && (
               <button
-                onClick={() => onSelectTab('admin')}
+                onClick={() => selectTab('admin')}
                 className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
                   currentTab === 'admin'
                     ? 'bg-slate-100 text-slate-950'
@@ -102,7 +121,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
 
             <button
-              onClick={() => authUser?.role === 'lote' ? onSelectTab('loteportal') : onOpenLoteAuth()}
+              onClick={() => authUser?.role === 'lote' ? selectTab('loteportal') : onOpenLoteAuth()}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
                 currentTab === 'loteportal'
                   ? 'bg-emerald-500 text-slate-950'
@@ -117,7 +136,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Right actions */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => onSelectTab('lotes')}
+              onClick={() => selectTab('lotes')}
               className="hidden lg:flex items-center gap-1.5 text-xs text-slate-300 hover:text-red-400 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 transition"
               title="Directorio de Lotes Asociados"
             >
