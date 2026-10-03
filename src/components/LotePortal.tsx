@@ -119,7 +119,7 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
                   </div>
                   <div className='flex items-center gap-3 shrink-0'>
                     <button
-                      onClick={() => setCommentTarget({ id: e.id, folio: e.folio })}
+                      onClick={() => setCommentTarget({ id: e.folio, folio: e.folio })}
                       className='inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold hover:text-white hover:bg-slate-700'
                     >
                       <MessageCircle className='w-3.5 h-3.5' /> Comentarios
