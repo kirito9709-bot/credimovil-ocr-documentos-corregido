@@ -54,6 +54,36 @@ function supabaseConfigured() {
   return Boolean(supabase);
 }
 
+const CREDIMOVIL_INTEREST_MONTHLY = 0.02;
+const CREDIMOVIL_IVA_ON_INTEREST = 0.16;
+const CREDIMOVIL_GPS_MONTHLY = 260;
+const CREDIMOVIL_SDD_MONTHLY = 142;
+
+function roundMoney(value: number) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+// Based on the supplied GPI Auto Comercial quotes:
+// capital monthly + 2.00% monthly interest + 16% IVA on interest + GPS $260 + SDD $142.
+// The five supplied quotes are for 48 months and match this calculation to the cent.
+function calculateCredimovilMonthlyPayment(montoFinanciar: number, plazoMeses: number) {
+  const amount = Math.max(0, Number(montoFinanciar) || 0);
+  const term = Math.max(1, Number(plazoMeses) || 48);
+  if (!amount) return 0;
+
+  const capitalMensual = roundMoney(amount / term);
+  const interesMensual = roundMoney(amount * CREDIMOVIL_INTEREST_MONTHLY);
+  const ivaInteres = roundMoney(interesMensual * CREDIMOVIL_IVA_ON_INTEREST);
+
+  return roundMoney(
+    capitalMensual +
+    interesMensual +
+    ivaInteres +
+    CREDIMOVIL_GPS_MONTHLY +
+    CREDIMOVIL_SDD_MONTHLY
+  );
+}
+
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const sessions = new Map<string, {
   username: string;
@@ -1713,7 +1743,7 @@ app.post('/api/expedientes', async (req, res) => {
       montoFinanciar: Number(body.montoFinanciar) || Math.max(0, (Number(body.autoPrecio) || 0) - (Number(body.enganche) || 0)),
       plazoMeses: Number(body.plazoMeses) || 48,
       tasaInteresAnual: 28,
-      mensualidadEstimada: Number(body.mensualidadEstimada) || 0,
+      mensualidadEstimada: calculateCredimovilMonthlyPayment(Number(body.montoFinanciar) || 0, Number(body.plazoMeses) || 48),
       financieraAsignada: body.financieraAsignada || 'CrediMóvil Auto',
       documentosFondeo: docsFondeo,
       cuentaClabeLote: body.cuentaClabeLote || '',
@@ -1747,6 +1777,10 @@ app.put('/api/expedientes/:id', async (req, res) => {
       ...existing,
       ...req.body,
       tasaInteresAnual: 28,
+      mensualidadEstimada: calculateCredimovilMonthlyPayment(
+        Number((req.body?.montoFinanciar ?? existing.montoFinanciar)) || 0,
+        Number((req.body?.plazoMeses ?? existing.plazoMeses)) || 48
+      ),
       id: existing.id,
       folio: existing.folio,
       pinFondeo: existing.pinFondeo,
