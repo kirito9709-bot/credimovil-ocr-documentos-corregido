@@ -86,6 +86,18 @@ export interface EstadosCuentaAnalisis {
   fechaSubida?: string;
 }
 
+export interface ObligadoSolidarioDocumentos {
+  requerido: boolean;
+  nombre?: string;
+  fotoIneFrente?: string;
+  fotoIneFrenteNombre?: string;
+  fotoIneReverso?: string;
+  fotoIneReversoNombre?: string;
+  comprobanteDomicilioUrl?: string;
+  comprobanteDomicilioNombre?: string;
+  estadosCuenta?: EstadosCuentaAnalisis;
+}
+
 export interface ExpedienteCredito {
   id: string;
   folio: string; // e.g. EXP-2026-1001
@@ -121,6 +133,7 @@ export interface ExpedienteCredito {
   dependientesEconomicos?: number;
   estadoCivil?: 'SOLTERO' | 'CASADO' | 'UNION_LIBRE' | 'DIVORCIADO' | 'VIUDO' | '';
   referenciasPersonales?: ReferenciaPersonal[];
+  obligadoSolidario?: ObligadoSolidarioDocumentos;
 
   // 3. Datos del Lote de Autos
   loteId?: string;
