@@ -144,17 +144,18 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
       '<html><head><title>Cotización CrediMóvil</title>' +
       '<style>' +
       '@page{size:A4 landscape;margin:10mm}' +
-      'html,body{margin:0;padding:0;background:#fff}' +
-      'body{font-family:Arial,Helvetica,sans-serif;color:#071A33;font-size:11px}' +
+      "'*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}' +"
+      'html,body{margin:0;padding:0;background:#071A33}' +
+      'body{font-family:Arial,Helvetica,sans-serif;color:#fff;font-size:11px;background:#071A33}' +
       '.header{background:#071A33;color:#fff;border-radius:12px;padding:15px 18px;margin-bottom:14px;border-bottom:4px solid #C81E2B;display:flex;justify-content:space-between;align-items:center}' +
       '.brand{font-size:24px;font-weight:900}.brand span{color:#E3262F}' +
       '.tag{font-size:9px;color:#B9C7DA;text-transform:uppercase;letter-spacing:1.2px;margin-top:3px}' +
       '.folio{font-size:9px;color:#D7E0E7;text-align:right}.folio strong{display:block;color:#fff;font-size:13px;margin-top:2px}' +
-      '.client{background:#F1F5F9;border:1px solid #D7E0E7;border-radius:10px;padding:10px 12px;margin-bottom:12px}.client strong{font-size:12px}.vehicle{color:#46617D;font-size:10px;margin-top:3px}' +
+      '.client{background:#102A43;border:1px solid #294767;border-radius:10px;padding:10px 12px;margin-bottom:12px}.client strong{font-size:12px}.vehicle{color:#46617D;font-size:10px;margin-top:3px}' +
       'table.quote{width:100%;border-collapse:collapse;border:1px solid #D7E0E7;border-radius:10px;overflow:hidden}.quote td{padding:7px 9px;border-bottom:1px solid #E2E8F0;font-size:10px}.quote tr:last-child td{border-bottom:0}.quote td:first-child{font-weight:700;width:52%;color:#294767}.highlight td{background:#FFF4F4}.highlight td:last-child{font-size:20px;font-weight:900;color:#C81E2B}' +
-      '.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.box{border:1px solid #D7E0E7;border-radius:10px;padding:9px;background:#F8FAFC}.box span{display:block;color:#64748B;font-size:8px;text-transform:uppercase;letter-spacing:.5px}.box strong{display:block;margin-top:3px;font-size:12px}' +
-      '.note{margin-top:10px;padding:9px 10px;border-left:4px solid #C81E2B;background:#F8FAFC;color:#64748B;font-size:8px;line-height:1.35}' +
-      '.cover-footer{text-align:center;color:#94A3B8;font-size:8px;margin-top:10px}' +
+      '.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.box{border:1px solid #294767;border-radius:10px;padding:9px;background:#102A43}.box span{display:block;color:#8FA8C0;font-size:8px;text-transform:uppercase;letter-spacing:.5px}.box strong{display:block;margin-top:3px;font-size:12px}' +
+      '.note{margin-top:10px;padding:9px 10px;border-left:4px solid #C81E2B;background:#0B213E;color:#B9C7DA;font-size:8px;line-height:1.35}' +
+      '.cover-footer{text-align:center;color:#8FA8C0;font-size:8px;margin-top:10px}' +
       '.schedule-page{page-break-before:always;min-height:180mm;display:flex;flex-direction:column}.schedule-header{background:#071A33;color:#fff;border-bottom:4px solid #C81E2B;border-radius:12px 12px 0 0;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}.schedule-brand{font-size:20px;font-weight:900}.schedule-brand span{color:#E3262F}.schedule-sub{font-size:9px;color:#B9C7DA;margin-top:2px}.schedule-meta{font-size:9px;text-align:right;color:#B9C7DA}.schedule-meta strong{color:#fff;font-size:12px}.schedule-meta span{font-size:8px}' +
       '.schedule{width:100%;border-collapse:collapse;border:1px solid #D7E0E7;border-top:0;table-layout:fixed}.schedule th{background:#18365C;color:#fff;padding:6px 5px;font-size:8px;text-align:right}.schedule th:first-child{text-align:center;width:6%}.schedule th:nth-child(2){width:14%}.schedule th:nth-child(3),.schedule th:nth-child(4),.schedule th:nth-child(5),.schedule th:nth-child(6){width:11%}.schedule th:nth-child(7){width:14%}.schedule th:nth-child(8){width:14%}.schedule td{padding:6px 5px;border-bottom:1px solid #E2E8F0;font-size:8px;text-align:right;white-space:nowrap}.schedule td.center{text-align:center;font-weight:800;color:#294767}.schedule tr:nth-child(even) td{background:#F8FAFC}.schedule tr:last-child td{border-bottom:0}.schedule td.payment{font-weight:900;color:#C81E2B}.schedule td.balance{font-weight:700;color:#047857}.schedule-footer{margin-top:auto;padding-top:8px;color:#94A3B8;font-size:8px;border-top:1px solid #E2E8F0}' +
       '</style></head><body>' +
