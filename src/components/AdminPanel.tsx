@@ -222,7 +222,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             className="w-full py-3 px-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-sm transition shadow-lg shadow-red-900/30 flex items-center justify-center gap-2"
           >
             <KeyRound className="w-4 h-4" />
-            Ingresar PIN de Asesor (1234)
+            Ingresar con usuario y contraseña
           </button>
         </div>
       </div>
