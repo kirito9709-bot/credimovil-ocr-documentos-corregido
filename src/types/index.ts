@@ -89,6 +89,22 @@ export interface EstadosCuentaAnalisis {
 export interface ObligadoSolidarioDocumentos {
   requerido: boolean;
   nombre?: string;
+  curp?: string;
+  rfc?: string;
+  fechaNacimiento?: string;
+  sexo?: string;
+  telefono?: string;
+  correo?: string;
+  ingresoMensualAprox?: number;
+  tiempoViviendoDomicilio?: string;
+  casaPropiaORentada?: 'PROPIA' | 'RENTADA' | 'FAMILIAR' | '';
+  tiempoEnTrabajo?: string;
+  nombreUbicacionEmpleo?: string;
+  direccionEmpleo?: string;
+  giroActividadEmpresa?: string;
+  dependientesEconomicos?: number;
+  estadoCivil?: 'SOLTERO' | 'CASADO' | 'UNION_LIBRE' | 'DIVORCIADO' | 'VIUDO' | '';
+  referenciasPersonales?: ReferenciaPersonal[];
   fotoIneFrente?: string;
   fotoIneFrenteNombre?: string;
   fotoIneReverso?: string;
