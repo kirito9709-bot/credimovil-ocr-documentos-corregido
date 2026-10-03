@@ -149,8 +149,8 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   // Referencias Personales
   const [referencias, setReferencias] = useState<ReferenciaPersonal[]>([
     { nombre: '', telefono: '', relacion: 'Familiar (otro domicilio)', esFamiliar: true },
-    { nombre: '', telefono: '', relacion: 'Amigo / Conocido', esFamiliar: false },
-    { nombre: '', telefono: '', relacion: 'Laboral / Compañero', esFamiliar: false },
+    { nombre: '', telefono: '', relacion: 'Conocido 1', esFamiliar: false },
+    { nombre: '', telefono: '', relacion: 'Conocido 2', esFamiliar: false },
   ]);
 
   // Dealership
@@ -383,6 +383,18 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
       return;
     }
 
+    const referenciasIncompletas = referencias.some((r) => !r.nombre.trim() || !r.telefono.trim());
+    if (referencias.length !== 3 || referenciasIncompletas) {
+      setScanError('Debes capturar las 3 referencias obligatorias: 1 familiar de otro domicilio y 2 conocidos.');
+      return;
+    }
+
+    const telefonosReferencias = referencias.map((r) => r.telefono.replace(/\\D/g, ''));
+    if (new Set(telefonosReferencias).size !== telefonosReferencias.length) {
+      setScanError('Las 3 referencias deben tener teléfonos distintos.');
+      return;
+    }
+
     setIsSaving(true);
     try {
       const selectedLote = lotes.find((l) => l.id === selectedLoteId);
@@ -535,6 +547,11 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     setAutoModelo('');
     setAutoPrecio('');
     setEnganche('');
+    setReferencias([
+      { nombre: '', telefono: '', relacion: 'Familiar (otro domicilio)', esFamiliar: true },
+      { nombre: '', telefono: '', relacion: 'Conocido 1', esFamiliar: false },
+      { nombre: '', telefono: '', relacion: 'Conocido 2', esFamiliar: false },
+    ]);
   };
 
   // SUCCESS SCREEN
@@ -1954,7 +1971,103 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         </div>
 
         {/* ======================================================== */}
-        {/* SECCIÓN 4: DATOS DEL VEHÍCULO Y LOTE ASOCIADO           */}
+        {
+          {/* Referencias personales obligatorias */}
+          <div className="pt-2 border-t border-slate-200 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-red-600" />
+                  3 Referencias Personales <span className="text-red-500">*</span>
+                </h4>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  1 familiar que viva en otro domicilio y 2 conocidos. Captura nombres y teléfonos diferentes.
+                </p>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded-lg">
+                Obligatorio
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {referencias.map((ref, index) => (
+                <div key={index} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-700">
+                      Referencia {index + 1}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                      ref.esFamiliar
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : 'bg-blue-50 text-blue-700 border-blue-200'
+                    }`}>
+                      {ref.esFamiliar ? 'Familiar • otro domicilio' : ref.relacion}
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      Nombre completo *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={ref.nombre}
+                      onChange={(e) =>
+                        setReferencias((prev) =>
+                          prev.map((item, i) => (i === index ? { ...item, nombre: e.target.value } : item))
+                        )
+                      }
+                      placeholder="Nombre de la referencia"
+                      className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      Teléfono *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      value={ref.telefono}
+                      onChange={(e) =>
+                        setReferencias((prev) =>
+                          prev.map((item, i) => (i === index ? { ...item, telefono: e.target.value } : item))
+                        )
+                      }
+                      placeholder="81 1234 5678"
+                      className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
+                    />
+                  </div>
+
+                  {ref.esFamiliar && (
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                        Ciudad / Municipio donde vive *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={ref.ciudad || ''}
+                        onChange={(e) =>
+                          setReferencias((prev) =>
+                            prev.map((item, i) => (i === index ? { ...item, ciudad: e.target.value } : item))
+                          )
+                        }
+                        placeholder="ej. Apodaca, N.L."
+                        className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-slate-900 focus:outline-none"
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+
+        /* SECCIÓN 4: DATOS DEL VEHÍCULO Y LOTE ASOCIADO           */}
         {/* ======================================================== */}
         <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-6 sm:p-8 space-y-6">
           <div className="flex items-center gap-2 pb-4 border-b border-slate-200">
