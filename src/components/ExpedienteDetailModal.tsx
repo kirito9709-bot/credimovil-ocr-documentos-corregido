@@ -178,15 +178,6 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
     }
   };
 
-  const openWhatsAppToLote = () => {
-    const text = `*Actualización CrediMóvil - Expediente ${expediente.folio}*\n` +
-      `Cliente: *${expediente.ine?.nombreCompleto || expediente.ine?.nombre}*\n` +
-      `Estatus Actual: *${estatus}*\n` +
-      `Monto Fondeo al Lote: *$${calcMontoFinanciar.toLocaleString('es-MX')} MXN*\n` +
-      `Checklist de Documentos: ${window.location.origin}/?tab=fondeo&folio=${expediente.folio}&pin=${expediente.pinFondeo}`;
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
-  };
-
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
@@ -246,11 +237,11 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
       return;
     }
 
-    const text = `*CrediMóvil - Actualización de expediente*\\n` +
-      `Folio: *${expediente.folio}*\\n` +
-      `Cliente: *${expediente.ine?.nombreCompleto || expediente.ine?.nombre}*\\n` +
-      `Estatus: *${estatus}*\\n` +
-      `Monto a financiar: *$${calcMontoFinanciar.toLocaleString('es-MX')} MXN*\\n` +
+    const text = `*CrediMóvil - Actualización de expediente*\n` +
+      `Folio: *${expediente.folio}*\n` +
+      `Cliente: *${expediente.ine?.nombreCompleto || expediente.ine?.nombre}*\n` +
+      `Estatus: *${estatus}*\n` +
+      `Monto a financiar: *$${calcMontoFinanciar.toLocaleString('es-MX')} MXN*\n` +
       `Checklist: ${window.location.origin}/?tab=fondeo&folio=${expediente.folio}&pin=${expediente.pinFondeo}`;
 
     window.location.href = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
