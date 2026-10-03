@@ -158,7 +158,11 @@ function safeEqualText(a: string, b: string) {
 
 function getBearerToken(req: any) {
   const value = String(req.headers.authorization || '');
-  return value.startsWith('Bearer ') ? value.slice(7).trim() : '';
+  if (value.startsWith('Bearer ')) return value.slice(7).trim();
+
+  const cookieHeader = String(req.headers.cookie || '');
+  const cookie = cookieHeader.split(';').map((part: string) => part.trim()).find((part: string) => part.startsWith('credimovil_session='));
+  return cookie ? decodeURIComponent(cookie.slice('credimovil_session='.length)) : '';
 }
 
 function getSession(req: any) {
@@ -1072,9 +1076,12 @@ app.post('/api/auth/login', async (req, res) => {
     expiresAt: Date.now() + SESSION_TTL_MS,
   });
 
+  res.setHeader(
+    'Set-Cookie',
+    `credimovil_session=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`
+  );
   res.json({
     success: true,
-    token,
     user: { username, role: account.role, nombre: account.nombre, loteId: account.loteId || null },
   });
 });
@@ -1088,6 +1095,7 @@ app.get('/api/auth/me', (req, res) => {
 app.post('/api/auth/logout', (req, res) => {
   const token = getBearerToken(req);
   if (token) sessions.delete(token);
+  res.setHeader('Set-Cookie', 'credimovil_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
   res.json({ success: true });
 });
 
