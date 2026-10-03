@@ -65,6 +65,37 @@ function mapSupabaseLote(row: any) {
   };
 }
 
+async function getSupabaseExpedientes() {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from('expedientes')
+    .select('*')
+    .order('updated_at', { ascending: false });
+
+  if (error) throw new Error(`Supabase expedientes: ${error.message}`);
+
+  return (data || []).map((row: any) => {
+    const source = row.data && typeof row.data === 'object' ? row.data : {};
+    return {
+      ...source,
+      id: source.id || row.id,
+      folio: row.folio || source.folio,
+      pinFondeo: row.pin_fondeo || source.pinFondeo,
+      estatus: row.estatus || source.estatus || 'NUEVO',
+      loteId: row.lote_id || source.loteId || '',
+      loteNombre: source.loteNombre || '',
+      telefono: row.telefono || source.telefono || '',
+      autoMarca: row.auto_marca || source.autoMarca || '',
+      autoModelo: row.auto_modelo || source.autoModelo || '',
+      autoAno: row.auto_ano || source.autoAno || '',
+      montoFinanciar: Number(row.monto_financiar || source.montoFinanciar || 0),
+      fechaCreacion: source.fechaCreacion || row.created_at,
+      fechaActualizacion: source.fechaActualizacion || row.updated_at,
+    };
+  });
+}
+
 async function getSupabaseLotes() {
   if (!supabase) return null;
   const { data, error } = await supabase
@@ -1384,10 +1415,10 @@ app.get('/api/expedientes/:id/documentos/:filename', (req, res) => {
 });
 
 // 5. Expedientes (CRUD)
-app.get('/api/expedientes', (req, res) => {
+app.get('/api/expedientes', async (req, res) => {
   if (!requireStaff(req, res)) return;
   const { q, estatus, loteId } = req.query;
-  let list = readJson(EXPEDIENTES_FILE, []);
+  let list = supabase ? (await getSupabaseExpedientes()) || [] : readJson(EXPEDIENTES_FILE, []);
   let migrated = false;
   for (const exp of list) migrated = persistExpedienteDocuments(exp) || migrated;
   if (migrated) writeJson(EXPEDIENTES_FILE, list);
@@ -1426,10 +1457,10 @@ app.get('/api/expedientes', (req, res) => {
   res.json({ success: true, count: list.length, expedientes: list });
 });
 
-app.get('/api/expedientes/:id', (req, res) => {
+app.get('/api/expedientes/:id', async (req, res) => {
   if (!requireStaff(req, res)) return;
-  const expedientes = readJson(EXPEDIENTES_FILE, []);
-  const item = expedientes.find((e: any) => e.id === req.params.id);
+  const expedientes = supabase ? (await getSupabaseExpedientes()) || [] : readJson(EXPEDIENTES_FILE, []);
+  const item = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
   if (!item) {
     return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
   }
@@ -1754,9 +1785,9 @@ app.put('/api/expedientes/:id/fondeo-doc-review', (req, res) => {
 });
 
 // 8. Estadísticas
-app.get('/api/stats', (req, res) => {
+app.get('/api/stats', async (req, res) => {
   if (!requireStaff(req, res)) return;
-  const expedientes = readJson(EXPEDIENTES_FILE, []);
+  const expedientes = supabase ? (await getSupabaseExpedientes()) || [] : readJson(EXPEDIENTES_FILE, []);
 
   const total = expedientes.length;
   const nuevos = expedientes.filter((e: any) => e.estatus === 'NUEVO').length;
