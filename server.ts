@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { createHmac, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ if (!fs.existsSync(DATA_DIR)) {
 const EXPEDIENTES_FILE = path.join(DATA_DIR, 'expedientes.json');
 const LOTES_FILE = path.join(DATA_DIR, 'lotes.json');
 const ADMIN_FILE = path.join(DATA_DIR, 'admin.json');
+const ASESORES_FILE = path.join(DATA_DIR, 'asesores.json');
 const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
 
 if (!fs.existsSync(UPLOADS_DIR)) {
@@ -249,6 +251,94 @@ function writeJson(filePath: string, data: any) {
   } catch (err) {
     console.error(`Error writing ${filePath}:`, err);
   }
+}
+
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const DOCUMENT_TTL_SECONDS = 24 * 60 * 60;
+const SESSION_SECRET = (process.env.CREDIMOVIL_SESSION_SECRET || process.env.GEMINI_API_KEY || '').trim();
+const sessions = new Map<string, { username: string; role: 'admin' | 'asesor'; nombre: string; expiresAt: number }>();
+
+function normalizeUsername(value: string = '') { return value.trim().toLowerCase(); }
+function hashPassword(password: string, salt = randomBytes(16).toString('hex')) {
+  return `${salt}:${scryptSync(password, salt, 64).toString('hex')}`;
+}
+function verifyPassword(password: string, storedHash: string) {
+  const [salt, expectedHex] = String(storedHash || '').split(':');
+  if (!salt || !expectedHex) return false;
+  const actual = scryptSync(password, salt, 64);
+  const expected = Buffer.from(expectedHex, 'hex');
+  return expected.length === actual.length && timingSafeEqual(actual, expected);
+}
+function safeEqualText(a: string, b: string) {
+  const aa = Buffer.from(String(a)); const bb = Buffer.from(String(b));
+  return aa.length === bb.length && timingSafeEqual(aa, bb);
+}
+function getBearerToken(req: any) {
+  const value = String(req.headers.authorization || '');
+  return value.startsWith('Bearer ') ? value.slice(7).trim() : '';
+}
+function getSession(req: any) {
+  const token = getBearerToken(req);
+  if (!token) return null;
+  const session = sessions.get(token);
+  if (!session) return null;
+  if (session.expiresAt < Date.now()) { sessions.delete(token); return null; }
+  return { ...session, token };
+}
+function requireAuth(req: any, res: any) {
+  const session = getSession(req);
+  if (!session) {
+    res.status(401).json({ success: false, message: 'Debes iniciar sesión como asesor para acceder a este recurso.' });
+    return null;
+  }
+  return session;
+}
+function requireAdmin(req: any, res: any) {
+  const session = requireAuth(req, res);
+  if (!session) return null;
+  if (session.role !== 'admin') {
+    res.status(403).json({ success: false, message: 'Esta función requiere permisos de administrador.' });
+    return null;
+  }
+  return session;
+}
+function advisorRecords() { return readJson(ASESORES_FILE, []); }
+function writeAdvisorRecords(records: any[]) { writeJson(ASESORES_FILE, records); }
+function signDocumentAccessToken(expedienteId: string) {
+  if (!SESSION_SECRET) return '';
+  const payload = Buffer.from(JSON.stringify({
+    expedienteId, exp: Math.floor(Date.now() / 1000) + DOCUMENT_TTL_SECONDS, kind: 'document',
+  })).toString('base64url');
+  const signature = createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
+  return `${payload}.${signature}`;
+}
+function verifyDocumentAccessToken(token: string, expedienteId: string) {
+  if (!SESSION_SECRET || !token) return false;
+  const [payload, signature] = token.split('.');
+  if (!payload || !signature) return false;
+  const expected = createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
+  if (!safeEqualText(signature, expected)) return false;
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return parsed.kind === 'document' && parsed.expedienteId === expedienteId && Number(parsed.exp) > Math.floor(Date.now() / 1000);
+  } catch { return false; }
+}
+function decorateExpedienteDocumentUrls(exp: any) {
+  const accessToken = signDocumentAccessToken(exp.id);
+  if (!accessToken) return exp;
+  const withToken = (value: any) => {
+    if (typeof value !== 'string' || !value.startsWith('/api/expedientes/')) return value;
+    return `${value}${value.includes('?') ? '&' : '?'}accessToken=${encodeURIComponent(accessToken)}`;
+  };
+  exp.fotoIneFrente = withToken(exp.fotoIneFrente);
+  exp.fotoIneReverso = withToken(exp.fotoIneReverso);
+  exp.comprobanteDomicilioActualUrl = withToken(exp.comprobanteDomicilioActualUrl);
+  if (exp.estadosCuenta) for (const key of ['mes1Url','mes2Url','mes3Url','archivoConsolidadoUrl']) exp.estadosCuenta[key] = withToken(exp.estadosCuenta[key]);
+  for (const doc of exp.documentosFondeo || []) doc.archivoUrl = withToken(doc.archivoUrl);
+  return exp;
+}
+function sanitizeLoteForPublic(lote: any) {
+  return { id: lote.id, nombre: lote.nombre, ciudad: lote.ciudad };
 }
 
 function sanitizeFileName(name: string = 'documento') {
