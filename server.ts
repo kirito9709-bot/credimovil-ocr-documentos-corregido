@@ -1930,7 +1930,7 @@ app.post('/api/expedientes', async (req, res) => {
       engancheModo: body.engancheModo || 'PORCENTAJE',
       enganchePorcentaje: Number(body.enganchePorcentaje) || 20,
       montoFinanciar: Number(body.montoFinanciar) || Math.max(0, (Number(body.autoPrecio) || 0) - (Number(body.enganche) || 0)),
-      plazoMeses: Number(body.plazoMeses) || 48,
+      plazoMeses: Math.min(48, Math.max(12, Number(body.plazoMeses) || 48)),
       tasaInteresAnual: 28,
       mensualidadEstimada: calculateCredimovilMonthlyPayment(Number(body.montoFinanciar) || 0, Number(body.plazoMeses) || 48),
       financieraAsignada: body.financieraAsignada || 'CrediMóvil Auto',
@@ -1968,7 +1968,7 @@ app.put('/api/expedientes/:id', async (req, res) => {
       tasaInteresAnual: 28,
       mensualidadEstimada: calculateCredimovilMonthlyPayment(
         Number((req.body?.montoFinanciar ?? existing.montoFinanciar)) || 0,
-        Number((req.body?.plazoMeses ?? existing.plazoMeses)) || 48
+        Math.min(48, Math.max(12, Number((req.body?.plazoMeses ?? existing.plazoMeses)) || 48))
       ),
       id: existing.id,
       folio: existing.folio,
