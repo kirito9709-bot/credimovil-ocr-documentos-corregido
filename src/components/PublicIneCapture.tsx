@@ -2293,7 +2293,6 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 <option value={24}>24 Meses (2 Años)</option>
                 <option value={36}>36 Meses (3 Años)</option>
                 <option value={48}>48 Meses (4 Años)</option>
-                <option value={60}>60 Meses (5 Años)</option>
               </select>
             </div>
 
