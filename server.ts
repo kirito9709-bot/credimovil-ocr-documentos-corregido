@@ -192,41 +192,7 @@ export function getCredimovilDefaultDocs(esLegalizado: boolean = false) {
 }
 
 // Initial Dealerships
-const DEFAULT_LOTES = [
-  {
-    id: 'lote-1',
-    nombre: 'Lote Automotriz San Jerónimo',
-    contacto: 'Lic. Roberto Garza',
-    telefono: '811-234-5678',
-    correo: 'ventas@sanjeronimoautos.com',
-    direccion: 'Av. Gonzalitos #1450',
-    ciudad: 'Monterrey, N.L.',
-    cuentaClabeDefault: '',
-    bancoDefault: '',
-  },
-  {
-    id: 'lote-2',
-    nombre: 'Seminuevos Cumbres Premier',
-    contacto: 'Ing. Carlos Mendoza',
-    telefono: '818-765-4321',
-    correo: 'gerencia@cumbrespremier.mx',
-    direccion: 'Paseo de los Leones #2300',
-    ciudad: 'Monterrey, N.L.',
-    cuentaClabeDefault: '',
-    bancoDefault: '',
-  },
-  {
-    id: 'lote-3',
-    nombre: 'CarPoint Linda Vista',
-    contacto: 'Ana Laura Peña',
-    telefono: '812-445-9988',
-    correo: 'creditos@carpointlv.com',
-    direccion: 'Av. Miguel Alemán #310',
-    ciudad: 'Guadalupe, N.L.',
-    cuentaClabeDefault: '',
-    bancoDefault: '',
-  },
-];
+const DEFAULT_LOTES: any[] = [];
 
 // Helper: read/write JSON safely
 function readJson(filePath: string, fallback: any) {
