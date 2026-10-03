@@ -75,7 +75,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
 
   const engancheMinimoPesos = Math.round((Number(precio) || 0) * 0.20);
   const engancheSeguro = Math.min(100, Math.max(20, Number(enganchePorcentaje) || 20));
-  const engancheMontoSeguro = Math.min(Number(precio) || 0, Math.max(engancheMinimoPesos, Number(engancheMonto) || engancheMinimoPesos));
+  const engancheMontoSeguro = Math.min(Number(precio) || 0, Math.max(0, Number(engancheMonto) || 0));
   const calcEnganche = engancheModo === 'PORCENTAJE'
     ? Math.round((Number(precio) || 0) * engancheSeguro / 100)
     : engancheMontoSeguro;
@@ -464,7 +464,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                         type="button"
                         onClick={() => {
                           setEngancheModo('MONTO');
-                          setEngancheMonto(calcEnganche);
+                          setEngancheMonto(engancheMonto === '' ? calcEnganche : engancheMonto);
                         }}
                         className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold border ${
                           engancheModo === 'MONTO'
@@ -496,14 +496,14 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                         step={1000}
                         value={engancheMonto === '' ? engancheMinimoPesos : engancheMonto}
                         onChange={(e) => {
-                          const value = Number(e.target.value) || engancheMinimoPesos;
-                          setEngancheMonto(Math.min(Number(precio) || 0, Math.max(engancheMinimoPesos, value)));
+                          const value = Number(e.target.value);
+                          setEngancheMonto(Number.isFinite(value) ? Math.min(Number(precio) || 0, Math.max(0, value)) : 0);
                         }}
                         className="w-full py-1.5 px-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white"
                       />
                     )}
                     <div className="text-[10px] text-slate-500 mt-1">
-                      Mínimo 20%: ${engancheMinimoPesos.toLocaleString('es-MX')} • Equivale a {calcEnganchePorcentajeReal}%
+                      Efectivo: monto libre • Equivale a {calcEnganchePorcentajeReal}%
                     </div>
                   </div>
 
