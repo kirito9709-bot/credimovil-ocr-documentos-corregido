@@ -293,7 +293,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-5 sm:space-y-8">
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#071A33] border border-[#0F2A4D] rounded-2xl p-5 sm:p-6 shadow-lg shadow-slate-900/10">
         <div>
@@ -310,7 +310,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto">
           <button
             onClick={onGoToCaptura}
             className="py-2 px-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-md shadow-red-900/30"
@@ -379,7 +379,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       </div>
 
       {/* Flujo de Crédito */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
         <div className="bg-violet-500/10 border border-violet-500/20 rounded-2xl p-4">
           <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Pre-aprobado</span>
           <span className="text-2xl font-black text-violet-400 mt-1 block">{stats.preAprobados}</span>
@@ -467,7 +467,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
       {/* Expedientes Table / Clean Empty State */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-950/80 text-[11px] text-slate-400 uppercase tracking-wider border-b border-slate-800">
               <tr>
@@ -647,6 +647,76 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="md:hidden divide-y divide-slate-800/80">
+          {expedientes.length === 0 ? (
+            <div className="p-8 text-center">
+              <FolderOpen className="w-9 h-9 text-red-400 mx-auto mb-3" />
+              <p className="text-sm font-bold text-white">No hay expedientes</p>
+              <p className="text-xs text-slate-400 mt-1 mb-4">Captura el primer expediente real.</p>
+              <button onClick={onGoToCaptura} className="py-2.5 px-4 bg-red-600 text-white rounded-xl text-xs font-bold">
+                <Plus className="w-3.5 h-3.5 inline mr-1.5" /> Nuevo expediente
+              </button>
+            </div>
+          ) : (
+            expedientes.map((exp) => {
+              const requiredDocs = (exp.documentosFondeo || []).filter((d) => d.requerido);
+              const approvedDocs = requiredDocs.filter((d) => d.estatus === 'APROBADO');
+              const uploadedDocs = requiredDocs.filter((d) => d.estatus === 'SUBIDO');
+              const statusText =
+                exp.estatus === 'EN_EVALUACION' ? 'EN ANÁLISIS' :
+                exp.estatus === 'PRE_APROBADO' ? 'PRE-APROBADO' :
+                exp.estatus === 'FONDEO_PENDIENTE' || exp.estatus === 'FONDEO_REVISION' ? 'FONDEO' :
+                exp.estatus;
+
+              return (
+                <div
+                  key={exp.id}
+                  className="p-4 sm:p-5 hover:bg-slate-800/50 transition"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-red-400 font-black text-sm">{exp.folio}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/20 text-[10px] font-bold">
+                          {statusText}
+                        </span>
+                      </div>
+                      <div className="mt-2 text-white font-bold truncate">{exp.ine?.nombreCompleto || exp.ine?.nombre || 'Sin nombre'}</div>
+                      <div className="mt-1 text-xs text-slate-400">{exp.loteNombre || 'Sin lote'}</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-[10px] text-slate-500 uppercase">Monto</div>
+                      <div className="text-base font-black text-emerald-400">{(exp.montoFinanciar || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 })}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mt-4">
+                    <div className="rounded-xl bg-slate-950/60 border border-slate-800 p-3">
+                      <div className="text-[10px] text-slate-500 uppercase">Vehículo</div>
+                      <div className="text-xs font-semibold text-slate-200 mt-1 truncate">{exp.autoMarca} {exp.autoModelo}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">Año {exp.autoAno}</div>
+                    </div>
+                    <div className="rounded-xl bg-slate-950/60 border border-slate-800 p-3">
+                      <div className="text-[10px] text-slate-500 uppercase">Fondeo</div>
+                      <div className="text-xs font-semibold text-slate-200 mt-1">{approvedDocs.length}/{requiredDocs.length} docs</div>
+                      <div className="text-[10px] text-amber-400 mt-0.5">{uploadedDocs.length} por revisar</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex gap-2">
+                    <button type="button" onClick={() => onOpenExpediente(exp)} className="flex-1 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold">
+                      <Eye className="w-3.5 h-3.5 inline mr-1.5" /> Ver expediente
+                    </button>
+                    <button type="button" onClick={() => onOpenPrint(exp)} className="py-2 px-3 rounded-xl bg-slate-800 border border-slate-700 text-red-300 text-xs font-bold" aria-label="Imprimir">
+                      <Printer className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
