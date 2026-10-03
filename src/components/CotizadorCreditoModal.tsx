@@ -144,7 +144,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
       '<html><head><title>Cotización CrediMóvil</title>' +
       '<style>' +
       '@page{size:A4 landscape;margin:10mm}' +
-      "'*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}' +"
+      '*{ -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
       'html,body{margin:0;padding:0;background:#071A33}' +
       'body{font-family:Arial,Helvetica,sans-serif;color:#fff;font-size:11px;background:#071A33}' +
       '.header{background:#071A33;color:#fff;border-radius:12px;padding:15px 18px;margin-bottom:14px;border-bottom:4px solid #C81E2B;display:flex;justify-content:space-between;align-items:center}' +
@@ -184,8 +184,17 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
       '</section>' +
       schedulePages.join('') +
       '</body></html>';
+    popup.document.open();
     popup.document.write(html);
     popup.document.close();
+    setTimeout(() => {
+      try {
+        popup.focus();
+        popup.print();
+      } catch {
+        // El usuario puede imprimir manualmente desde la ventana abierta.
+      }
+    }, 700);
   };
 
   return (
