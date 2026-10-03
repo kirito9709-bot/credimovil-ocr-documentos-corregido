@@ -137,7 +137,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F7FB] text-[#163F41] flex flex-col selection:bg-red-200 selection:text-[#041329]">
+    <div className="min-h-screen bg-[#EBF0F8] text-[#163F41] flex flex-col selection:bg-red-200 selection:text-[#041329]">
       {/* Top Navigation */}
       <Navbar
         currentTab={currentTab}
