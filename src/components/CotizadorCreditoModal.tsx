@@ -228,19 +228,19 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="text-xs font-bold text-slate-300 uppercase">
                 Cliente
-                <input value={clienteNombre} onChange={(e) => setClienteNombre(e.target.value)} placeholder="Nombre del cliente" className="mt-1.5 w-full rounded-xl bg-[#F5F8FC] text-[#102A43] border border-[#C5D1DF] px-3 py-2.5 text-sm" />
+                <input value={clienteNombre} onChange={(e) => setClienteNombre(e.target.value)} placeholder="Nombre del cliente" className="mt-1.5 w-full rounded-xl bg-[#121824] text-slate-100 border border-[#2E3A59] placeholder:text-slate-500 px-3 py-2.5 text-sm" />
               </label>
               <label className="text-xs font-bold text-slate-300 uppercase">
                 Marca
-                <input value={vehiculoMarca} onChange={(e) => setVehiculoMarca(e.target.value)} placeholder="Ej. Kia" className="mt-1.5 w-full rounded-xl bg-[#F5F8FC] text-[#102A43] border border-[#C5D1DF] px-3 py-2.5 text-sm" />
+                <input value={vehiculoMarca} onChange={(e) => setVehiculoMarca(e.target.value)} placeholder="Ej. Kia" className="mt-1.5 w-full rounded-xl bg-[#121824] text-slate-100 border border-[#2E3A59] placeholder:text-slate-500 px-3 py-2.5 text-sm" />
               </label>
               <label className="text-xs font-bold text-slate-300 uppercase">
                 Modelo / versión
-                <input value={vehiculoModelo} onChange={(e) => setVehiculoModelo(e.target.value)} placeholder="Ej. Sorento" className="mt-1.5 w-full rounded-xl bg-[#F5F8FC] text-[#102A43] border border-[#C5D1DF] px-3 py-2.5 text-sm" />
+                <input value={vehiculoModelo} onChange={(e) => setVehiculoModelo(e.target.value)} placeholder="Ej. Sorento" className="mt-1.5 w-full rounded-xl bg-[#121824] text-slate-100 border border-[#2E3A59] placeholder:text-slate-500 px-3 py-2.5 text-sm" />
               </label>
               <label className="text-xs font-bold text-slate-300 uppercase">
                 Año
-                <input value={vehiculoAno} onChange={(e) => setVehiculoAno(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="Ej. 2026" inputMode="numeric" className="mt-1.5 w-full rounded-xl bg-[#F5F8FC] text-[#102A43] border border-[#C5D1DF] px-3 py-2.5 text-sm" />
+                <input value={vehiculoAno} onChange={(e) => setVehiculoAno(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="Ej. 2026" inputMode="numeric" className="mt-1.5 w-full rounded-xl bg-[#121824] text-slate-100 border border-[#2E3A59] placeholder:text-slate-500 px-3 py-2.5 text-sm" />
               </label>
             </div>
           </div>
@@ -248,7 +248,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="text-xs font-bold text-slate-300 uppercase">
               Precio del vehículo
-              <input type="number" min={0} value={precio} onChange={(e) => setPrecio(Number(e.target.value) || 0)} className="mt-1.5 w-full rounded-xl bg-[#F5F8FC] text-[#102A43] border border-[#C5D1DF] px-3 py-2.5 text-sm" />
+              <input type="number" min={0} value={precio} onChange={(e) => setPrecio(Number(e.target.value) || 0)} className="mt-1.5 w-full rounded-xl bg-[#121824] text-slate-100 border border-[#2E3A59] placeholder:text-slate-500 px-3 py-2.5 text-sm" />
             </label>
 
             <div>
@@ -258,16 +258,16 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
                 <button type="button" onClick={() => setModoEnganche('MONTO')} className={'py-2 rounded-xl border text-xs font-bold ' + (modoEnganche === 'MONTO' ? 'bg-red-600 border-red-500 text-white' : 'bg-white/5 border-white/10 text-slate-300')}>Efectivo ($)</button>
               </div>
               {modoEnganche === 'MONTO' ? (
-                <input type="number" min={0} max={precio || undefined} step={1} value={engancheMonto} onChange={(e) => setEngancheMonto(Number(e.target.value) || 0)} className="w-full rounded-xl bg-[#F5F8FC] text-[#102A43] border border-[#C5D1DF] px-3 py-2.5 text-sm" />
+                <input type="number" min={0} max={precio || undefined} step={1} value={engancheMonto} onChange={(e) => setEngancheMonto(Number(e.target.value) || 0)} className="w-full rounded-xl bg-[#121824] text-slate-100 border border-[#2E3A59] placeholder:text-slate-500 px-3 py-2.5 text-sm" />
               ) : (
-                <input type="number" min={20} max={100} step={0.01} value={enganchePorcentaje} onChange={(e) => setEnganchePorcentaje(Number(e.target.value) || 0)} className="w-full rounded-xl bg-[#F5F8FC] text-[#102A43] border border-[#C5D1DF] px-3 py-2.5 text-sm" />
+                <input type="number" min={20} max={100} step={0.01} value={enganchePorcentaje} onChange={(e) => setEnganchePorcentaje(Number(e.target.value) || 0)} className="w-full rounded-xl bg-[#121824] text-slate-100 border border-[#2E3A59] placeholder:text-slate-500 px-3 py-2.5 text-sm" />
               )}
               <p className="text-[11px] text-slate-400 mt-1.5">Equivalente: {porcentajeReal.toFixed(2)}%</p>
             </div>
 
             <label className="text-xs font-bold text-slate-300 uppercase">
               Plazo
-              <select value={plazo} onChange={(e) => setPlazo(Number(e.target.value))} className="mt-1.5 w-full rounded-xl bg-[#F5F8FC] text-[#102A43] border border-[#C5D1DF] px-3 py-2.5 text-sm">
+              <select value={plazo} onChange={(e) => setPlazo(Number(e.target.value))} className="mt-1.5 w-full rounded-xl bg-[#121824] text-slate-100 border border-[#2E3A59] placeholder:text-slate-500 px-3 py-2.5 text-sm">
                 <option value={12}>12 meses</option>
                 <option value={24}>24 meses</option>
                 <option value={36}>36 meses</option>
@@ -299,7 +299,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
               </div>
               <label className="text-[11px] font-bold text-slate-300 uppercase">
                 Prima del seguro
-                <input type="number" min={0} step={1} value={seguroMonto} onChange={(e) => setSeguroMonto(Number(e.target.value) || 0)} className="mt-1.5 w-full rounded-xl bg-[#F5F8FC] text-[#102A43] border border-[#C5D1DF] px-3 py-2.5 text-sm" />
+                <input type="number" min={0} step={1} value={seguroMonto} onChange={(e) => setSeguroMonto(Number(e.target.value) || 0)} className="mt-1.5 w-full rounded-xl bg-[#121824] text-slate-100 border border-[#2E3A59] placeholder:text-slate-500 px-3 py-2.5 text-sm" />
               </label>
             </div>
 
