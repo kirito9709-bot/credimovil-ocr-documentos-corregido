@@ -8,6 +8,7 @@ interface LotesManagerModalProps {
   onClose: () => void;
   lotes: LoteAuto[];
   onLoteCreated: (lote: LoteAuto) => void;
+  onLoteDeleted: (id: string) => void;
 }
 
 export const LotesManagerModal: React.FC<LotesManagerModalProps> = ({
@@ -15,6 +16,7 @@ export const LotesManagerModal: React.FC<LotesManagerModalProps> = ({
   onClose,
   lotes,
   onLoteCreated,
+  onLoteDeleted,
 }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [nombre, setNombre] = useState('');
@@ -28,6 +30,16 @@ export const LotesManagerModal: React.FC<LotesManagerModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
+
+  const handleDelete = async (lote: LoteAuto) => {
+    if (!confirm(`¿Eliminar el lote "${lote.nombre}"?`)) return;
+    try {
+      await api.deleteLote(lote.id);
+      onLoteDeleted(lote.id);
+    } catch (err: any) {
+      alert(err.message || 'No se pudo eliminar el lote.');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -253,6 +265,16 @@ export const LotesManagerModal: React.FC<LotesManagerModalProps> = ({
                       <span className="font-mono text-slate-300">{lote.cuentaClabeDefault}</span> ({lote.bancoDefault || 'Banco'})
                     </p>
                   )}
+                </div>
+
+                <div className="flex items-center justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(lote)}
+                    className="py-1.5 px-2.5 text-[11px] text-rose-300 bg-rose-950/30 border border-rose-800/50 rounded-lg hover:bg-rose-950/50"
+                  >
+                    Eliminar lote
+                  </button>
                 </div>
 
                 {/* Stats badge */}
