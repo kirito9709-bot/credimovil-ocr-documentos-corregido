@@ -453,44 +453,125 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// 2. Admin Auth
-app.post('/api/admin/auth', (req, res) => {
-  const { pin } = req.body;
-  const admin = readJson(ADMIN_FILE, { pin: '1234' });
-  if (pin === admin.pin) {
-    res.json({
-      success: true,
-      token: `token_${Date.now()}_auth`,
-      admin: {
-        nombre: admin.asesorNombre || 'Asesor CrediMóvil',
-        correo: admin.correoNotificaciones,
-      },
-    });
-  } else {
-    res.status(401).json({ success: false, message: 'PIN de asesor incorrecto. (PIN inicial: 1234)' });
+// 2. Authentication and Advisor Management
+app.post('/api/auth/login', (req, res) => {
+  const username = normalizeUsername(req.body?.username);
+  const password = String(req.body?.password || '');
+
+  if (!username || !password) {
+    return res.status(400).json({ success: false, message: 'Usuario y contraseña son obligatorios.' });
   }
+
+  const adminUsername = normalizeUsername(process.env.CREDIMOVIL_ADMIN_USER || '');
+  const adminPassword = String(process.env.CREDIMOVIL_ADMIN_PASSWORD || '');
+
+  if (!adminUsername || !adminPassword) {
+    return res.status(503).json({
+      success: false,
+      message: 'La cuenta administradora no está configurada. Agrega CREDIMOVIL_ADMIN_USER y CREDIMOVIL_ADMIN_PASSWORD en Render → Environment.',
+    });
+  }
+
+  let account: { role: 'admin' | 'asesor'; nombre: string } | null = null;
+
+  if (username === adminUsername && safeEqualText(password, adminPassword)) {
+    account = { role: 'admin', nombre: 'Administrador CrediMóvil' };
+  } else {
+    const user = advisorRecords().find((item: any) => item.username === username && item.active !== false);
+    if (user && verifyPassword(password, user.passwordHash)) {
+      account = { role: 'asesor', nombre: user.nombre || username };
+    }
+  }
+
+  if (!account) {
+    return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
+  }
+
+  const token = randomUUID();
+  sessions.set(token, {
+    username,
+    role: account.role,
+    nombre: account.nombre,
+    expiresAt: Date.now() + SESSION_TTL_MS,
+  });
+
+  res.json({
+    success: true,
+    token,
+    user: { username, role: account.role, nombre: account.nombre },
+  });
 });
 
-app.post('/api/admin/change-pin', (req, res) => {
-  const { currentPin, newPin, asesorNombre, telefonoContacto, correoNotificaciones } = req.body;
-  const admin = readJson(ADMIN_FILE, { pin: '1234' });
+app.get('/api/auth/me', (req, res) => {
+  const session = requireAuth(req, res);
+  if (!session) return;
+  res.json({ success: true, user: { username: session.username, role: session.role, nombre: session.nombre } });
+});
 
-  if (currentPin !== admin.pin) {
-    return res.status(401).json({ success: false, message: 'El PIN actual no coincide.' });
+app.post('/api/auth/logout', (req, res) => {
+  const token = getBearerToken(req);
+  if (token) sessions.delete(token);
+  res.json({ success: true });
+});
+
+app.get('/api/asesores', (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const users = advisorRecords().map((user: any) => ({
+    id: user.id,
+    username: user.username,
+    nombre: user.nombre,
+    active: user.active !== false,
+    fechaCreacion: user.fechaCreacion,
+  }));
+  res.json({ success: true, asesores: users });
+});
+
+app.post('/api/asesores', (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const username = normalizeUsername(req.body?.username);
+  const password = String(req.body?.password || '');
+  const nombre = String(req.body?.nombre || '').trim();
+
+  if (!/^[a-z0-9._-]{3,30}$/.test(username)) {
+    return res.status(400).json({ success: false, message: 'El usuario debe tener entre 3 y 30 caracteres y solo usar letras, números, punto, guion o guion bajo.' });
   }
-  if (newPin && newPin.length < 4) {
-    return res.status(400).json({ success: false, message: 'El nuevo PIN debe tener al menos 4 caracteres.' });
+  if (password.length < 8) {
+    return res.status(400).json({ success: false, message: 'La contraseña debe tener al menos 8 caracteres.' });
+  }
+  if (nombre.length < 2) {
+    return res.status(400).json({ success: false, message: 'El nombre del asesor es obligatorio.' });
   }
 
-  const updatedAdmin = {
-    ...admin,
-    pin: newPin || admin.pin,
-    asesorNombre: asesorNombre || admin.asesorNombre,
-    telefonoContacto: telefonoContacto || admin.telefonoContacto,
-    correoNotificaciones: correoNotificaciones || admin.correoNotificaciones,
+  const records = advisorRecords();
+  if (records.some((item: any) => item.username === username) || normalizeUsername(process.env.CREDIMOVIL_ADMIN_USER || '') === username) {
+    return res.status(409).json({ success: false, message: 'Ese usuario ya existe.' });
+  }
+
+  const record = {
+    id: `asesor-${Date.now()}-${randomBytes(3).toString('hex')}`,
+    username,
+    nombre,
+    passwordHash: hashPassword(password),
+    active: true,
+    fechaCreacion: new Date().toISOString(),
   };
-  writeJson(ADMIN_FILE, updatedAdmin);
-  res.json({ success: true, message: 'Configuración de CrediMóvil actualizada.' });
+  records.push(record);
+  writeAdvisorRecords(records);
+
+  res.status(201).json({
+    success: true,
+    asesor: { id: record.id, username: record.username, nombre: record.nombre, active: true, fechaCreacion: record.fechaCreacion },
+  });
+});
+
+app.delete('/api/asesores/:id', (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const records = advisorRecords();
+  const index = records.findIndex((item: any) => item.id === req.params.id);
+  if (index < 0) return res.status(404).json({ success: false, message: 'Asesor no encontrado.' });
+  records.splice(index, 1);
+  writeAdvisorRecords(records);
+  res.json({ success: true, message: 'Usuario de asesor eliminado.' });
 });
 
 // Helper: Sleep utility for exponential backoff
@@ -775,31 +856,31 @@ Reglas:
 // 4. Lotes de Autos
 app.get('/api/lotes', (req, res) => {
   const lotes = readJson(LOTES_FILE, DEFAULT_LOTES);
+  const session = getSession(req);
   const expedientes = readJson(EXPEDIENTES_FILE, []);
+
+  if (!session) {
+    return res.json({ success: true, lotes: lotes.map(sanitizeLoteForPublic) });
+  }
 
   const lotesWithStats = lotes.map((l: any) => {
     const exps = expedientes.filter((e: any) => e.loteId === l.id || e.loteNombre === l.nombre);
     const fondeados = exps.filter((e: any) => e.estatus === 'FONDEADO').length;
-    return {
-      ...l,
-      totalExpedientes: exps.length,
-      totalFondeados: fondeados,
-    };
+    return { ...l, totalExpedientes: exps.length, totalFondeados: fondeados };
   });
 
   res.json({ success: true, lotes: lotesWithStats });
 });
 
 app.post('/api/lotes', (req, res) => {
+  if (!requireAuth(req, res)) return;
   const { nombre, contacto, telefono, correo, direccion, ciudad, cuentaClabeDefault, bancoDefault } = req.body;
-  if (!nombre) {
-    return res.status(400).json({ success: false, message: 'El nombre del lote es obligatorio.' });
-  }
+  if (!nombre) return res.status(400).json({ success: false, message: 'El nombre del lote es obligatorio.' });
 
   const lotes = readJson(LOTES_FILE, DEFAULT_LOTES);
   const newLote = {
-    id: `lote-${Date.now()}`,
-    nombre,
+    id: `lote-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    nombre: String(nombre).trim(),
     contacto: contacto || '',
     telefono: telefono || '',
     correo: correo || '',
@@ -814,8 +895,32 @@ app.post('/api/lotes', (req, res) => {
   res.json({ success: true, lote: newLote, message: 'Lote registrado con éxito.' });
 });
 
+app.delete('/api/lotes/:id', (req, res) => {
+  if (!requireAuth(req, res)) return;
+  const lotes = readJson(LOTES_FILE, DEFAULT_LOTES);
+  const index = lotes.findIndex((l: any) => l.id === req.params.id);
+  if (index < 0) return res.status(404).json({ success: false, message: 'Lote no encontrado.' });
+
+  const lote = lotes[index];
+  const expedientes = readJson(EXPEDIENTES_FILE, []);
+  const hasExpedientes = expedientes.some((e: any) => e.loteId === lote.id || e.loteNombre === lote.nombre);
+  if (hasExpedientes) {
+    return res.status(409).json({ success: false, message: 'No puedes eliminar un lote que ya tiene expedientes asociados.' });
+  }
+
+  lotes.splice(index, 1);
+  writeJson(LOTES_FILE, lotes);
+  res.json({ success: true, message: 'Lote eliminado correctamente.' });
+});
+
 // Securely serve persisted expedition documents. Files never live inside expedientes.json.
 app.get('/api/expedientes/:id/documentos/:filename', (req, res) => {
+  const session = getSession(req);
+  const accessToken = typeof req.query.accessToken === 'string' ? req.query.accessToken : '';
+  if (!session && !verifyDocumentAccessToken(accessToken, req.params.id)) {
+    return res.status(401).json({ success: false, message: 'Acceso no autorizado al documento.' });
+  }
+
   const expedienteId = sanitizeFileName(req.params.id);
   const filename = sanitizeFileName(req.params.filename);
   const expDir = path.join(UPLOADS_DIR, expedienteId);
@@ -830,6 +935,7 @@ app.get('/api/expedientes/:id/documentos/:filename', (req, res) => {
 
 // 5. Expedientes (CRUD)
 app.get('/api/expedientes', (req, res) => {
+  if (!requireAuth(req, res)) return;
   const { q, estatus, loteId } = req.query;
   let list = readJson(EXPEDIENTES_FILE, []);
   let migrated = false;
@@ -866,17 +972,19 @@ app.get('/api/expedientes', (req, res) => {
 
   list.sort((a: any, b: any) => new Date(b.fechaActualizacion || b.fechaCreacion).getTime() - new Date(a.fechaActualizacion || a.fechaCreacion).getTime());
 
+  list = list.map((exp: any) => decorateExpedienteDocumentUrls(exp));
   res.json({ success: true, count: list.length, expedientes: list });
 });
 
 app.get('/api/expedientes/:id', (req, res) => {
+  if (!requireAuth(req, res)) return;
   const expedientes = readJson(EXPEDIENTES_FILE, []);
   const item = expedientes.find((e: any) => e.id === req.params.id);
   if (!item) {
     return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
   }
   if (persistExpedienteDocuments(item)) writeJson(EXPEDIENTES_FILE, expedientes);
-  res.json({ success: true, expediente: item });
+  res.json({ success: true, expediente: decorateExpedienteDocumentUrls(item) });
 });
 
 app.post('/api/expedientes/by-folio', (req, res) => {
@@ -1029,11 +1137,12 @@ app.post('/api/expedientes', (req, res) => {
   res.status(201).json({
     success: true,
     message: 'Expediente guardado exitosamente en CrediMóvil.',
-    expediente: newExpediente,
+    expediente: decorateExpedienteDocumentUrls(newExpediente),
   });
 });
 
 app.put('/api/expedientes/:id', (req, res) => {
+  if (!requireAuth(req, res)) return;
   const expedientes = readJson(EXPEDIENTES_FILE, []);
   const index = expedientes.findIndex((e: any) => e.id === req.params.id);
   if (index === -1) {
@@ -1060,10 +1169,11 @@ app.put('/api/expedientes/:id', (req, res) => {
   expedientes[index] = updated;
   writeJson(EXPEDIENTES_FILE, expedientes);
 
-  res.json({ success: true, expediente: updated, message: 'Expediente actualizado exitosamente.' });
+  res.json({ success: true, expediente: decorateExpedienteDocumentUrls(updated), message: 'Expediente actualizado exitosamente.' });
 });
 
 app.delete('/api/expedientes/:id', (req, res) => {
+  if (!requireAuth(req, res)) return;
   let expedientes = readJson(EXPEDIENTES_FILE, []);
   const initialLen = expedientes.length;
   expedientes = expedientes.filter((e: any) => e.id !== req.params.id);
@@ -1080,6 +1190,7 @@ app.delete('/api/expedientes/:id', (req, res) => {
 
 // 6. Subida de Documentos (PNG, JPG, PDF)
 app.post('/api/expedientes/:id/fondeo-doc', (req, res) => {
+  if (!requireAuth(req, res)) return;
   const { docId, archivoUrl, archivoNombre, archivoTamano, subidoPor } = req.body;
   const expedientes = readJson(EXPEDIENTES_FILE, []);
   const exp = expedientes.find((e: any) => e.id === req.params.id);
@@ -1137,6 +1248,7 @@ app.post('/api/expedientes/:id/fondeo-doc', (req, res) => {
 
 // 7. Asesor aprueba o rechaza documento
 app.put('/api/expedientes/:id/fondeo-doc-review', (req, res) => {
+  if (!requireAuth(req, res)) return;
   const { docId, estatus, observaciones } = req.body;
   const expedientes = readJson(EXPEDIENTES_FILE, []);
   const exp = expedientes.find((e: any) => e.id === req.params.id);
@@ -1160,12 +1272,13 @@ app.put('/api/expedientes/:id/fondeo-doc-review', (req, res) => {
   res.json({
     success: true,
     message: `Estatus del documento actualizado a ${estatus}.`,
-    expediente: exp,
+    expediente: decorateExpedienteDocumentUrls(exp),
   });
 });
 
 // 8. Estadísticas
 app.get('/api/stats', (req, res) => {
+  if (!requireAuth(req, res)) return;
   const expedientes = readJson(EXPEDIENTES_FILE, []);
 
   const total = expedientes.length;
