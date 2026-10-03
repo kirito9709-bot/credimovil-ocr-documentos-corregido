@@ -141,7 +141,6 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const [tiempoViviendoDomicilio, setTiempoViviendoDomicilio] = useState('');
   const [casaPropiaORentada, setCasaPropiaORentada] = useState<'PROPIA' | 'RENTADA' | 'FAMILIAR' | ''>('');
   const [tiempoEnTrabajo, setTiempoEnTrabajo] = useState('');
-  const [tiempoViviendoDomicilio, setTiempoViviendoDomicilio] = useState('');
   const [nombreUbicacionEmpleo, setNombreUbicacionEmpleo] = useState('');
   const [direccionEmpleo, setDireccionEmpleo] = useState('');
   const [giroActividadEmpresa, setGiroActividadEmpresa] = useState('');
