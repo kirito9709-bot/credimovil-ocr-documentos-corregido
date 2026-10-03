@@ -1437,7 +1437,7 @@ app.post('/api/expedientes/by-folio', (req, res) => {
   res.json({ success: true, expediente: item });
 });
 
-app.post('/api/expedientes', (req, res) => {
+app.post('/api/expedientes', async (req, res) => {
   const expedientes = readJson(EXPEDIENTES_FILE, []);
 
   // Generate unique folio
@@ -1576,7 +1576,7 @@ app.post('/api/expedientes', (req, res) => {
   });
 });
 
-app.put('/api/expedientes/:id', (req, res) => {
+app.put('/api/expedientes/:id', async (req, res) => {
   if (!requireAuth(req, res)) return;
   const expedientes = readJson(EXPEDIENTES_FILE, []);
   const index = expedientes.findIndex((e: any) => e.id === req.params.id);
@@ -1614,10 +1614,11 @@ app.put('/api/expedientes/:id', (req, res) => {
   res.json({ success: true, expediente: decorateExpedienteDocumentUrls(updated), message: 'Expediente actualizado exitosamente.' });
 });
 
-app.delete('/api/expedientes/:id', (req, res) => {
+app.delete('/api/expedientes/:id', async (req, res) => {
   if (!requireAuth(req, res)) return;
   let expedientes = readJson(EXPEDIENTES_FILE, []);
   const initialLen = expedientes.length;
+  const original = expedientes.find((e: any) => e.id === req.params.id);
   expedientes = expedientes.filter((e: any) => e.id !== req.params.id);
 
   if (expedientes.length === initialLen) {
@@ -1625,14 +1626,14 @@ app.delete('/api/expedientes/:id', (req, res) => {
   }
 
   writeJson(EXPEDIENTES_FILE, expedientes);
-  if (supabase) {
-    const original = readJson(EXPEDIENTES_FILE, []).find((e: any) => e.id === req.params.id);
-    if (original?.folio) {
-      try {
-        await supabase.from('expedientes').delete().eq('folio', original.folio);
-      } catch (syncError: any) {
-        console.error('Supabase: error al eliminar expediente:', syncError?.message || syncError);
+  if (supabase && original?.folio) {
+    try {
+      const { error: deleteError } = await supabase.from('expedientes').delete().eq('folio', original.folio);
+      if (deleteError) {
+        console.error('Supabase: error al eliminar expediente:', deleteError.message);
       }
+    } catch (syncError: any) {
+      console.error('Supabase: error al eliminar expediente:', syncError?.message || syncError);
     }
   }
   const uploadDir = path.join(UPLOADS_DIR, sanitizeFileName(req.params.id));
