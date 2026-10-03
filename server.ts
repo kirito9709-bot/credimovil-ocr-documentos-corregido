@@ -1092,6 +1092,25 @@ app.get('/api/stats', (req, res) => {
 });
 
 // Dev Server & Static Files
+function resolveDistPath() {
+  const candidates = [
+    path.resolve(__dirname, 'dist'),
+    path.resolve(process.cwd(), 'dist'),
+    path.resolve(__dirname, '..', 'dist'),
+    path.resolve(process.cwd(), '..', 'dist'),
+  ];
+
+  const found = candidates.find((candidate) => fs.existsSync(path.join(candidate, 'index.html')));
+
+  if (!found) {
+    console.error('No se encontró dist/index.html. Rutas revisadas:', candidates);
+    return candidates[0];
+  }
+
+  console.log('CrediMóvil frontend dist encontrado en:', found);
+  return found;
+}
+
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
@@ -1100,10 +1119,10 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.resolve(__dirname, 'dist');
+    const distPath = resolveDistPath();
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
-      res.sendFile(path.resolve(distPath, 'index.html'));
+      res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
