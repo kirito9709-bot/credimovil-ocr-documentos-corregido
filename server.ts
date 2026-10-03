@@ -21,6 +21,37 @@ const PORT = Number(process.env.PORT) || 3000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function requestIp(req: any) {
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return forwarded || req.ip || req.socket?.remoteAddress || 'unknown';
+}
+
+function isRateLimited(key: string, limit = 8, windowMs = 15 * 60 * 1000) {
+  const now = Date.now();
+  const current = loginAttempts.get(key);
+
+  if (!current || current.resetAt <= now) {
+    loginAttempts.set(key, { count: 1, resetAt: now + windowMs });
+    return false;
+  }
+
+  current.count += 1;
+  return current.count > limit;
+}
+
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=()');
+  if (req.path.startsWith('/api/')) {
+    res.setHeader('Cache-Control', 'no-store');
+  }
+  next();
+});
+
 function normalizeSupabaseUrl(raw: string) {
   const value = String(raw || '').trim();
   if (!value) return '';
@@ -986,6 +1017,11 @@ app.get('/api/health', (req, res) => {
 
 // 2. Authentication and Advisor Management
 app.post('/api/auth/login', async (req, res) => {
+  const ipKey = `login:${requestIp(req)}`;
+  if (isRateLimited(ipKey)) {
+    return res.status(429).json({ success: false, message: 'Demasiados intentos de acceso. Espera 15 minutos e inténtalo nuevamente.' });
+  }
+
   const username = normalizeUsername(req.body?.username);
   const password = String(req.body?.password || '');
 
@@ -1841,8 +1877,14 @@ app.get('/api/expedientes/:id', async (req, res) => {
 
 app.post('/api/expedientes/by-folio', async (req, res) => {
   const { folio, pinFondeo } = req.body;
+  const pin = String(pinFondeo || '').trim();
+
   if (!folio) {
     return res.status(400).json({ success: false, message: 'Debe ingresar el folio del expediente.' });
+  }
+
+  if (!/^\d{4}$/.test(pin)) {
+    return res.status(401).json({ success: false, message: 'Debes ingresar el PIN de 4 dígitos del expediente.' });
   }
 
   try {
@@ -1855,15 +1897,35 @@ app.post('/api/expedientes/by-folio', async (req, res) => {
     if (error) throw new Error(`Supabase expediente por folio: ${error.message}`);
     if (!row) return res.status(404).json({ success: false, message: 'No se encontró ningún expediente con ese folio.' });
 
-    if (pinFondeo && row.pin_fondeo && pinFondeo.trim() !== row.pin_fondeo.trim()) {
-      return res.status(401).json({ success: false, message: 'PIN de acceso del lote incorrecto.' });
+    if (!row.pin_fondeo || pin !== String(row.pin_fondeo).trim()) {
+      return res.status(401).json({ success: false, message: 'Folio o PIN incorrectos.' });
     }
 
     const list = (await getSupabaseExpedientes()) || [];
     const item = list.find((e: any) => e.folio === row.folio);
     if (!item) return res.status(404).json({ success: false, message: 'No se pudo reconstruir el expediente.' });
 
-    res.json({ success: true, expediente: item });
+    const publicExpediente = {
+      id: row.id,
+      folio: item.folio,
+      pinFondeo: undefined,
+      estatus: item.estatus,
+      loteNombre: item.loteNombre,
+      clienteNombre: item.ine?.nombreCompleto || item.ine?.nombre || '',
+      autoMarca: item.autoMarca,
+      autoModelo: item.autoModelo,
+      autoAno: item.autoAno,
+      montoFinanciar: item.montoFinanciar,
+      plazoMeses: item.plazoMeses,
+      tasaInteresAnual: item.tasaInteresAnual,
+      mensualidadEstimada: item.mensualidadEstimada,
+      financieraAsignada: item.financieraAsignada,
+      documentosFondeo: item.documentosFondeo || [],
+      cuentaClabeLote: item.cuentaClabeLote || '',
+      bancoLote: item.bancoLote || '',
+    };
+
+    res.json({ success: true, expediente: publicExpediente });
   } catch (error: any) {
     console.error('POST /api/expedientes/by-folio error:', error);
     res.status(500).json({ success: false, message: error?.message || 'No se pudo consultar el expediente.' });
