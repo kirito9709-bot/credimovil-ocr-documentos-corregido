@@ -18,7 +18,6 @@ export const LoteLoginModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) 
     try {
       const res = await api.login(username.trim(), password);
       if (res.user?.role !== 'lote') throw new Error('Estas credenciales no corresponden a un usuario de lote.');
-      localStorage.setItem('credimovil_auth_token', res.token);
       localStorage.setItem('credimovil_auth_user', JSON.stringify(res.user));
       onSuccess(res.user); setUsername(''); setPassword('');
     } catch (err: any) { setMessage(err.message || 'No se pudo iniciar sesión.'); }
