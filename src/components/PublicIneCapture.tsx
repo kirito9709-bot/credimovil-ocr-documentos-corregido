@@ -1749,7 +1749,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
                   {label:'INE Frente', value:obligadoIneFrente, input:obligadoIneFrenteInput, setter:setObligadoIneFrente, name:setObligadoIneFrenteNombre, nameValue:obligadoIneFrenteNombre},
-                  {label:'INE Reverso', value:obligadoIneReverso, input:obligadoIneReversoInput, setter:setObligadoIneReverso, name:setObligadoIneReversoNombre, nameValue:obligadoIneReReversoNombre},
+                  {label:'INE Reverso', value:obligadoIneReverso, input:obligadoIneReversoInput, setter:setObligadoIneReverso, name:setObligadoIneReversoNombre, nameValue:obligadoIneReversoNombre},
                 ].map((doc:any, index:number) => (
                   <div key={doc.label} className="border border-slate-200 rounded-2xl p-4 bg-slate-50/60">
                     <div className="flex items-center justify-between mb-3">
