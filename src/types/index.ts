@@ -156,6 +156,7 @@ export interface ExpedienteCredito {
   loteNombre: string;
   asesorLoteContacto?: string;
   telefonoLote?: string;
+  correoLote?: string;
 
   // 4. Datos del Vehículo
   autoMarca: string;
