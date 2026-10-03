@@ -30,3 +30,73 @@
     display: none !important;
   }
 }
+
+
+/* Mobile-first application hardening and usability. */
+html,
+body,
+#root {
+  min-height: 100%;
+  width: 100%;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  background: #020617;
+}
+
+button,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 767px) {
+  body {
+    font-size: 15px;
+  }
+
+  .credimovil-mobile-form {
+    width: 100%;
+  }
+
+  .credimovil-mobile-form input,
+  .credimovil-mobile-form select,
+  .credimovil-mobile-form textarea {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .credimovil-mobile-form button {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  .safe-bottom {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  /* Prevent wide tables and desktop cards from forcing horizontal scrolling. */
+  table {
+    min-width: 0 !important;
+  }
+
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 420px) {
+  .credimovil-mobile-form {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+}
