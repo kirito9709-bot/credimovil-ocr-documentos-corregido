@@ -1,213 +1,189 @@
 import { ExpedienteCredito, IneData, LoteAuto } from '../types';
 
+const getAuthToken = () => localStorage.getItem('credimovil_auth_token') || '';
+
+const authHeaders = (extra: Record<string, string> = {}) => {
+  const token = getAuthToken();
+  return token ? { ...extra, Authorization: `Bearer ${token}` } : extra;
+};
+
+const parseError = async (res: Response, fallback: string) => {
+  const err = await res.json().catch(() => ({}));
+  throw new Error(err.message || fallback);
+};
+
 export const api = {
-  // OCR Call Credencial INE
+  async login(username: string, password: string) {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) await parseError(res, 'Usuario o contraseña incorrectos.');
+    return res.json() as Promise<{ success: boolean; token: string; user: { username: string; role: 'admin' | 'asesor'; nombre: string } }>;
+  },
+
+  async getMe() {
+    const res = await fetch('/api/auth/me', { headers: authHeaders() });
+    if (!res.ok) await parseError(res, 'Sesión no válida.');
+    return res.json();
+  },
+
+  async logout() {
+    await fetch('/api/auth/logout', { method: 'POST', headers: authHeaders() }).catch(() => {});
+    localStorage.removeItem('credimovil_auth_token');
+    localStorage.removeItem('credimovil_auth_user');
+  },
+
+  async getAsesores() {
+    const res = await fetch('/api/asesores', { headers: authHeaders() });
+    if (!res.ok) await parseError(res, 'No se pudieron consultar los asesores.');
+    return res.json();
+  },
+
+  async createAsesor(data: { username: string; password: string; nombre: string }) {
+    const res = await fetch('/api/asesores', {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await parseError(res, 'No se pudo crear el asesor.');
+    return res.json();
+  },
+
+  async deleteAsesor(id: string) {
+    const res = await fetch(`/api/asesores/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    if (!res.ok) await parseError(res, 'No se pudo eliminar el asesor.');
+    return res.json();
+  },
+
   async scanIne(imageBase64: string, imageBackBase64?: string): Promise<{ success: boolean; data: IneData; message?: string }> {
     const res = await fetch('/api/ocr-ine', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageBase64, imageBackBase64 }),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Error al procesar la credencial INE');
-    }
+    if (!res.ok) await parseError(res, 'Error al procesar la credencial INE');
     return res.json();
   },
 
-  // OCR Call Comprobante de Domicilio (Agua o Luz)
-  async scanComprobanteDomicilio(imageBase64: string): Promise<{
-    success: boolean;
-    data: {
-      tipoComprobante?: string;
-      companiaEmisora?: string;
-      nombreTitular?: string;
-      fechaEmision?: string;
-      esReciente?: boolean;
-      calle?: string;
-      numExterior?: string;
-      numInterior?: string;
-      colonia?: string;
-      codigoPostal?: string;
-      municipio?: string;
-      estado?: string;
-      domicilioCompleto?: string;
-    };
-    message?: string;
-  }> {
+  async scanComprobanteDomicilio(imageBase64: string) {
     const res = await fetch('/api/ocr-comprobante-domicilio', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageBase64 }),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Error al procesar el comprobante de domicilio');
-    }
+    if (!res.ok) await parseError(res, 'Error al procesar el comprobante de domicilio');
     return res.json();
   },
 
-  // Expedientes
-  async getExpedientes(params?: { q?: string; estatus?: string; loteId?: string }): Promise<{ success: boolean; count: number; expedientes: ExpedienteCredito[] }> {
+  async getExpedientes(params?: { q?: string; estatus?: string; loteId?: string }) {
     const searchParams = new URLSearchParams();
     if (params?.q) searchParams.append('q', params.q);
     if (params?.estatus) searchParams.append('estatus', params.estatus);
     if (params?.loteId) searchParams.append('loteId', params.loteId);
 
-    const res = await fetch(`/api/expedientes?${searchParams.toString()}`);
-    if (!res.ok) throw new Error('Error al consultar expedientes');
+    const res = await fetch(`/api/expedientes?${searchParams.toString()}`, { headers: authHeaders() });
+    if (!res.ok) await parseError(res, 'Error al consultar expedientes');
     return res.json();
   },
 
-  async getExpediente(id: string): Promise<{ success: boolean; expediente: ExpedienteCredito }> {
-    const res = await fetch(`/api/expedientes/${id}`);
-    if (!res.ok) throw new Error('Expediente no encontrado');
+  async getExpediente(id: string) {
+    const res = await fetch(`/api/expedientes/${encodeURIComponent(id)}`, { headers: authHeaders() });
+    if (!res.ok) await parseError(res, 'Expediente no encontrado');
     return res.json();
   },
 
-  async lookupByFolio(folio: string, pinFondeo?: string): Promise<{ success: boolean; expediente: ExpedienteCredito; message?: string }> {
+  async lookupByFolio(folio: string, pinFondeo?: string) {
     const res = await fetch('/api/expedientes/by-folio', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ folio, pinFondeo }),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Error al buscar el expediente');
-    }
+    if (!res.ok) await parseError(res, 'Error al buscar el expediente');
     return res.json();
   },
 
-  async createExpediente(data: Partial<ExpedienteCredito>): Promise<{ success: boolean; expediente: ExpedienteCredito; message: string }> {
+  async createExpediente(data: Partial<ExpedienteCredito>) {
     const res = await fetch('/api/expedientes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Error al guardar el expediente');
-    }
+    if (!res.ok) await parseError(res, 'Error al guardar el expediente');
     return res.json();
   },
 
-  async updateExpediente(id: string, data: Partial<ExpedienteCredito>): Promise<{ success: boolean; expediente: ExpedienteCredito; message: string }> {
-    const res = await fetch(`/api/expedientes/${id}`, {
+  async updateExpediente(id: string, data: Partial<ExpedienteCredito>) {
+    const res = await fetch(`/api/expedientes/${encodeURIComponent(id)}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error('Error al actualizar expediente');
+    if (!res.ok) await parseError(res, 'Error al actualizar expediente');
     return res.json();
   },
 
-  async deleteExpediente(id: string): Promise<{ success: boolean; message: string }> {
-    const res = await fetch(`/api/expedientes/${id}`, {
+  async deleteExpediente(id: string) {
+    const res = await fetch(`/api/expedientes/${encodeURIComponent(id)}`, {
       method: 'DELETE',
+      headers: authHeaders(),
     });
-    if (!res.ok) throw new Error('Error al eliminar expediente');
+    if (!res.ok) await parseError(res, 'Error al eliminar expediente');
     return res.json();
   },
 
-  // Fondeo docs
-  async uploadFondeoDoc(expedienteId: string, payload: {
-    docId: string;
-    archivoUrl: string;
-    archivoNombre: string;
-    archivoTamano?: string;
-    subidoPor?: string;
-  }): Promise<{ success: boolean; documentosFondeo: any[]; expedienteEstatus: string; message: string }> {
-    const res = await fetch(`/api/expedientes/${expedienteId}/fondeo-doc`, {
+  async uploadFondeoDoc(expedienteId: string, payload: { docId: string; archivoUrl: string; archivoNombre: string; archivoTamano?: string; subidoPor?: string }) {
+    const res = await fetch(`/api/expedientes/${encodeURIComponent(expedienteId)}/fondeo-doc`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Error al subir documento de fondeo');
-    }
+    if (!res.ok) await parseError(res, 'Error al subir documento de fondeo');
     return res.json();
   },
 
-  async reviewFondeoDoc(expedienteId: string, payload: {
-    docId: string;
-    estatus: 'APROBADO' | 'RECHAZADO' | 'PENDIENTE';
-    observaciones?: string;
-  }): Promise<{ success: boolean; expediente: ExpedienteCredito; message: string }> {
-    const res = await fetch(`/api/expedientes/${expedienteId}/fondeo-doc-review`, {
+  async reviewFondeoDoc(expedienteId: string, payload: { docId: string; estatus: 'APROBADO' | 'RECHAZADO' | 'PENDIENTE'; observaciones?: string }) {
+    const res = await fetch(`/api/expedientes/${encodeURIComponent(expedienteId)}/fondeo-doc-review`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Error al evaluar documento');
+    if (!res.ok) await parseError(res, 'Error al evaluar documento');
     return res.json();
   },
 
-  // Lotes
-  async getLotes(): Promise<{ success: boolean; lotes: LoteAuto[] }> {
-    const res = await fetch('/api/lotes');
-    if (!res.ok) throw new Error('Error al consultar lotes');
+  async getLotes() {
+    const res = await fetch('/api/lotes', { headers: authHeaders() });
+    if (!res.ok) await parseError(res, 'Error al consultar lotes');
     return res.json();
   },
 
-  async createLote(lote: Partial<LoteAuto>): Promise<{ success: boolean; lote: LoteAuto; message: string }> {
+  async createLote(lote: Partial<LoteAuto>) {
     const res = await fetch('/api/lotes', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(lote),
     });
-    if (!res.ok) throw new Error('Error al registrar lote');
+    if (!res.ok) await parseError(res, 'Error al registrar lote');
     return res.json();
   },
 
-  // Stats
-  async getStats(): Promise<{
-    success: boolean;
-    stats: {
-      total: number;
-      nuevos: number;
-      enEvaluacion: number;
-      aprobados: number;
-      fondeoRevision: number;
-      fondeados: number;
-      montoTotalFinanciado: number;
-    };
-  }> {
-    const res = await fetch('/api/stats');
-    if (!res.ok) throw new Error('Error al obtener estadísticas');
-    return res.json();
-  },
-
-  // Admin auth
-  async verifyAdminPin(pin: string): Promise<{ success: boolean; token: string; admin: { nombre: string; correo: string } }> {
-    const res = await fetch('/api/admin/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin }),
+  async deleteLote(id: string) {
+    const res = await fetch(`/api/lotes/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'PIN incorrecto');
-    }
+    if (!res.ok) await parseError(res, 'No se pudo eliminar el lote.');
     return res.json();
   },
 
-  async updateAdminConfig(payload: {
-    currentPin: string;
-    newPin?: string;
-    asesorNombre?: string;
-    telefonoContacto?: string;
-    correoNotificaciones?: string;
-  }): Promise<{ success: boolean; message: string }> {
-    const res = await fetch('/api/admin/change-pin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Error al actualizar configuración');
-    }
+  async getStats() {
+    const res = await fetch('/api/stats', { headers: authHeaders() });
+    if (!res.ok) await parseError(res, 'Error al obtener estadísticas');
     return res.json();
   },
 };
