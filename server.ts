@@ -49,6 +49,135 @@ function supabaseConfigured() {
   return Boolean(supabase);
 }
 
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const sessions = new Map<string, {
+  username: string;
+  role: 'admin' | 'asesor' | 'lote';
+  nombre: string;
+  loteId?: string;
+  expiresAt: number;
+}>();
+
+function normalizeUsername(value: string = '') {
+  return String(value).trim().toLowerCase();
+}
+
+function hashPassword(password: string, salt = randomBytes(16).toString('hex')) {
+  return `${salt}:${scryptSync(password, salt, 64).toString('hex')}`;
+}
+
+function verifyPassword(password: string, storedHash: string) {
+  const [salt, expectedHex] = String(storedHash || '').split(':');
+  if (!salt || !expectedHex) return false;
+  const actual = scryptSync(password, salt, 64);
+  const expected = Buffer.from(expectedHex, 'hex');
+  return expected.length === actual.length && timingSafeEqual(actual, expected);
+}
+
+function safeEqualText(a: string, b: string) {
+  const aa = Buffer.from(String(a));
+  const bb = Buffer.from(String(b));
+  return aa.length === bb.length && timingSafeEqual(aa, bb);
+}
+
+function getBearerToken(req: any) {
+  const value = String(req.headers.authorization || '');
+  return value.startsWith('Bearer ') ? value.slice(7).trim() : '';
+}
+
+function getSession(req: any) {
+  const token = getBearerToken(req);
+  if (!token) return null;
+  const session = sessions.get(token);
+  if (!session) return null;
+  if (session.expiresAt < Date.now()) {
+    sessions.delete(token);
+    return null;
+  }
+  return { ...session, token };
+}
+
+function requireAuth(req: any, res: any) {
+  const session = getSession(req);
+  if (!session) {
+    res.status(401).json({ success: false, message: 'Debes iniciar sesión para acceder a este recurso.' });
+    return null;
+  }
+  return session;
+}
+
+function requireAdmin(req: any, res: any) {
+  const session = requireAuth(req, res);
+  if (!session) return null;
+  if (session.role !== 'admin') {
+    res.status(403).json({ success: false, message: 'Esta función requiere permisos de administrador.' });
+    return null;
+  }
+  return session;
+}
+
+function requireStaff(req: any, res: any) {
+  const session = requireAuth(req, res);
+  if (!session) return null;
+  if (session.role !== 'admin' && session.role !== 'asesor') {
+    res.status(403).json({ success: false, message: 'Esta función es exclusiva del equipo CrediMóvil.' });
+    return null;
+  }
+  return session;
+}
+
+function requireLote(req: any, res: any) {
+  const session = requireAuth(req, res);
+  if (!session) return null;
+  if (session.role !== 'lote' || !session.loteId) {
+    res.status(403).json({ success: false, message: 'Esta función es exclusiva del portal del lote.' });
+    return null;
+  }
+  return session;
+}
+
+async function findLoteUser(username: string) {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('lote_usuarios')
+    .select('id,nombre,username,password_hash,activo,lote_id')
+    .eq('username', username)
+    .maybeSingle();
+  if (error) throw new Error(`Supabase usuarios de lote: ${error.message}`);
+  return data || null;
+}
+
+async function supabaseLoteUserList() {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('lote_usuarios')
+    .select('id,nombre,username,activo,lote_id,created_at')
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(`Supabase usuarios de lote: ${error.message}`);
+  return data || [];
+}
+
+async function findAdvisor(username: string) {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('asesores')
+    .select('id,nombre,username,password_hash,activo,created_at')
+    .eq('username', username)
+    .maybeSingle();
+  if (error) throw new Error(`Supabase asesores: ${error.message}`);
+  return data || null;
+}
+
+async function supabaseAdvisorList() {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('asesores')
+    .select('id,nombre,username,activo,created_at')
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(`Supabase asesores: ${error.message}`);
+  return data || [];
+}
+
 function mapSupabaseLote(row: any) {
   return {
     id: row.id,
