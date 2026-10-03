@@ -2228,12 +2228,18 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   <input
                     type="number"
                     min={0}
-                    max={precioSeguro}
+                    max={precioSeguro > 0 ? precioSeguro : undefined}
                     step={1}
-                    value={engancheMonto === '' ? 0 : engancheMonto}
+                    value={engancheMonto === '' ? '' : engancheMonto}
                     onChange={(e) => {
-                      const value = Number(e.target.value);
-                      setEngancheMonto(Number.isFinite(value) ? Math.min(precioSeguro, Math.max(0, value)) : 0);
+                      const raw = e.target.value;
+                      if (raw === '') {
+                        setEngancheMonto('');
+                        return;
+                      }
+                      const value = Number(raw);
+                      if (!Number.isFinite(value)) return;
+                      setEngancheMonto(precioSeguro > 0 ? Math.min(precioSeguro, Math.max(0, value)) : Math.max(0, value));
                     }}
                     className="w-full py-2 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm font-semibold focus:border-slate-900 focus:outline-none"
                   />
