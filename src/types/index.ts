@@ -1,0 +1,165 @@
+export interface IneData {
+  nombre: string;
+  primerApellido: string;
+  segundoApellido: string;
+  nombreCompleto: string;
+  curp: string;
+  rfc: string; // Generado automáticamente con opción de corrección
+  claveElector?: string;
+  fechaNacimiento: string;
+  sexo: 'H' | 'M' | 'X' | '';
+  edad?: number;
+  domicilio: {
+    calle: string;
+    numExterior: string;
+    numInterior: string;
+    colonia: string;
+    codigoPostal: string;
+    municipio: string;
+    estado: string;
+    domicilioCompleto: string;
+  };
+  vigencia: {
+    emision: string;
+    vigenciaHasta: string;
+    seccion: string;
+  };
+  ocrCic?: string;
+  tipoCredencial?: string;
+  calidadImagen?: 'BUENA' | 'ACEPTABLE' | 'BORROSA';
+  observaciones?: string[];
+}
+
+export type EstatusCredito =
+  | 'NUEVO'
+  | 'EN_EVALUACION'
+  | 'PRE_APROBADO'
+  | 'APROBADO'
+  | 'FONDEO_PENDIENTE'
+  | 'FONDEO_REVISION'
+  | 'FONDEADO'
+  | 'RECHAZADO';
+
+export type EstatusDocumentoFondeo = 'PENDIENTE' | 'SUBIDO' | 'APROBADO' | 'RECHAZADO';
+
+export type CategoriaDocumento = 'INICIO_CREDITO' | 'VEHICULO_BASICA' | 'VEHICULO_LEGALIZADO' | 'PAGO_FONDEO';
+
+export interface DocumentoFondeo {
+  id: string;
+  categoria: CategoriaDocumento;
+  tipo: string;
+  nombre: string;
+  descripcion: string;
+  requerido: boolean;
+  estatus: EstatusDocumentoFondeo;
+  archivoUrl?: string; // persisted /api/... document URL (legacy base64 is still supported for migration)
+  archivoNombre?: string;
+  archivoTipo?: string; // 'png' | 'jpeg' | 'pdf'
+  archivoTamano?: string;
+  fechaSubida?: string;
+  subidoPor?: string;
+  observaciones?: string;
+  fechaRevision?: string;
+}
+
+export interface ReferenciaPersonal {
+  nombre: string;
+  telefono: string;
+  relacion: string;
+  esFamiliar: boolean;
+}
+
+export interface EstadosCuentaAnalisis {
+  mes1Url?: string;
+  mes1Nombre?: string;
+  mes2Url?: string;
+  mes2Nombre?: string;
+  mes3Url?: string;
+  mes3Nombre?: string;
+  archivoConsolidadoUrl?: string;
+  archivoConsolidadoNombre?: string;
+  bancoEmisor?: string;
+  fechaSubida?: string;
+}
+
+export interface ExpedienteCredito {
+  id: string;
+  folio: string; // e.g. EXP-2026-1001
+  pinFondeo: string; // 4 digits for dealership access
+  fechaCreacion: string;
+  fechaActualizacion: string;
+  estatus: EstatusCredito;
+
+  // 1. Identificación Oficial (INE por los 2 lados)
+  ine: IneData;
+  fotoIneFrente?: string; // persisted /api/... document URL (legacy data URI supported)
+  fotoIneReverso?: string; // persisted /api/... document URL (legacy data URI supported)
+
+  // 2. Comprobante de Domicilio (Agua o Luz CFE)
+  domicilioCoincideConIne?: boolean;
+  comprobanteDomicilioActualUrl?: string; // Agua o Luz
+  comprobanteDomicilioActualNombre?: string;
+  tipoComprobanteDomicilio?: 'CFE_LUZ' | 'AGUA' | 'OTRO';
+
+  // 3. Estados de Cuenta de los últimos 3 meses para Análisis
+  estadosCuenta?: EstadosCuentaAnalisis;
+
+  // 4. Checklist Inicio de Crédito Automotriz (CrediMóvil)
+  telefono: string;
+  correo: string;
+  ingresoMensualAprox?: number;
+  tiempoViviendoDomicilio?: string;
+  casaPropiaORentada?: 'PROPIA' | 'RENTADA' | 'FAMILIAR' | '';
+  tiempoEnTrabajo?: string;
+  nombreUbicacionEmpleo?: string;
+  giroActividadEmpresa?: string;
+  dependientesEconomicos?: number;
+  estadoCivil?: 'SOLTERO' | 'CASADO' | 'UNION_LIBRE' | 'DIVORCIADO' | 'VIUDO' | '';
+  referenciasPersonales?: ReferenciaPersonal[];
+
+  // 3. Datos del Lote de Autos
+  loteId?: string;
+  loteNombre: string;
+  asesorLoteContacto?: string;
+  telefonoLote?: string;
+
+  // 4. Datos del Vehículo
+  autoMarca: string;
+  autoModelo: string;
+  autoAno: number;
+  autoVersion?: string;
+  autoPrecio: number;
+  autoVin?: string;
+  esVehiculoLegalizado: boolean;
+
+  // 5. Términos Financieros
+  enganche: number;
+  montoFinanciar: number;
+  plazoMeses: number; // 12, 24, 36, 48, 60
+  tasaInteresAnual?: number;
+  mensualidadEstimada?: number;
+  financieraAsignada?: string;
+
+  // 6. Checklist de Documentación de Fondeo y Vehículo (CrediMóvil)
+  documentosFondeo: DocumentoFondeo[];
+  fondeoMontoLiquidado?: number;
+  cuentaClabeLote?: string;
+  bancoLote?: string;
+
+  // Notas internas del asesor
+  notasAsesor?: string;
+}
+
+export interface LoteAuto {
+  id: string;
+  nombre: string;
+  contacto: string;
+  telefono: string;
+  correo: string;
+  direccion: string;
+  ciudad: string;
+  cuentaClabeDefault?: string;
+  bancoDefault?: string;
+  totalExpedientes?: number;
+  totalFondeados?: number;
+}
