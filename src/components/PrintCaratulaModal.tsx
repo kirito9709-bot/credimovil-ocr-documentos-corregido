@@ -21,7 +21,10 @@ export const PrintCaratulaModal: React.FC<PrintCaratulaModalProps> = ({
   const dom = ine.domicilio || {};
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-2 sm:p-4 backdrop-blur-md overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-2 sm:p-4 backdrop-blur-md overflow-y-auto"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="relative w-full max-w-4xl bg-white text-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col my-8 print:m-0 print:p-0 print:border-none print:shadow-none">
         {/* Screen Toolbar */}
         <div className="flex items-center justify-between px-6 py-4 bg-slate-950 text-white print:hidden">
@@ -213,7 +216,7 @@ export const PrintCaratulaModal: React.FC<PrintCaratulaModalProps> = ({
                     ${(expediente.montoFinanciar || 0).toLocaleString('es-MX')} MXN
                   </td>
                   <td className="py-2 px-3">{expediente.plazoMeses} meses</td>
-                  <td className="py-2 px-3">{expediente.tasaInteresAnual || 14.5}%</td>
+                  <td className="py-2 px-3">28%</td>
                   <td className="py-2 px-3 font-bold">${(expediente.mensualidadEstimada || 0).toLocaleString('es-MX')} MXN</td>
                 </tr>
               </tbody>
@@ -247,6 +250,16 @@ export const PrintCaratulaModal: React.FC<PrintCaratulaModalProps> = ({
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="flex justify-end pt-2 print:hidden">
+            <button
+              type="button"
+              onClick={onClose}
+              className="py-2 px-5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs"
+            >
+              Cerrar expediente
+            </button>
           </div>
 
           {/* Signatures */}
