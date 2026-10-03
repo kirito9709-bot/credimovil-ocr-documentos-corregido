@@ -1773,6 +1773,233 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
           </div>
         </div>
 
+        {/* ======================================================== */}
+        {/* SECCIÓN 2: DATOS DEL CLIENTE */}
+        {/* ======================================================== */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-7 space-y-6">
+          <div className="flex items-center gap-2 pb-4 border-b border-slate-200">
+            <span className="w-7 h-7 rounded-md bg-red-600 text-white text-xs font-black flex items-center justify-center">2</span>
+            <div>
+              <h3 className="text-base font-black text-slate-900">Datos del Cliente</h3>
+              <p className="text-xs text-slate-500">Información obtenida de la INE y domicilio validado.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="lg:col-span-2">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nombre(s) <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                required
+                value={ineData.nombre || ''}
+                onChange={(e) => setIneData((prev) => {
+                  const next = { ...prev, nombre: e.target.value };
+                  next.nombreCompleto = [next.nombre, next.primerApellido, next.segundoApellido].filter(Boolean).join(' ');
+                  return next;
+                })}
+                placeholder="Nombre(s)"
+                className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Primer apellido <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                required
+                value={ineData.primerApellido || ''}
+                onChange={(e) => setIneData((prev) => {
+                  const next = { ...prev, primerApellido: e.target.value };
+                  next.nombreCompleto = [next.nombre, next.primerApellido, next.segundoApellido].filter(Boolean).join(' ');
+                  return next;
+                })}
+                placeholder="Apellido paterno"
+                className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Segundo apellido</label>
+              <input
+                type="text"
+                value={ineData.segundoApellido || ''}
+                onChange={(e) => setIneData((prev) => {
+                  const next = { ...prev, segundoApellido: e.target.value };
+                  next.nombreCompleto = [next.nombre, next.primerApellido, next.segundoApellido].filter(Boolean).join(' ');
+                  return next;
+                })}
+                placeholder="Apellido materno"
+                className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">CURP (18 dígitos) <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                required
+                maxLength={18}
+                value={ineData.curp || ''}
+                onChange={(e) => setIneData((prev) => ({ ...prev, curp: e.target.value.toUpperCase() }))}
+                placeholder="CURP"
+                className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm font-mono uppercase focus:border-red-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                RFC del Cliente <span className="text-red-500">*</span>
+                <span className="ml-2 text-[10px] font-semibold text-red-600 normal-case">Auto-generar</span>
+              </label>
+              <input
+                type="text"
+                maxLength={13}
+                value={ineData.rfc || ''}
+                onChange={(e) => setIneData((prev) => ({ ...prev, rfc: e.target.value.toUpperCase() }))}
+                placeholder="RFC"
+                className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm font-mono uppercase focus:border-red-500 focus:outline-none"
+              />
+              <p className="text-[10px] text-slate-500 mt-1">Se genera con la base del CURP y puede completarse con homoclave SAT.</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Fecha de nacimiento <span className="text-red-500">*</span></label>
+              <input
+                type="date"
+                required
+                value={ineData.fechaNacimiento || ''}
+                onChange={(e) => setIneData((prev) => ({ ...prev, fechaNacimiento: e.target.value }))}
+                className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Sexo <span className="text-red-500">*</span></label>
+              <select
+                required
+                value={ineData.sexo || ''}
+                onChange={(e) => setIneData((prev) => ({ ...prev, sexo: e.target.value }))}
+                className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none"
+              >
+                <option value="">Seleccionar...</option>
+                <option value="H">Hombre</option>
+                <option value="M">Mujer</option>
+              </select>
+            </div>
+
+            <div className="lg:col-span-4">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Domicilio actual</label>
+              <textarea
+                rows={2}
+                value={ineData.domicilio?.domicilioCompleto || ''}
+                onChange={(e) => setIneData((prev) => ({
+                  ...prev,
+                  domicilio: { ...prev.domicilio, domicilioCompleto: e.target.value },
+                }))}
+                placeholder="Calle, número, colonia, municipio, estado y C.P."
+                className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm resize-none focus:border-red-500 focus:outline-none"
+              />
+              <p className="text-[10px] text-slate-500 mt-1">El domicilio se puede ajustar manualmente después del OCR.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ======================================================== */}
+        {/* SECCIÓN 3: PERFIL SOCIOECONÓMICO Y LABORAL */}
+        {/* ======================================================== */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-7 space-y-6">
+          <div className="flex items-center gap-2 pb-4 border-b border-slate-200">
+            <span className="w-7 h-7 rounded-md bg-red-600 text-white text-xs font-black flex items-center justify-center">3</span>
+            <div>
+              <h3 className="text-base font-black text-slate-900">Perfil Socioeconómico y Laboral</h3>
+              <p className="text-xs text-slate-500">Información de contacto, empleo y referencias personales para el dictamen.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Teléfono de contacto <span className="text-red-500">*</span></label>
+              <input type="tel" required value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="81 1234 5678" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Correo electrónico</label>
+              <input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder="cliente@ejemplo.com" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Ingreso mensual comprobable ($MXN) <span className="text-red-500">*</span></label>
+              <input type="number" min="0" required value={ingresoMensual} onChange={(e) => setIngresoMensual(e.target.value === '' ? '' : Number(e.target.value))} placeholder="ej. 35000" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Vivienda <span className="text-red-500">*</span></label>
+              <select required value={casaPropiaORentada} onChange={(e) => setCasaPropiaORentada(e.target.value as any)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none">
+                <option value="">Seleccionar condición...</option>
+                <option value="PROPIA">Casa propia</option>
+                <option value="RENTADA">Rentada</option>
+                <option value="FAMILIAR">Casa familiar</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Antigüedad en domicilio <span className="text-red-500">*</span></label>
+              <input type="text" required value={tiempoViviendoDomicilio} onChange={(e) => setTiempoViviendoDomicilio(e.target.value)} placeholder="ej. 5 años" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Empresa / lugar de trabajo <span className="text-red-500">*</span></label>
+              <input type="text" required value={nombreUbicacionEmpleo} onChange={(e) => setNombreUbicacionEmpleo(e.target.value)} placeholder="ej. Nemak México" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Antigüedad en empleo <span className="text-red-500">*</span></label>
+              <input type="text" required value={tiempoEnTrabajo} onChange={(e) => setTiempoEnTrabajo(e.target.value)} placeholder="ej. 3 años" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Dependientes económicos</label>
+              <input type="number" min="0" value={dependientesEconomicos} onChange={(e) => setDependientesEconomicos(Number(e.target.value) || 0)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+            </div>
+            <div className="lg:col-span-3">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Dirección del empleo <span className="text-red-500">*</span></label>
+              <input type="text" required value={direccionEmpleo} onChange={(e) => setDireccionEmpleo(e.target.value)} placeholder="Calle, número, colonia, municipio, estado" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+            </div>
+            <div className="lg:col-span-2">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Giro / actividad de la empresa <span className="text-red-500">*</span></label>
+              <input type="text" required value={giroActividadEmpresa} onChange={(e) => setGiroActividadEmpresa(e.target.value)} placeholder="ej. Comercio, industria, servicios" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Estado civil <span className="text-red-500">*</span></label>
+              <select required value={estadoCivil} onChange={(e) => setEstadoCivil(e.target.value as any)} className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none">
+                <option value="">Seleccionar...</option>
+                <option value="SOLTERO">Soltero(a)</option>
+                <option value="CASADO">Casado(a)</option>
+                <option value="UNION_LIBRE">Unión libre</option>
+                <option value="DIVORCIADO">Divorciado(a)</option>
+                <option value="VIUDO">Viudo(a)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <h4 className="text-sm font-black text-slate-900 mb-3">Referencias personales</h4>
+            <p className="text-xs text-slate-500 mb-3">1 familiar que viva en otro domicilio y 2 conocidos.</p>
+            <div className="space-y-3">
+              {referencias.map((ref, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                      {index === 0 ? 'Familiar (otro domicilio)' : `Conocido ${index}`}
+                    </label>
+                    <input type="text" required value={ref.nombre} onChange={(e) => setReferencias((prev) => prev.map((item, i) => i === index ? { ...item, nombre: e.target.value } : item))} placeholder="Nombre completo" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Teléfono</label>
+                    <input type="tel" required value={ref.telefono} onChange={(e) => setReferencias((prev) => prev.map((item, i) => i === index ? { ...item, telefono: e.target.value } : item))} placeholder="81 1234 5678" className="w-full py-2.5 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:border-red-500 focus:outline-none" />
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-xs text-slate-500 font-semibold">{index === 0 ? 'Debe vivir en otro domicilio' : 'Conocido'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* SECCIÓN 4: DATOS DEL VEHÍCULO Y LOTE ASOCIADO           */}
         {/* ======================================================== */}
         <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-6 sm:p-8 space-y-6">
