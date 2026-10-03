@@ -44,7 +44,6 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
   const [activeTab, setActiveTab] = useState<'detalle' | 'fondeo' | 'fotos'>('detalle');
   const [estatus, setEstatus] = useState<EstatusCredito>(expediente.estatus);
   const [financiera, setFinanciera] = useState(expediente.financieraAsignada || 'CrediMóvil Auto');
-  const [tasa] = useState(28);
   const [plazo, setPlazo] = useState(expediente.plazoMeses || 48);
   const [precio, setPrecio] = useState(expediente.autoPrecio || 0);
   const [enganchePorcentaje, setEnganchePorcentaje] = useState(() => {
@@ -351,7 +350,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                       className="w-full py-1.5 px-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white"
                     />
                     <div className="text-[10px] text-slate-500 mt-1">
-                      ${calcEnganche.toLocaleString('es-MX')}{'}'} MXN • mínimo 20%
+                      ${calcEnganche.toLocaleString('es-MX')} MXN • mínimo 20%
                     </div>
                   </div>
 
