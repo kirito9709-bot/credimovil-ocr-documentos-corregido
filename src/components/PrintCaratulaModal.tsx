@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Printer, Car, ShieldCheck } from 'lucide-react';
 import { ExpedienteCredito } from '../types';
 
@@ -17,6 +17,14 @@ export const PrintCaratulaModal: React.FC<PrintCaratulaModalProps> = ({
     window.print();
   };
 
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   const ine = expediente.ine || {};
   const dom = ine.domicilio || {};
   const montoCotizado = Math.max(0, Number(expediente.montoFinanciar) || 0);
@@ -30,10 +38,10 @@ export const PrintCaratulaModal: React.FC<PrintCaratulaModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-2 sm:p-4 backdrop-blur-md overflow-y-auto"
+      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 p-2 sm:p-4 backdrop-blur-md overflow-hidden"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="relative w-full max-w-4xl bg-white text-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col my-8 print:m-0 print:p-0 print:border-none print:shadow-none">
+      <div className="relative w-full max-w-5xl max-h-[94vh] bg-white text-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col print:m-0 print:p-0 print:border-none print:shadow-none">
         {/* Screen Toolbar */}
         <div className="flex items-center justify-between px-6 py-4 bg-slate-950 text-white print:hidden">
           <div className="flex items-center gap-2">
@@ -43,6 +51,7 @@ export const PrintCaratulaModal: React.FC<PrintCaratulaModalProps> = ({
 
           <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={handlePrint}
               className="py-2 px-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-red-900/30"
             >
@@ -50,7 +59,8 @@ export const PrintCaratulaModal: React.FC<PrintCaratulaModalProps> = ({
               Imprimir / Guardar PDF
             </button>
             <button
-              onClick={onClose}
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onClose(); }}
               className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
             >
               <X className="w-5 h-5" />
@@ -59,14 +69,18 @@ export const PrintCaratulaModal: React.FC<PrintCaratulaModalProps> = ({
         </div>
 
         {/* Printable Sheet */}
-        <div className="p-8 sm:p-12 print:p-6 text-slate-900 bg-white space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 sm:p-10 print:overflow-visible print:p-6 text-slate-900 bg-white space-y-6">
           {/* Header */}
-          <div className="flex items-start justify-between border-b-2 border-red-600 pb-4">
+          <div className="flex items-start justify-between border-b-4 border-red-600 pb-5 bg-gradient-to-r from-[#EEF3F8] to-white px-4 py-4 rounded-2xl">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-black tracking-tight text-slate-950">
-                  CREDI<span className="text-red-600">MÓVIL</span>
-                </span>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[#071A33] flex items-center justify-center overflow-hidden border border-[#18365C]">
+                  <img src="https://credimovil.mx/wp-content/uploads/2024/05/logo-white-170px.png" alt="CrediMóvil" className="w-10 h-auto" />
+                </div>
+                <div>
+                  <div className="text-2xl font-black tracking-tight text-[#071A33]">CREDI<span className="text-red-600">MÓVIL</span></div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Crédito automotriz directo</div>
+                </div>
               </div>
               <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">
                 Tu auto, más cerca de tus planes • Checklist para Trámite de Vehículo
