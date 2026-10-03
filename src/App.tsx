@@ -38,7 +38,6 @@ export default function App() {
   // Initial load
   useEffect(() => {
     // Restore the authenticated session from the HttpOnly cookie.
-    const savedUser = localStorage.getItem('credimovil_auth_user');
     api.getMe()
       .then((res) => {
         if (res?.success && res.user) {
