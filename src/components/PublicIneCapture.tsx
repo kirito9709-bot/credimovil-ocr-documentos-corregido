@@ -383,13 +383,15 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
       return;
     }
 
-    const referenciasIncompletas = referencias.some((r) => !r.nombre.trim() || !r.telefono.trim());
+    const referenciasIncompletas = referencias.some(
+      (r) => !r.nombre.trim() || !r.telefono.trim() || (r.esFamiliar && !r.ciudad?.trim())
+    );
     if (referencias.length !== 3 || referenciasIncompletas) {
-      setScanError('Debes capturar las 3 referencias obligatorias: 1 familiar de otro domicilio y 2 conocidos.');
+      setScanError('Debes capturar las 3 referencias obligatorias: 1 familiar de otro domicilio y 2 conocidos. El familiar debe incluir su ciudad o municipio.');
       return;
     }
 
-    const telefonosReferencias = referencias.map((r) => r.telefono.replace(/\\D/g, ''));
+    const telefonosReferencias = referencias.map((r) => r.telefono.replace(/\D/g, ''));
     if (new Set(telefonosReferencias).size !== telefonosReferencias.length) {
       setScanError('Las 3 referencias deben tener teléfonos distintos.');
       return;
