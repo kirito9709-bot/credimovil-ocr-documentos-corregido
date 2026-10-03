@@ -718,19 +718,13 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
         <div className="relative z-10">
           <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold tracking-wide uppercase flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" /> Portal Oficial CrediMóvil
-            </span>
-            <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300 text-xs font-semibold">
-              Mesa de Análisis de Crédito Automotriz
-            </span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
             Apertura de Expediente para <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-rose-400">Análisis y Fondeo</span>
           </h1>
           <p className="text-sm text-slate-300 max-w-3xl mt-2 leading-relaxed">
-            Completa la información del solicitante y carga los <strong>3 documentos obligatorios</strong> requeridos por la mesa de control para dictaminar el crédito del vehículo.
+            Captura la información del solicitante y utiliza CrediMóvil OCR para extraer los datos de la documentación del crédito automotriz.
           </p>
 
           {/* 3 Pillars Summary Bar */}
