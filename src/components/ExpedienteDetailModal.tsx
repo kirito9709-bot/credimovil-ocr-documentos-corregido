@@ -96,6 +96,8 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
         tasaInteresAnual: 28,
         plazoMeses: Number(plazo),
         enganche: calcEnganche,
+        engancheModo,
+        enganchePorcentaje: calcEnganchePorcentajeReal,
         autoPrecio: Number(precio),
         montoFinanciar: calcMontoFinanciar,
         mensualidadEstimada: calcMensualidad,
