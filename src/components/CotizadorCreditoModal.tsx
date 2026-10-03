@@ -97,7 +97,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
     seguroResumenLabel + ': ' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro)),
     'Total capital financiado: ' + money(totalCapitalFinanciado),
     'Plazo: ' + plazo + ' meses',
-    ...(showRate ? ['Tasa anual: 28%'] : []),
+    ...((showRate && !customerMode) ? ['Tasa anual: 28%'] : []),
     'Mensualidad estimada: ' + money(mensualidad),
     'GPS: $260 MXN | SDD: $142 MXN',
     'Desglose mensual: Capital ' + money(capitalMensualBase) + ' + Interés ' + money(interesesMensualesBase) + ' + IVA interés ' + money(ivaMensualBase) + ' + GPS $260 + SDD $142 = ' + money(mensualidad),
@@ -181,7 +181,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
           '<tr><td>' + seguroResumenLabel + '</td><td>' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro)) + '</td></tr>' +
           '<tr><td>Total capital financiado</td><td>' + money(totalCapitalFinanciado) + '</td></tr>' +
           '<tr><td>Plazo</td><td>' + plazo + ' meses</td></tr>' +
-          (showRate ? '<tr><td>Tasa anual</td><td>28%</td></tr>' : '') +
+          ((showRate && !customerMode) ? '<tr><td>Tasa anual</td><td>28%</td></tr>' : '') +
           '<tr class="highlight"><td>Mensualidad estimada</td><td>' + money(mensualidad) + '</td></tr>' +
         '</table>' +
         '<div class="summary">' +
