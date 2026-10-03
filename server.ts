@@ -181,6 +181,34 @@ function requireLote(req: any, res: any) {
   return session;
 }
 
+async function getExpedienteRowByIdOrFolio(identifier: string) {
+  if (!supabase) throw new Error('Supabase no está configurado.');
+
+  const value = String(identifier || '').trim();
+
+  const byId = await supabase
+    .from('expedientes')
+    .select('id,folio,lote_id')
+    .eq('id', value)
+    .maybeSingle();
+
+  if (byId.error) throw new Error(`Supabase expediente: ${byId.error.message}`);
+  if (byId.data) return byId.data;
+
+  const byFolio = await supabase
+    .from('expedientes')
+    .select('id,folio,lote_id')
+    .eq('folio', value.toUpperCase())
+    .maybeSingle();
+
+  if (byFolio.error) throw new Error(`Supabase expediente por folio: ${byFolio.error.message}`);
+  return byFolio.data || null;
+}
+
+function canAccessLote(session: any, loteId: string) {
+  return session?.role === 'admin' || session?.role === 'asesor' || (session?.role === 'lote' && session?.loteId === loteId);
+}
+
 async function findLoteUser(username: string) {
   if (!supabase) return null;
   const { data, error } = await supabase
@@ -1485,6 +1513,139 @@ app.get('/api/lote/expedientes', async (req, res) => {
   } catch (error: any) {
     console.error('GET /api/lote/expedientes error:', error);
     res.status(500).json({ success: false, message: error?.message || 'No se pudieron cargar tus créditos.' });
+  }
+});
+
+// Chat directo Lote <-> Equipo CrediMóvil.
+app.get('/api/lotes/:loteId/chat', async (req, res) => {
+  const session = getSession(req);
+  if (!session) return res.status(401).json({ success: false, message: 'Debes iniciar sesión.' });
+
+  const loteId = session.role === 'lote' ? session.loteId : String(req.params.loteId || '');
+  if (!loteId || !canAccessLote(session, loteId)) {
+    return res.status(403).json({ success: false, message: 'No tienes acceso a este chat.' });
+  }
+
+  try {
+    const { data: lote, error: loteError } = await supabase
+      .from('lotes')
+      .select('id,nombre')
+      .eq('id', loteId)
+      .maybeSingle();
+
+    if (loteError) throw new Error(`Supabase lote chat: ${loteError.message}`);
+    if (!lote) return res.status(404).json({ success: false, message: 'Lote no encontrado.' });
+
+    const { data: messages, error } = await supabase
+      .from('lote_chat_mensajes')
+      .select('*')
+      .eq('lote_id', loteId)
+      .order('created_at', { ascending: true })
+      .limit(300);
+
+    if (error) throw new Error(`Supabase chat: ${error.message}`);
+
+    res.json({ success: true, lote, mensajes: messages || [] });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo cargar el chat.' });
+  }
+});
+
+app.post('/api/lotes/:loteId/chat', async (req, res) => {
+  const session = getSession(req);
+  if (!session) return res.status(401).json({ success: false, message: 'Debes iniciar sesión.' });
+
+  const loteId = session.role === 'lote' ? session.loteId : String(req.params.loteId || '');
+  if (!loteId || !canAccessLote(session, loteId)) {
+    return res.status(403).json({ success: false, message: 'No tienes acceso a este chat.' });
+  }
+
+  const mensaje = String(req.body?.mensaje || '').trim();
+  if (!mensaje) return res.status(400).json({ success: false, message: 'Escribe un mensaje.' });
+  if (mensaje.length > 2000) return res.status(400).json({ success: false, message: 'El mensaje no puede superar 2,000 caracteres.' });
+
+  try {
+    const { data, error } = await supabase
+      .from('lote_chat_mensajes')
+      .insert({
+        lote_id: loteId,
+        autor_tipo: session.role,
+        autor_usuario: session.username,
+        autor_nombre: session.nombre,
+        mensaje,
+      })
+      .select('*')
+      .single();
+
+    if (error) throw new Error(`Supabase chat: ${error.message}`);
+    res.status(201).json({ success: true, mensaje: data });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo enviar el mensaje.' });
+  }
+});
+
+// Comentarios y solicitudes ligadas al folio.
+app.get('/api/expedientes/:id/comentarios', async (req, res) => {
+  const session = getSession(req);
+  if (!session) return res.status(401).json({ success: false, message: 'Debes iniciar sesión.' });
+
+  try {
+    const exp = await getExpedienteRowByIdOrFolio(req.params.id);
+    if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+
+    if (!canAccessLote(session, exp.lote_id || '')) {
+      return res.status(403).json({ success: false, message: 'No tienes acceso a los comentarios de este expediente.' });
+    }
+
+    const { data, error } = await supabase
+      .from('expediente_comentarios')
+      .select('*')
+      .eq('expediente_id', exp.id)
+      .order('created_at', { ascending: true })
+      .limit(300);
+
+    if (error) throw new Error(`Supabase comentarios: ${error.message}`);
+    res.json({ success: true, comentarios: data || [] });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || 'No se pudieron cargar los comentarios.' });
+  }
+});
+
+app.post('/api/expedientes/:id/comentarios', async (req, res) => {
+  const session = getSession(req);
+  if (!session) return res.status(401).json({ success: false, message: 'Debes iniciar sesión.' });
+
+  const comentario = String(req.body?.comentario || '').trim();
+  const tipo = req.body?.tipo === 'SOLICITUD' ? 'SOLICITUD' : 'COMENTARIO';
+
+  if (!comentario) return res.status(400).json({ success: false, message: 'Escribe un comentario.' });
+  if (comentario.length > 3000) return res.status(400).json({ success: false, message: 'El comentario no puede superar 3,000 caracteres.' });
+
+  try {
+    const exp = await getExpedienteRowByIdOrFolio(req.params.id);
+    if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+
+    if (!canAccessLote(session, exp.lote_id || '')) {
+      return res.status(403).json({ success: false, message: 'No tienes acceso a este expediente.' });
+    }
+
+    const { data, error } = await supabase
+      .from('expediente_comentarios')
+      .insert({
+        expediente_id: exp.id,
+        autor_tipo: session.role,
+        autor_usuario: session.username,
+        autor_nombre: session.nombre,
+        tipo,
+        comentario,
+      })
+      .select('*')
+      .single();
+
+    if (error) throw new Error(`Supabase comentario: ${error.message}`);
+    res.status(201).json({ success: true, comentario: data });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo guardar el comentario.' });
   }
 });
 
