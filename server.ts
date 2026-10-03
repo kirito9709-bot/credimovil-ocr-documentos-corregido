@@ -1748,8 +1748,17 @@ app.get('/api/stats', (req, res) => {
 
   const total = expedientes.length;
   const nuevos = expedientes.filter((e: any) => e.estatus === 'NUEVO').length;
+  const preAprobados = expedientes.filter((e: any) => e.estatus === 'PRE_APROBADO').length;
   const enEvaluacion = expedientes.filter((e: any) => e.estatus === 'EN_EVALUACION').length;
-  const aprobados = expedientes.filter((e: any) => e.estatus === 'APROBADO' || e.estatus === 'PRE_APROBADO').length;
+  const aprobados = expedientes.filter((e: any) => e.estatus === 'APROBADO').length;
+  const contratos = expedientes.filter((e: any) => e.estatus === 'CONTRATO').length;
+  const gps = expedientes.filter((e: any) => e.estatus === 'GPS').length;
+  const fondeo = expedientes.filter((e: any) =>
+    e.estatus === 'FONDEO' ||
+    e.estatus === 'FONDEO_PENDIENTE' ||
+    e.estatus === 'FONDEO_REVISION' ||
+    e.estatus === 'FONDEADO'
+  ).length;
   const fondeoRevision = expedientes.filter((e: any) => e.estatus === 'FONDEO_REVISION' || e.estatus === 'FONDEO_PENDIENTE').length;
   const fondeados = expedientes.filter((e: any) => e.estatus === 'FONDEADO').length;
 
@@ -1762,8 +1771,12 @@ app.get('/api/stats', (req, res) => {
     stats: {
       total,
       nuevos,
+      preAprobados,
       enEvaluacion,
       aprobados,
+      contratos,
+      gps,
+      fondeo,
       fondeoRevision,
       fondeados,
       montoTotalFinanciado,
