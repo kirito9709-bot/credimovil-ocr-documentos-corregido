@@ -39,7 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#d9e7e7] shadow-sm">
+    <header className="sticky top-0 z-40 bg-[#163F41]/98 backdrop-blur-md border-b border-[#2E766F] shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand: CrediMóvil */}
@@ -47,25 +47,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center gap-3 cursor-pointer group"
             onClick={() => selectTab('captura')}
           >
-            <div className="w-[132px] sm:w-[150px] flex items-center justify-center group-hover:scale-[1.02] transition">
-              <img
-                src="https://credimovil.mx/wp-content/uploads/2024/05/logo-white-170px.png"
-                alt="CrediMóvil"
-                className="w-full h-auto object-contain"
-              />
-            </div>
-            <div className="hidden xl:block">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-extrabold tracking-wide text-[#163F41]">
-                  CREDIMÓVIL
-                </span>
-                <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded bg-red-500/10 text-[#4E9B92] border border-red-500/20">
-                  OCR & Fondeo
-                </span>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-[132px] sm:w-[150px] flex items-center justify-center">
+                <img
+                  src="https://credimovil.mx/wp-content/uploads/2024/05/logo-white-170px.png"
+                  alt="CrediMóvil"
+                  className="w-full h-auto object-contain"
+                />
               </div>
-              <p className="text-[11px] text-slate-400 hidden sm:block">
-                Tu auto, más cerca de tus planes
-              </p>
+              <div className="hidden sm:block">
+                <p className="text-[11px] text-white/80">Tu auto, más cerca de tus planes</p>
+              </div>
             </div>
           </div>
 
@@ -73,7 +65,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={() => setMobileOpen((open) => !open)}
-            className="md:hidden p-2 rounded-xl bg-slate-900 border border-slate-800 text-[#163F41]"
+            className="md:hidden p-2 rounded-xl bg-white/10 border border-white/15 text-white"
             aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -85,8 +77,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => onSelectTab('captura')}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
                 currentTab === 'captura'
-                  ? 'bg-[#163F41] text-white shadow-md shadow-[#163F41]/20'
-                  : 'text-[#35585A] hover:text-[#163F41] hover:bg-[#EAF3F3]'
+                  ? 'bg-[#4E9B92] text-white shadow-md shadow-[#0E2E30]/20'
+                  : 'text-white/85 hover:text-white hover:bg-white/10'
               }`}
             >
               <Scan className="w-4 h-4" />
@@ -98,7 +90,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 relative ${
                 currentTab === 'fondeo'
                   ? 'bg-[#163F41] text-white shadow-md shadow-[#163F41]/20'
-                  : 'text-[#35585A] hover:text-[#163F41] hover:bg-[#EAF3F3]'
+                  : 'text-white/80 hover:text-white hover:bg-[#EAF3F3]'
               }`}
             >
               <FolderSync className="w-4 h-4" />
@@ -110,8 +102,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => selectTab('admin')}
                 className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
                   currentTab === 'admin'
-                    ? 'bg-[#163F41] text-white'
-                    : 'text-[#35585A] hover:text-[#163F41] hover:bg-[#EAF3F3]'
+                    ? 'bg-[#4E9B92] text-white'
+                    : 'text-white/85 hover:text-white hover:bg-white/10'
                 }`}
               >
                 {isAdminAuth ? (
@@ -128,7 +120,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
                 currentTab === 'loteportal'
                   ? 'bg-[#4E9B92] text-white'
-                  : 'text-[#35585A] hover:text-[#163F41] hover:bg-[#EAF3F3]'
+                  : 'text-white/85 hover:text-white hover:bg-white/10'
               }`}
             >
               <UserRound className="w-4 h-4" />
@@ -166,7 +158,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="hidden md:flex items-center gap-2">
             <button
               onClick={() => selectTab('lotes')}
-              className="hidden lg:flex items-center gap-1.5 text-xs text-[#35585A] hover:text-[#163F41] px-3 py-1.5 rounded-lg bg-[#F3F8F8] hover:bg-[#EAF3F3] border border-[#d9e7e7] transition"
+              className="hidden lg:flex items-center gap-1.5 text-xs text-[#35585A] hover:text-[#163F41] px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 transition"
               title="Directorio de Lotes Asociados"
             >
               <Building2 className="w-3.5 h-3.5 text-red-400" />
