@@ -1196,7 +1196,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
       {/* Preview modal for PDF & PNG */}
       {previewDocUrl && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/90 p-4">
-          <div className="relative max-w-4xl max-h-[90vh] bg-slate-900 rounded-2xl overflow-hidden p-4 border border-slate-700 flex flex-col w-full">
+          <div className="relative w-full max-w-4xl h-[92vh] sm:h-auto max-h-[92vh] bg-[#1C2541] rounded-2xl overflow-hidden p-3 sm:p-4 border border-[#2E3A59] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-2">
               <h4 className="text-sm font-bold text-white">{previewDocTitle}</h4>
               <button
@@ -1208,18 +1208,42 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
             </div>
             <div className="flex-1 overflow-auto flex items-center justify-center">
               {isPdfUrl(previewDocUrl) ? (
-                <object
-                  data={previewDocUrl}
-                  type="application/pdf"
-                  className="w-full h-[75vh] rounded"
-                >
-                  <p className="text-xs text-slate-400">PDF</p>
-                </object>
+                <>
+                  <div className="hidden md:flex w-full h-[75vh] items-center justify-center">
+                    <object
+                      data={previewDocUrl}
+                      type="application/pdf"
+                      className="w-full h-full rounded bg-white"
+                    >
+                      <div className="text-center p-6 text-slate-300">
+                        <p className="text-sm mb-3">Tu navegador no previsualiza el PDF directamente.</p>
+                        <a href={previewDocUrl} target="_blank" rel="noopener noreferrer" className="py-2.5 px-4 bg-red-600 text-white rounded-xl text-xs font-bold inline-flex items-center gap-2">
+                          <ExternalLink className="w-4 h-4" /> Abrir PDF
+                        </a>
+                      </div>
+                    </object>
+                  </div>
+                  <div className="md:hidden w-full rounded-2xl border border-[#2E3A59] bg-[#121824] p-6 text-center">
+                    <FileText className="w-12 h-12 text-red-400 mx-auto mb-3" />
+                    <h5 className="text-base font-black text-white">PDF listo para visualizar</h5>
+                    <p className="text-xs text-slate-400 mt-2 mb-5">
+                      En celular, Chrome puede no mostrar PDFs dentro de esta ventana. Ábrelo directamente para verlo completo.
+                    </p>
+                    <div className="grid grid-cols-1 gap-2">
+                      <a href={previewDocUrl} target="_blank" rel="noopener noreferrer" className="py-3 px-4 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2">
+                        <ExternalLink className="w-4 h-4" /> Abrir PDF en el celular
+                      </a>
+                      <a href={previewDocUrl} download={previewDocTitle || 'documento.pdf'} className="py-3 px-4 bg-[#1C2541] hover:bg-[#2E3A59] border border-[#2E3A59] text-white rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2">
+                        <Download className="w-4 h-4" /> Descargar PDF
+                      </a>
+                    </div>
+                  </div>
+                </>
               ) : (
                 <img
                   src={previewDocUrl}
                   alt="Documento"
-                  className="max-h-[75vh] object-contain rounded"
+                  className="max-h-[75vh] max-w-full object-contain rounded"
                 />
               )}
             </div>
