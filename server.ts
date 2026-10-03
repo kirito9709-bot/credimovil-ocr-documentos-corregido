@@ -1009,6 +1009,23 @@ async function getSupabaseExpedientes() {
     documentRows = docs || [];
   }
 
+  const loteIds = Array.from(new Set((data || []).map((row: any) => row.lote_id || row.data?.loteId).filter(Boolean)));
+  const loteContactById = new Map<string, { telefono?: string; correo?: string }>();
+  if (loteIds.length > 0) {
+    const { data: loteRows, error: loteError } = await supabase
+      .from('lotes')
+      .select('id,telefono,correo')
+      .in('id', loteIds);
+    if (!loteError) {
+      for (const lote of loteRows || []) {
+        loteContactById.set(lote.id, {
+          telefono: lote.telefono || '',
+          correo: lote.correo || '',
+        });
+      }
+    }
+  }
+
   const docsByExpediente = new Map<string, any[]>();
   for (const doc of documentRows) {
     const list = docsByExpediente.get(doc.expediente_id) || [];
@@ -1029,6 +1046,8 @@ async function getSupabaseExpedientes() {
       loteId: row.lote_id || source.loteId || '',
       loteNombre: source.loteNombre || '',
       telefono: row.telefono || source.telefono || '',
+      telefonoLote: source.telefonoLote || loteContactById.get(row.lote_id || source.loteId)?.telefono || '',
+      correoLote: source.correoLote || loteContactById.get(row.lote_id || source.loteId)?.correo || '',
       autoMarca: row.auto_marca || source.autoMarca || '',
       autoModelo: row.auto_modelo || source.autoModelo || '',
       autoAno: row.auto_ano || source.autoAno || '',
