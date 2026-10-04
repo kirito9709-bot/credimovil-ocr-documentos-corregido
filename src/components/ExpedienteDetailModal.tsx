@@ -1187,6 +1187,13 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                   <p className="text-xs text-slate-500 italic">No se han adjuntado estados de cuenta en este expediente.</p>
                 )}
               </div>
+
+              {/* OCR visible directly with the statement documents */}
+              {(expediente.estadosCuenta?.archivoConsolidadoUrl || expediente.estadosCuenta?.mes1Url || expediente.estadosCuenta?.mes2Url || expediente.estadosCuenta?.mes3Url) && (
+                <div className="pt-4 border-t border-slate-800">
+                  <EstadosCuentaOCRPanel expediente={expediente} onUpdate={onUpdate} />
+                </div>
+              )}
             </div>
           )}
         </div>
