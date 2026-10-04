@@ -47,6 +47,14 @@ export type EstatusDocumentoFondeo = 'PENDIENTE' | 'SUBIDO' | 'APROBADO' | 'RECH
 
 export type CategoriaDocumento = 'INICIO_CREDITO' | 'VEHICULO_BASICA' | 'VEHICULO_LEGALIZADO' | 'PAGO_FONDEO';
 
+export interface NominaDocumento {
+  archivoUrl?: string;
+  archivoNombre?: string;
+  archivoTipo?: string;
+  archivoTamano?: number;
+  fechaSubida?: string;
+}
+
 export interface DocumentoFondeo {
   id: string;
   categoria: CategoriaDocumento;
@@ -193,6 +201,7 @@ export interface ExpedienteCredito {
 
   // 3. Estados de Cuenta de los últimos 3 meses para Análisis
   estadosCuenta?: EstadosCuentaAnalisis;
+  nominas?: NominaDocumento[];
   estadosCuentaAnalisis?: EstadosCuentaAnalisisResultado;
 
   // 4. Checklist Inicio de Crédito Automotriz (CrediMóvil)
