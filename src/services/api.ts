@@ -222,6 +222,15 @@ export const api = {
     return res.json();
   },
 
+  async getEstadosCuentaOcrJob(expedienteId: string, jobId: string) {
+    const res = await fetch(
+      '/api/expedientes/' + encodeURIComponent(expedienteId) + '/estados-cuenta/ocr-job/' + encodeURIComponent(jobId),
+      { headers: authHeaders() }
+    );
+    if (!res.ok) await parseError(res, 'No se pudo consultar el estado del OCR.');
+    return res.json();
+  },
+
   async downloadEstadosCuentaExcel(expedienteId: string, folio?: string) {
     const res = await fetch('/api/expedientes/' + encodeURIComponent(expedienteId) + '/estados-cuenta/excel', { headers: authHeaders() });
     if (!res.ok) await parseError(res, 'No se pudo generar el Excel de estados de cuenta.');
