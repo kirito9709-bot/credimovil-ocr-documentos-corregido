@@ -7,21 +7,17 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const archiverModule = require('archiver');
-const archiver = typeof archiverModule === 'function'
-  ? archiverModule
-  : typeof archiverModule?.default === 'function'
-    ? archiverModule.default
-    : typeof archiverModule?.create === 'function'
-      ? archiverModule.create
-      : typeof archiverModule?.archiver === 'function'
-        ? archiverModule.archiver
-        : null;
+const archiverModule = await import('archiver');
+const archiver =
+  (typeof archiverModule.create === 'function' && archiverModule.create) ||
+  (typeof archiverModule.default?.create === 'function' && archiverModule.default.create) ||
+  (typeof archiverModule.default === 'function' && archiverModule.default) ||
+  null;
 
 if (!archiver) {
-  throw new Error('No se pudo inicializar el módulo archiver. Verifica la instalación de archiver.');
+  throw new Error(
+    `No se pudo inicializar archiver. Exportaciones disponibles: ${Object.keys(archiverModule).join(', ')}`
+  );
 }
 import * as XLSX from 'xlsx';
 
