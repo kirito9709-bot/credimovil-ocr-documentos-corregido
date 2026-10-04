@@ -2583,10 +2583,12 @@ app.get('/api/expedientes/:id/estados-cuenta/excel', async (req, res) => {
         Monto: m.monto,
         Saldo: m.saldo ?? '',
         Clasificacion: m.clasificacion || '',
+        Confianza: typeof m.confianza === 'number' ? Math.round(m.confianza * 100) + '%' : '',
+        Fuente: m.fuente || '',
         Mes: m.mes
       }));
       const ws = XLSX.utils.json_to_sheet(data);
-      ws['!cols'] = [{wch:14},{wch:48},{wch:24},{wch:18},{wch:12},{wch:15},{wch:15},{wch:15},{wch:15},{wch:18},{wch:20}];
+      ws['!cols'] = [{wch:14},{wch:48},{wch:24},{wch:18},{wch:12},{wch:15},{wch:15},{wch:15},{wch:15},{wch:18},{wch:14},{wch:24},{wch:20}];
       XLSX.utils.book_append_sheet(wb, ws, name);
     };
     makeSheet(ingresos, 'Ingresos'); makeSheet(egresos, 'Egresos'); makeSheet(movimientos, 'Movimientos');
