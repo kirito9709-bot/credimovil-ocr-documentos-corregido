@@ -229,6 +229,8 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const [obligadoIneFrenteNombre, setObligadoIneFrenteNombre] = useState('');
   const [obligadoIneReverso, setObligadoIneReverso] = useState<string | null>(null);
   const [obligadoIneReversoNombre, setObligadoIneReversoNombre] = useState('');
+  const [isScanningObligado, setIsScanningObligado] = useState(false);
+  const [obligadoOcrError, setObligadoOcrError] = useState<string | null>(null);
   const [obligadoComprobante, setObligadoComprobante] = useState<string | null>(null);
   const [obligadoComprobanteNombre, setObligadoComprobanteNombre] = useState('');
   const [obligadoMes1, setObligadoMes1] = useState<string | null>(null);
@@ -557,6 +559,52 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
       });
   };
 
+  const handleRunObligadoOcr = async () => {
+    if (!obligadoIneFrente) {
+      setObligadoOcrError('Sube primero el frente del INE del obligado solidario.');
+      return;
+    }
+
+    setIsScanningObligado(true);
+    setObligadoOcrError(null);
+
+    try {
+      const res = await api.scanIne(obligadoIneFrente, obligadoIneReverso || undefined);
+      if (!res.success || !res.data) {
+        throw new Error(res.message || 'No se pudieron extraer los datos del obligado solidario.');
+      }
+
+      const data = res.data;
+      let finalRfc = data.rfc || '';
+      if (!finalRfc || finalRfc.length < 10) {
+        finalRfc = calcularRfcBase(
+          data.curp,
+          data.nombre,
+          data.primerApellido,
+          data.segundoApellido,
+          data.fechaNacimiento
+        );
+      }
+
+      const nombreCompleto = data.nombreCompleto ||
+        [data.nombre, data.primerApellido, data.segundoApellido].filter(Boolean).join(' ').trim();
+
+      setObligadoNombre(nombreCompleto);
+      setObligadoCurp(data.curp || '');
+      setObligadoRfc(finalRfc);
+      setObligadoFechaNacimiento(data.fechaNacimiento || '');
+      setObligadoSexo(data.sexo || '');
+    } catch (error: any) {
+      console.error(error);
+      setObligadoOcrError(
+        error?.message ||
+        'No se pudo leer el INE del obligado solidario. Puedes capturar los datos manualmente.'
+      );
+    } finally {
+      setIsScanningObligado(false);
+    }
+  };
+
   // Readiness evaluation for analysis
   const hasIneCompleta = Boolean(fotoFrente && fotoReverso);
   const hasComprobanteDomicilio = Boolean(comprobanteDomicilioDoc);
@@ -810,6 +858,8 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     setConsolidadoDoc(null);
     setConsolidadoNombre('');
     setNominas([]);
+    setIsScanningObligado(false);
+    setObligadoOcrError(null);
     setIneData({
       nombre: '',
       primerApellido: '',
@@ -2670,6 +2720,42 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     </div>
                   ))}
                 </div>
+
+                {obligadoIneFrente && (
+                  <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/5 p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-black text-slate-100">Extraer datos del obligado con OCR</p>
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          Completa automáticamente nombre, CURP, RFC, fecha de nacimiento y sexo. Revisa los datos antes de guardar.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRunObligadoOcr}
+                        disabled={isScanningObligado}
+                        className="py-2.5 px-4 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shrink-0"
+                      >
+                        {isScanningObligado ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            Leyendo INE...
+                          </>
+                        ) : (
+                          <>
+                            <Scan className="w-4 h-4" />
+                            Extraer datos con OCR
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    {obligadoOcrError && (
+                      <div className="mt-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-300">
+                        {obligadoOcrError}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="mt-4 border border-[#2E3A59] rounded-2xl p-4 bg-[#121824]/60">
                   <div className="flex items-center justify-between"><span className="text-xs font-bold text-slate-200">Comprobante de domicilio <span className="text-red-500">*</span></span>{obligadoComprobante && <Check className="w-4 h-4 text-emerald-600" />}</div>
