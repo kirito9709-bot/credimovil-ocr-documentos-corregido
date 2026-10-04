@@ -2292,6 +2292,8 @@ function normalizeStatementResult(parsed: any, docType: string) {
       cargo: cargo || undefined,
       abono: abono || undefined,
       clasificacion: hasExplicitColumns ? 'COLUMNAS' : 'INFERIDA',
+      confianza: Number.isFinite(Number(m?.confianza)) ? Number(m.confianza) : undefined,
+      fuente: String(m?.fuente || parsed?._ocrMeta?.provider || 'GEMINI_VISION'),
     };
 
     if (!base.descripcion) return [];
