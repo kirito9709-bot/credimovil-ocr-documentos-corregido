@@ -73,6 +73,30 @@ export interface ReferenciaPersonal {
   ciudad?: string;
 }
 
+export interface EstadoCuentaMovimiento {
+  fecha: string;
+  descripcion: string;
+  referencia?: string;
+  tipo: 'INGRESO' | 'EGRESO';
+  monto: number;
+  categoria?: string;
+  saldo?: number;
+  mes?: string;
+}
+
+export interface EstadosCuentaAnalisisDetalle {
+  procesadoEn: string;
+  bancoEmisor?: string;
+  cuentaUltimos4?: string;
+  movimientos: EstadoCuentaMovimiento[];
+  resumen: {
+    ingresos: number;
+    egresos: number;
+    diferencia: number;
+    movimientos: number;
+  };
+}
+
 export interface EstadosCuentaAnalisis {
   mes1Url?: string;
   mes1Nombre?: string;
@@ -112,6 +136,7 @@ export interface ObligadoSolidarioDocumentos {
   comprobanteDomicilioUrl?: string;
   comprobanteDomicilioNombre?: string;
   estadosCuenta?: EstadosCuentaAnalisis;
+  estadosCuentaAnalisis?: { procesadoEn: string; meses: Record<string, EstadosCuentaAnalisisDetalle>; movimientos: EstadoCuentaMovimiento[]; resumen: { ingresos: number; egresos: number; diferencia: number; movimientos: number } };
 }
 
 export interface ExpedienteCredito {
