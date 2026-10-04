@@ -1347,63 +1347,79 @@ app.delete('/api/lote-usuarios/:id', async (req, res) => {
 // Helper: Sleep utility for exponential backoff
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Helper: Call Gemini models with multi-model fallback and backoff retry for 503 / 429
+// Helper: cascada de modelos Gemini para OCR multimodal.
 async function callGeminiWithResilience(
   parts: any[],
   purpose: string
 ): Promise<string> {
-  // Ordered by speed, quota availability, and multimodal OCR accuracy
-  const candidateModels = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash-lite'];
+  // Prioridad: calidad multimodal primero; los modelos Lite quedan como último respaldo.
+  // Evitamos reintentar 429 porque suele ser una cuota agotada del proyecto/modelo.
+  const candidateModels = [
+    'gemini-3.8-flash',
+    'gemini-3.7-flash',
+    'gemini-3.6-flash',
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
+  ];
 
   if (!ai) {
     throw new Error('GEMINI_API_KEY no está configurada en el servidor. Configúrala en Render → Environment.');
   }
+
   let lastError: any = null;
 
   for (const modelName of candidateModels) {
-    // Attempt up to 2 times per candidate model in case of temporary 503 or 429 spike
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    const maxAttempts = 2;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        console.log(`[CrediMóvil OCR - ${purpose}] Trying model ${modelName} (attempt ${attempt})...`);
+        console.log(`[CrediMóvil OCR - ${purpose}] Intentando ${modelName} (intento ${attempt})...`);
+
         const response = await ai.models.generateContent({
           model: modelName,
           contents: { parts },
           config: {
             responseMimeType: 'application/json',
+            temperature: 0,
           },
         });
 
         if (response && response.text) {
-          console.log(`[CrediMóvil OCR - ${purpose}] Success with ${modelName}`);
+          console.log(`[CrediMóvil OCR - ${purpose}] OK con ${modelName}`);
           return response.text;
         }
+
+        lastError = new Error(`El modelo ${modelName} no devolvió contenido.`);
       } catch (err: any) {
         lastError = err;
+
         const msg = String(err?.message || err);
-        const code = err?.status || err?.code;
-        const isTemporary =
-          code === 503 ||
-          code === 429 ||
-          msg.includes('503') ||
-          msg.includes('UNAVAILABLE') ||
-          msg.includes('high demand') ||
-          msg.includes('RESOURCE_EXHAUSTED') ||
-          msg.includes('rate limit');
+        const code = Number(err?.status || err?.code || 0);
+        const quota = code === 429 || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota');
+        const unavailable = code === 503 || msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('high demand');
 
-        console.warn(`[CrediMóvil OCR - ${purpose}] ${modelName} attempt ${attempt} warning: ${msg.slice(0, 160)}`);
+        console.warn(
+          `[CrediMóvil OCR - ${purpose}] ${modelName} intento ${attempt}: ${msg.slice(0, 220)}`
+        );
 
-        if (isTemporary && attempt === 1) {
-          // Wait 1200ms before retrying same model
-          await sleep(1200);
+        if (quota) {
+          // 429: pasar inmediatamente al siguiente modelo.
+          break;
+        }
+
+        if (unavailable && attempt < maxAttempts) {
+          const waitMs = attempt === 1 ? 1800 : 3500;
+          await sleep(waitMs);
           continue;
         }
-        // Move to the next candidate model
+
         break;
       }
     }
   }
 
-  throw lastError || new Error('Modelos de IA temporalmente ocupados por alta demanda');
+  throw lastError || new Error('Todos los modelos Gemini de respaldo fallaron o agotaron su cuota.');
 }
 
 // 3. OCR de Credencial INE CrediMóvil con Gemini Multimodal
@@ -2212,15 +2228,52 @@ function parseGeminiJson(textValue: string) {
 
 function parseStatementMoney(value: any) {
   if (value === null || value === undefined || value === '') return 0;
-  const n = Number(String(value).replace(/[$,\\s]/g, '').replace(/[()]/g, ''));
-  return Number.isFinite(n) ? Math.abs(n) : 0;
+
+  let raw = String(value).trim();
+  if (!raw) return 0;
+
+  const negative = /^(.*)$/.test(raw) || /^-/.test(raw);
+  raw = raw.replace(/[()$\s]/g, '');
+
+  // Acepta 43,400.00 y 43.400,00 sin tratar el separador decimal como millar.
+  if (/^\d{1,3}(?:\.\d{3})+,\d{1,2}$/.test(raw)) {
+    raw = raw.replace(/\./g, '').replace(',', '.');
+  } else if (/^\d{1,3}(?:,\d{3})+\.\d{1,2}$/.test(raw)) {
+    raw = raw.replace(/,/g, '');
+  } else {
+    raw = raw.replace(/,/g, '');
+  }
+
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return 0;
+  return negative ? Math.abs(n) : Math.abs(n);
+}
+
+function statementFingerprint(row: any) {
+  const date = String(row?.fecha || '').trim().toUpperCase();
+  const description = String(row?.descripcion || '').trim().replace(/\s+/g, ' ').toUpperCase();
+  const reference = String(row?.referencia || '').trim().replace(/\s+/g, ' ').toUpperCase();
+  const cargo = parseStatementMoney(row?.cargo ?? row?.cargos);
+  const abono = parseStatementMoney(row?.abono ?? row?.abonos);
+  const saldo = row?.saldo === undefined || row?.saldo === null ? '' : parseStatementMoney(row.saldo);
+  return [date, description, reference, cargo.toFixed(2), abono.toFixed(2), saldo === '' ? '' : Number(saldo).toFixed(2)].join('|');
 }
 
 function normalizeStatementResult(parsed: any, docType: string) {
   const raw = Array.isArray(parsed?.movimientos) ? parsed.movimientos : [];
-  const normalized = raw.flatMap((m: any) => {
+  const seen = new Set<string>();
+  const uniqueRows = raw.filter((m: any) => {
+    if (!m?.descripcion) return false;
+    const fingerprint = statementFingerprint(m);
+    if (seen.has(fingerprint)) return false;
+    seen.add(fingerprint);
+    return true;
+  });
+
+  const normalized = uniqueRows.flatMap((m: any) => {
     const cargo = parseStatementMoney(m?.cargo ?? m?.cargos);
     const abono = parseStatementMoney(m?.abono ?? m?.abonos);
+    const hasExplicitColumns = cargo > 0 || abono > 0;
     const base = {
       fecha: String(m?.fecha || ''),
       descripcion: String(m?.descripcion || '').trim(),
@@ -2228,34 +2281,104 @@ function normalizeStatementResult(parsed: any, docType: string) {
       categoria: String(m?.categoria || 'OTROS').trim() || 'OTROS',
       saldo: Number.isFinite(Number(m?.saldo)) ? Number(m.saldo) : undefined,
       mes: docType,
+      cargo: cargo || undefined,
+      abono: abono || undefined,
+      clasificacion: hasExplicitColumns ? 'COLUMNAS' : 'INFERIDA',
     };
+
     if (!base.descripcion) return [];
-    // For BBVA, the column itself is authoritative: ABONOS = income, CARGOS = expense.
-    if (abono > 0 && cargo === 0) return [{ ...base, tipo: 'INGRESO', monto: abono }];
-    if (cargo > 0 && abono === 0) return [{ ...base, tipo: 'EGRESO', monto: cargo }];
+
+    // Para estados bancarios, la columna manda: ABONOS = INGRESO, CARGOS = EGRESO.
+    if (abono > 0 && cargo === 0) {
+      return [{ ...base, tipo: 'INGRESO', monto: abono }];
+    }
+    if (cargo > 0 && abono === 0) {
+      return [{ ...base, tipo: 'EGRESO', monto: cargo }];
+    }
     if (cargo > 0 && abono > 0) {
       return [
         { ...base, tipo: 'EGRESO', monto: cargo },
         { ...base, tipo: 'INGRESO', monto: abono },
       ];
     }
+
+    // Compatibilidad con respuestas antiguas. Queda marcada como INFERIDA
+    // para que la validación pueda advertir que la fila no vino de CARGOS/ABONOS.
     const tipo = String(m?.tipo || '').toUpperCase() === 'INGRESO' ? 'INGRESO' : 'EGRESO';
     const monto = parseStatementMoney(m?.monto);
-    return monto > 0 ? [{ ...base, tipo, monto }] : [];
+    return monto > 0 ? [{ ...base, tipo, monto, clasificacion: 'INFERIDA' }] : [];
   });
 
-  const ingresos = normalized.filter((m: any) => m.tipo === 'INGRESO').reduce((s: number, m: any) => s + m.monto, 0);
-  const egresos = normalized.filter((m: any) => m.tipo === 'EGRESO').reduce((s: number, m: any) => s + m.monto, 0);
+  const ingresos = normalized
+    .filter((m: any) => m.tipo === 'INGRESO')
+    .reduce((s: number, m: any) => s + m.monto, 0);
+  const egresos = normalized
+    .filter((m: any) => m.tipo === 'EGRESO')
+    .reduce((s: number, m: any) => s + m.monto, 0);
+
   return {
     bancoEmisor: String(parsed?.bancoEmisor || ''),
     cuentaUltimos4: String(parsed?.cuentaUltimos4 || ''),
     movimientos: normalized,
+    filasLeidas: uniqueRows.length,
+    filasDuplicadas: Math.max(0, raw.length - uniqueRows.length),
     resumen: {
       ingresos: Math.round(ingresos * 100) / 100,
       egresos: Math.round(egresos * 100) / 100,
       diferencia: Math.round((ingresos - egresos) * 100) / 100,
       movimientos: normalized.length
     }
+  };
+}
+
+function validateStatementResult(parsed: any, detail: any) {
+  const raw = Array.isArray(parsed?.movimientos) ? parsed.movimientos : [];
+  const inconsistencias: string[] = [];
+  let filasConSaldoComparables = 0;
+  let filasSaldoCorrectas = 0;
+
+  for (let i = 1; i < raw.length; i++) {
+    const previous = raw[i - 1];
+    const current = raw[i];
+
+    const previousSaldoRaw = previous?.saldo;
+    const currentSaldoRaw = current?.saldo;
+    if (previousSaldoRaw === undefined || previousSaldoRaw === null || currentSaldoRaw === undefined || currentSaldoRaw === null) {
+      continue;
+    }
+
+    const previousSaldo = parseStatementMoney(previousSaldoRaw);
+    const currentSaldo = parseStatementMoney(currentSaldoRaw);
+    const cargo = parseStatementMoney(current?.cargo ?? current?.cargos);
+    const abono = parseStatementMoney(current?.abono ?? current?.abonos);
+    const expected = Math.round((previousSaldo + abono - cargo) * 100) / 100;
+    const delta = Math.round((currentSaldo - expected) * 100) / 100;
+
+    filasConSaldoComparables++;
+
+    if (Math.abs(delta) <= 0.05) {
+      filasSaldoCorrectas++;
+    } else {
+      inconsistencias.push(
+        `Fila ${i + 1}: saldo esperado ${expected.toFixed(2)} y saldo leído ${currentSaldo.toFixed(2)} (diferencia ${delta.toFixed(2)}).`
+      );
+    }
+  }
+
+  const inferidas = (detail.movimientos || []).filter((m: any) => m.clasificacion === 'INFERIDA').length;
+  if (inferidas > 0) {
+    inconsistencias.push(`${inferidas} movimiento(s) no pudieron clasificarse desde una columna CARGOS/ABONOS explícita.`);
+  }
+
+  const estado = inconsistencias.length === 0 ? 'OK' : 'REVISAR';
+
+  return {
+    estado,
+    filasLeidas: Number(detail.filasLeidas || 0),
+    filasDuplicadas: Number(detail.filasDuplicadas || 0),
+    filasConSaldoComparables,
+    filasSaldoCorrectas,
+    inconsistencias,
   };
 }
 
@@ -2280,34 +2403,87 @@ app.post('/api/expedientes/:id/estados-cuenta/ocr', async (req, res) => {
       const buffer = Buffer.from(await fileBlob.arrayBuffer());
       const lowerName = String(doc.nombre || doc.storage_path || '').toLowerCase();
       const mimeType = lowerName.endsWith('.pdf') ? 'application/pdf' : lowerName.endsWith('.png') ? 'image/png' : lowerName.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
-      const prompt = `Eres un sistema OCR financiero especializado en estados de cuenta bancarios de México. Analiza visualmente TODO el estado de cuenta y devuelve EXCLUSIVAMENTE JSON válido.
+      const prompt = `Eres el motor de OCR financiero de CrediMóvil. Tu prioridad absoluta es NO alterar ni inventar importes.
 
-REGLA CRÍTICA PARA BBVA: en la tabla "Detalle de Movimientos Realizados", las columnas son FECHA OPER, FECHA LIQ, DESCRIPCIÓN, REFERENCIA, CARGOS, ABONOS y SALDO LIQUIDACIÓN.
-- CARGOS = dinero que SALE de la cuenta = EGRESO.
-- ABONOS = dinero que ENTRA a la cuenta = INGRESO.
-- El importe debe salir de la columna CARGOS o ABONOS, no de la descripción.
-- NO confundas SALDO LIQUIDACIÓN con CARGOS o ABONOS.
-- No cuentes saldos iniciales/finales, totales, "Cargos Objetados" o "Abonos Objetados" como movimientos.
-- No dupliques movimientos entre páginas.
-- Conserva cargo y abono como números positivos.
-- Si una fila tiene cargo y abono, conserva ambos.
-- Si puedes leer saldo anterior y posterior, úsalo solo para validar; nunca inventes o corrijas importes.
-- Para otros bancos, identifica las columnas equivalentes.
+Analiza visualmente TODO el estado de cuenta. Identifica primero la tabla real de movimientos y después transcribe cada fila.
+
+REGLAS OBLIGATORIAS PARA BBVA:
+1. En "Detalle de Movimientos Realizados", las columnas son:
+   FECHA OPER | FECHA LIQ | DESCRIPCIÓN | REFERENCIA | CARGOS | ABONOS | SALDO LIQUIDACIÓN.
+2. CARGOS = dinero que SALE de la cuenta = EGRESO.
+3. ABONOS = dinero que ENTRA a la cuenta = INGRESO.
+4. El monto DEBE copiarse de CARGOS o ABONOS. Nunca saques el monto de DESCRIPCIÓN, REFERENCIA ni SALDO LIQUIDACIÓN.
+5. SALDO LIQUIDACIÓN NO es movimiento. Sirve únicamente para validar la operación.
+6. No conviertas un 43,400.00 en 4,340.00 ni en 434.00: conserva todos los dígitos visibles.
+7. No cuentes saldos iniciales/finales, totales, "Cargos Objetados", "Abonos Objetados", intereses informativos o subtotales como movimientos, salvo que estén dentro de una fila de movimiento con una cantidad en CARGOS/ABONOS.
+8. No dupliques una fila que aparezca partida entre páginas.
+9. Si una fila tiene CARGO y ABONO, conserva ambos.
+10. Si una celda está vacía, devuelve 0. No uses otra columna para rellenarla.
+11. No inventes movimientos ni importes.
+12. Para otros bancos, identifica primero las columnas equivalentes a CARGOS y ABONOS y aplica la misma lógica.
+13. Usa SALDO para validar matemáticamente: saldo anterior + abono - cargo = saldo de la fila actual. Si no cuadra, NO corrijas el importe; conserva lo visible.
+14. Devuelve únicamente JSON válido. Sin markdown, comentarios ni explicaciones.
+
+Ejemplo visual de interpretación BBVA:
+"PAGO CUENTA DE TERCERO ... | CARGOS vacío | ABONOS 43,400.00 | SALDO 50,000.00"
+=> cargo: 0, abono: 43400.00
+"RETIRO CAJERO ... | CARGOS 400.00 | ABONOS vacío | SALDO 92,600.00"
+=> cargo: 400.00, abono: 0
 
 Devuelve exactamente:
 {"bancoEmisor":"","cuentaUltimos4":"","movimientos":[{"fecha":"YYYY-MM-DD o fecha visible","descripcion":"","referencia":"","cargo":0,"abono":0,"categoria":"NOMINA|TRANSFERENCIA|DEPOSITO|COMPRA|SERVICIOS|RENTA|IMPUESTOS|COMISION|RETIRO|OTROS","saldo":0}]}
 
 No agregues texto fuera del JSON. No inventes datos.`;
       const responseText = await callGeminiWithResilience([{ inlineData: { mimeType, data: buffer.toString('base64') } }, { text: prompt }], 'ESTADOS_CUENTA_' + doc.tipo);
-      const detail = normalizeStatementResult(parseGeminiJson(responseText), doc.tipo);
-      meses[doc.tipo] = { ...detail, nombreArchivo: doc.nombre, procesadoEn: new Date().toISOString() };
+      const parsed = parseGeminiJson(responseText);
+      const detail = normalizeStatementResult(parsed, doc.tipo);
+      const validacion = validateStatementResult(parsed, detail);
+
+      console.log(
+        `[CrediMóvil OCR - ${doc.tipo}] Filas=${detail.filasLeidas}; duplicadas=${detail.filasDuplicadas}; saldo OK=${validacion.filasSaldoCorrectas}/${validacion.filasConSaldoComparables}; estado=${validacion.estado}`
+      );
+
+      if (validacion.inconsistencias.length > 0) {
+        console.warn(
+          `[CrediMóvil OCR - ${doc.tipo}] Inconsistencias: ${validacion.inconsistencias.slice(0, 5).join(' | ')}`
+        );
+      }
+
+      meses[doc.tipo] = {
+        ...detail,
+        validacion,
+        nombreArchivo: doc.nombre,
+        procesadoEn: new Date().toISOString()
+      };
       allMovimientos.push(...detail.movimientos);
     }
     const previous = Object.entries(meses).filter(([type]) => !requestedTypes.includes(type)).flatMap(([, detail]: any) => detail?.movimientos || []);
     const movimientos = [...previous, ...allMovimientos];
     const ingresos = movimientos.filter((m: any) => m.tipo === 'INGRESO').reduce((s: number, m: any) => s + m.monto, 0);
     const egresos = movimientos.filter((m: any) => m.tipo === 'EGRESO').reduce((s: number, m: any) => s + m.monto, 0);
-    const analysis = { procesadoEn: new Date().toISOString(), meses, movimientos, resumen: { ingresos: Math.round(ingresos * 100) / 100, egresos: Math.round(egresos * 100) / 100, diferencia: Math.round((ingresos - egresos) * 100) / 100, movimientos: movimientos.length } };
+    const validaciones = Object.values(meses)
+      .map((detail: any) => detail?.validacion)
+      .filter(Boolean);
+
+    const inconsistenciasTotales = validaciones.flatMap((v: any) => v.inconsistencias || []);
+
+    const analysis = {
+      procesadoEn: new Date().toISOString(),
+      meses,
+      movimientos,
+      validacionGlobal: {
+        estado: inconsistenciasTotales.length === 0 ? 'OK' : 'REVISAR',
+        documentos: validaciones.length,
+        documentosOK: validaciones.filter((v: any) => v.estado === 'OK').length,
+        inconsistencias: inconsistenciasTotales,
+      },
+      resumen: {
+        ingresos: Math.round(ingresos * 100) / 100,
+        egresos: Math.round(egresos * 100) / 100,
+        diferencia: Math.round((ingresos - egresos) * 100) / 100,
+        movimientos: movimientos.length
+      }
+    };
     const { error: updateError } = await supabase.from('expedientes').update({ data: { ...(row.data || {}), estadosCuentaAnalisis: analysis } }).eq('id', row.id);
     if (updateError) throw new Error('Supabase análisis estados de cuenta: ' + updateError.message);
     res.json({ success: true, analysis, message: 'Estados de cuenta analizados con OCR y guardados en Supabase.' });
@@ -2332,7 +2508,24 @@ app.get('/api/expedientes/:id/estados-cuenta/excel', async (req, res) => {
     const wb = XLSX.utils.book_new();
     const resumen = [['CrediMóvil - Análisis de Estados de Cuenta'],['Folio',exp.folio],['Cliente',exp.ine?.nombreCompleto || exp.ine?.nombre || ''],[],['Resumen','Monto'],['Ingresos',analysis.resumen.ingresos],['Egresos',analysis.resumen.egresos],['Diferencia',analysis.resumen.diferencia],['Movimientos',analysis.resumen.movimientos]];
     const wsResumen = XLSX.utils.aoa_to_sheet(resumen); wsResumen['!cols'] = [{wch:30},{wch:24}]; XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
-    const makeSheet = (rows: any[], name: string) => { const data = rows.map((m: any) => ({ Fecha:m.fecha, Descripcion:m.descripcion, Referencia:m.referencia, Categoria:m.categoria, Monto:m.monto, Saldo:m.saldo ?? '', Mes:m.mes })); const ws = XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:14},{wch:48},{wch:24},{wch:18},{wch:15},{wch:15},{wch:20}]; XLSX.utils.book_append_sheet(wb, ws, name); };
+    const makeSheet = (rows: any[], name: string) => {
+      const data = rows.map((m: any) => ({
+        Fecha: m.fecha,
+        Descripcion: m.descripcion,
+        Referencia: m.referencia,
+        Categoria: m.categoria,
+        Tipo: m.tipo,
+        Cargo: m.tipo === 'EGRESO' ? (m.monto || 0) : '',
+        Abono: m.tipo === 'INGRESO' ? (m.monto || 0) : '',
+        Monto: m.monto,
+        Saldo: m.saldo ?? '',
+        Clasificacion: m.clasificacion || '',
+        Mes: m.mes
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      ws['!cols'] = [{wch:14},{wch:48},{wch:24},{wch:18},{wch:12},{wch:15},{wch:15},{wch:15},{wch:15},{wch:18},{wch:20}];
+      XLSX.utils.book_append_sheet(wb, ws, name);
+    };
     makeSheet(ingresos, 'Ingresos'); makeSheet(egresos, 'Egresos'); makeSheet(movimientos, 'Movimientos');
     const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
     res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
