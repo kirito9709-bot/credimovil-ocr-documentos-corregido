@@ -943,6 +943,9 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                     ['ESTADO_CUENTA_MES2', 'Estado de cuenta Mes 2'],
                     ['ESTADO_CUENTA_MES3', 'Estado de cuenta Mes 3'],
                     ['ESTADO_CUENTA_CONSOLIDADO', 'Estados de cuenta 3 meses (PDF)'],
+                    ['NOMINA_1', 'Nómina 1'],
+                    ['NOMINA_2', 'Nómina 2'],
+                    ['NOMINA_3', 'Nómina 3'],
                   ].map(([tipo, label]) => (
                     <div key={tipo} className="p-3 rounded-xl bg-slate-900 border border-slate-800">
                       <input
@@ -1086,6 +1089,51 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                   </div>
                 ) : (
                   <p className="text-xs text-slate-500 italic">No se adjuntó comprobante separado (se utilizó la dirección del INE).</p>
+                )}
+              </div>
+
+              {/* 3. Comprobantes de Nómina */}
+              <div className="pt-2 border-t border-slate-800">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] flex items-center justify-center font-bold">N</span>
+                  Comprobantes de Nómina (Opcionales)
+                </h4>
+
+                {expediente.nominas?.length ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {expediente.nominas.map((nomina, index) => (
+                      <div key={index} className="p-4 bg-slate-950 border border-slate-800 rounded-2xl">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-white truncate">
+                              {nomina.archivoNombre || `Nómina ${index + 1}`}
+                            </p>
+                            <p className="text-[11px] text-slate-400">
+                              Comprobante de nómina {index + 1}
+                            </p>
+                          </div>
+                        </div>
+                        {nomina.archivoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreviewDocUrl(nomina.archivoUrl || null);
+                              setPreviewDocTitle(`Comprobante de Nómina ${index + 1}`);
+                            }}
+                            className="w-full mt-3 py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                            Ver comprobante
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500 italic">No se adjuntaron comprobantes de nómina al crear el expediente.</p>
                 )}
               </div>
 
