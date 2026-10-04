@@ -7,18 +7,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
-const archiverModule = await import('archiver');
-const archiver =
-  (typeof archiverModule.create === 'function' && archiverModule.create) ||
-  (typeof archiverModule.default?.create === 'function' && archiverModule.default.create) ||
-  (typeof archiverModule.default === 'function' && archiverModule.default) ||
-  null;
-
-if (!archiver) {
-  throw new Error(
-    `No se pudo inicializar archiver. Exportaciones disponibles: ${Object.keys(archiverModule).join(', ')}`
-  );
-}
+import { ZipArchive } from 'archiver';
 import * as XLSX from 'xlsx';
 
 dotenv.config();
@@ -2199,7 +2188,7 @@ app.get('/api/expedientes/:id/documentos/zip', async (req, res) => {
     if (!docs?.length) return res.status(404).json({ success: false, message: 'Este expediente no tiene documentos almacenados.' });
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', 'attachment; filename="CrediMovil_' + sanitizeFileName(exp.folio) + '_Documentos.zip"');
-    const archive = archiver('zip', { zlib: { level: 9 } });
+    const archive = new ZipArchive({ zlib: { level: 9 } });
     archive.on('error', (err: any) => { if (!res.headersSent) res.status(500).json({ success: false, message: err.message }); else res.destroy(err); });
     archive.pipe(res);
     for (const doc of docs) {
