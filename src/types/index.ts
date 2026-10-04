@@ -110,6 +110,18 @@ export interface EstadosCuentaAnalisis {
   fechaSubida?: string;
 }
 
+export interface EstadosCuentaAnalisisResultado {
+  procesadoEn: string;
+  meses: Record<string, EstadosCuentaAnalisisDetalle>;
+  movimientos: EstadoCuentaMovimiento[];
+  resumen: {
+    ingresos: number;
+    egresos: number;
+    diferencia: number;
+    movimientos: number;
+  };
+}
+
 export interface ObligadoSolidarioDocumentos {
   requerido: boolean;
   nombre?: string;
@@ -160,6 +172,7 @@ export interface ExpedienteCredito {
 
   // 3. Estados de Cuenta de los últimos 3 meses para Análisis
   estadosCuenta?: EstadosCuentaAnalisis;
+  estadosCuentaAnalisis?: EstadosCuentaAnalisisResultado;
 
   // 4. Checklist Inicio de Crédito Automotriz (CrediMóvil)
   telefono: string;
