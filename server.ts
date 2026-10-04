@@ -9,6 +9,8 @@ import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { ZipArchive } from 'archiver';
 import * as XLSX from 'xlsx';
+import { documentAiConfigured, extractWithDocumentAi } from './server/ocr/documentAi';
+import { parseBankTables } from './server/ocr/bankParser';
 
 dotenv.config();
 
@@ -1096,6 +1098,8 @@ app.get('/api/health', (req, res) => {
     name: 'CrediMóvil OCR & Fondeo API',
     geminiConfigured: Boolean(GEMINI_API_KEY),
     geminiKeySource: process.env.GEMINI_API_KEY ? 'GEMINI_API_KEY' : (process.env.GOOGLE_API_KEY ? 'GOOGLE_API_KEY' : 'none'),
+    documentAiConfigured: documentAiConfigured(),
+    ocrProvider: String(process.env.OCR_PROVIDER || 'auto'),
     supabaseConfigured: Boolean(supabase),
     supabaseUrl: SUPABASE_URL || null,
   });
@@ -2438,13 +2442,63 @@ Devuelve exactamente:
 {"bancoEmisor":"","cuentaUltimos4":"","movimientos":[{"fecha":"YYYY-MM-DD o fecha visible","descripcion":"","referencia":"","cargo":0,"abono":0,"categoria":"NOMINA|TRANSFERENCIA|DEPOSITO|COMPRA|SERVICIOS|RENTA|IMPUESTOS|COMISION|RETIRO|OTROS","saldo":0}]}
 
 No agregues texto fuera del JSON. No inventes datos.`;
-      const responseText = await callGeminiWithResilience([{ inlineData: { mimeType, data: buffer.toString('base64') } }, { text: prompt }], 'ESTADOS_CUENTA_' + doc.tipo);
-      const parsed = parseGeminiJson(responseText);
+      let parsed: any;
+      let provider = 'GEMINI_VISION';
+      let providerConfidence: number | undefined;
+      let providerWarnings: string[] = [];
+
+      const ocrProvider = String(process.env.OCR_PROVIDER || 'auto').toLowerCase();
+      const useDocumentAi = (ocrProvider === 'document-ai' || ocrProvider === 'auto') && documentAiConfigured();
+
+      if (useDocumentAi) {
+        try {
+          const extracted = await extractWithDocumentAi(buffer, mimeType);
+          const bankParsed = parseBankTables(extracted.text, extracted.tableRows);
+
+          if (bankParsed.movimientos.length > 0) {
+            provider = bankParsed.parser;
+            providerConfidence = bankParsed.confidence;
+            providerWarnings = bankParsed.warnings;
+            parsed = {
+              bancoEmisor: bankParsed.bancoEmisor,
+              movimientos: bankParsed.movimientos,
+              _ocrMeta: {
+                provider: extracted.provider,
+                parser: bankParsed.parser,
+                confidence: bankParsed.confidence,
+                pageCount: extracted.pageCount,
+                tableDetected: bankParsed.tableDetected,
+                warnings: bankParsed.warnings,
+              },
+            };
+            console.log(
+              `[CrediMóvil OCR - ${doc.tipo}] Document AI encontró ${bankParsed.movimientos.length} movimientos; parser=${bankParsed.parser}; confianza=${bankParsed.confidence}`
+            );
+          } else {
+            console.warn(
+              `[CrediMóvil OCR - ${doc.tipo}] Document AI no encontró filas utilizables; se utilizará Gemini como fallback.`
+            );
+          }
+        } catch (documentAiError: any) {
+          console.warn(
+            `[CrediMóvil OCR - ${doc.tipo}] Document AI falló y se utilizará Gemini: ${String(documentAiError?.message || documentAiError).slice(0, 240)}`
+          );
+        }
+      }
+
+      if (!parsed) {
+        const responseText = await callGeminiWithResilience(
+          [{ inlineData: { mimeType, data: buffer.toString('base64') } }, { text: prompt }],
+          'ESTADOS_CUENTA_' + doc.tipo
+        );
+        parsed = parseGeminiJson(responseText);
+      }
+
       const detail = normalizeStatementResult(parsed, doc.tipo);
       const validacion = validateStatementResult(parsed, detail);
 
       console.log(
-        `[CrediMóvil OCR - ${doc.tipo}] Filas=${detail.filasLeidas}; duplicadas=${detail.filasDuplicadas}; saldo OK=${validacion.filasSaldoCorrectas}/${validacion.filasConSaldoComparables}; estado=${validacion.estado}`
+        `[CrediMóvil OCR - ${doc.tipo}] proveedor=${provider}; confianza=${providerConfidence ?? 'n/a'}; filas=${detail.filasLeidas}; duplicadas=${detail.filasDuplicadas}; saldo OK=${validacion.filasSaldoCorrectas}/${validacion.filasConSaldoComparables}; estado=${validacion.estado}`
       );
 
       if (validacion.inconsistencias.length > 0) {
@@ -2456,6 +2510,9 @@ No agregues texto fuera del JSON. No inventes datos.`;
       meses[doc.tipo] = {
         ...detail,
         validacion,
+        proveedorOCR: provider,
+        confianzaOCR: providerConfidence,
+        advertenciasOCR: providerWarnings,
         nombreArchivo: doc.nombre,
         procesadoEn: new Date().toISOString()
       };
