@@ -79,15 +79,30 @@ export interface EstadoCuentaMovimiento {
   referencia?: string;
   tipo: 'INGRESO' | 'EGRESO';
   monto: number;
+  cargo?: number;
+  abono?: number;
+  clasificacion?: 'COLUMNAS' | 'INFERIDA' | string;
   categoria?: string;
   saldo?: number;
   mes?: string;
+}
+
+export interface EstadosCuentaValidacion {
+  estado: 'OK' | 'REVISAR';
+  filasLeidas: number;
+  filasDuplicadas: number;
+  filasConSaldoComparables: number;
+  filasSaldoCorrectas: number;
+  inconsistencias: string[];
 }
 
 export interface EstadosCuentaAnalisisDetalle {
   procesadoEn: string;
   bancoEmisor?: string;
   cuentaUltimos4?: string;
+  filasLeidas?: number;
+  filasDuplicadas?: number;
+  validacion?: EstadosCuentaValidacion;
   movimientos: EstadoCuentaMovimiento[];
   resumen: {
     ingresos: number;
@@ -114,6 +129,12 @@ export interface EstadosCuentaAnalisisResultado {
   procesadoEn: string;
   meses: Record<string, EstadosCuentaAnalisisDetalle>;
   movimientos: EstadoCuentaMovimiento[];
+  validacionGlobal?: {
+    estado: 'OK' | 'REVISAR';
+    documentos: number;
+    documentosOK: number;
+    inconsistencias: string[];
+  };
   resumen: {
     ingresos: number;
     egresos: number;
