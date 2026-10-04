@@ -166,7 +166,6 @@ export interface ObligadoSolidarioDocumentos {
   tiempoEnTrabajo?: string;
   nombreUbicacionEmpleo?: string;
   direccionEmpleo?: string;
-  giroActividadEmpresa?: string;
   dependientesEconomicos?: number;
   estadoCivil?: 'SOLTERO' | 'CASADO' | 'UNION_LIBRE' | 'DIVORCIADO' | 'VIUDO' | '';
   referenciasPersonales?: ReferenciaPersonal[];
