@@ -200,6 +200,40 @@ export const api = {
     return res.json();
   },
 
+  async downloadExpedienteDocuments(expedienteId: string, folio?: string) {
+    const res = await fetch('/api/expedientes/' + encodeURIComponent(expedienteId) + '/documentos/zip', { headers: authHeaders() });
+    if (!res.ok) await parseError(res, 'No se pudieron descargar los documentos.');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'CrediMovil_' + (folio || expedienteId) + '_Documentos.zip';
+    document.body.appendChild(link); link.click(); link.remove();
+    URL.revokeObjectURL(url);
+  },
+
+  async analyzeEstadosCuenta(expedienteId: string, tipos?: string[]) {
+    const res = await fetch('/api/expedientes/' + encodeURIComponent(expedienteId) + '/estados-cuenta/ocr', {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ tipos }),
+    });
+    if (!res.ok) await parseError(res, 'No se pudieron analizar los estados de cuenta.');
+    return res.json();
+  },
+
+  async downloadEstadosCuentaExcel(expedienteId: string, folio?: string) {
+    const res = await fetch('/api/expedientes/' + encodeURIComponent(expedienteId) + '/estados-cuenta/excel', { headers: authHeaders() });
+    if (!res.ok) await parseError(res, 'No se pudo generar el Excel de estados de cuenta.');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'CrediMovil_' + (folio || expedienteId) + '_Ingresos_Egresos.xlsx';
+    document.body.appendChild(link); link.click(); link.remove();
+    URL.revokeObjectURL(url);
+  },
+
   async uploadExpedienteDocument(expedienteId: string, payload: { tipo: string; archivoData: string; archivoNombre: string; displayName?: string }) {
     const res = await fetch(`/api/expedientes/${encodeURIComponent(expedienteId)}/documentos`, {
       method: 'POST',
