@@ -31,6 +31,7 @@ import { ExpedienteCredito, EstatusCredito } from '../types';
 import { api } from '../services/api';
 import { ExpedienteComentariosModal } from './ExpedienteComentariosModal';
 import { CotizadorCreditoModal } from './CotizadorCreditoModal';
+import { EstadosCuentaOCRPanel } from './EstadosCuentaOCRPanel';
 
 interface ExpedienteDetailModalProps {
   expediente: ExpedienteCredito | null;
@@ -47,7 +48,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
   onDelete,
   onOpenPrint,
 }) => {
-  const [activeTab, setActiveTab] = useState<'detalle' | 'fondeo' | 'fotos'>('detalle');
+  const [activeTab, setActiveTab] = useState<'detalle' | 'fondeo' | 'fotos' | 'estados'>('detalle');
   const [estatus, setEstatus] = useState<EstatusCredito>(expediente?.estatus || 'NUEVO');
   const [financiera, setFinanciera] = useState(expediente?.financieraAsignada || 'CrediMóvil Auto');
   const [plazo, setPlazo] = useState(expediente?.plazoMeses || 48);
@@ -317,6 +318,18 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
             </button>
 
             <button
+              type="button"
+              onClick={() => {
+                api.downloadExpedienteDocuments(expediente.id, expediente.folio).catch((err: any) => alert(err.message || 'No se pudieron descargar los documentos.'));
+              }}
+              className="py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border border-slate-700"
+              title="Descargar todos los documentos del expediente"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">Todos los documentos</span>
+            </button>
+
+            <button
               onClick={() => onOpenPrint(expediente)}
               className="py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-medium transition flex items-center gap-1.5 border border-slate-700"
               title="Generar carátula imprimible"
@@ -398,6 +411,15 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
           >
             <MessageSquare className="w-3.5 h-3.5" />
             Comentarios
+          </button>
+
+          <button
+            onClick={() => setActiveTab('estados')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
+              activeTab === 'estados' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Estados de Cuenta OCR
           </button>
 
           <button
@@ -893,6 +915,10 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                 })}
               </div>
             </div>
+          )}
+
+          {activeTab === 'estados' && (
+            <EstadosCuentaOCRPanel expediente={expediente} onUpdate={onUpdate} />
           )}
 
           {activeTab === 'fotos' && (
