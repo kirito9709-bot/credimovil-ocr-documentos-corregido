@@ -2716,56 +2716,60 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
 
       {/* DOCUMENT PREVIEW MODAL */}
       {previewModalUrl && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1C2541] rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-            <div className="p-4 border-b border-[#2E3A59] flex items-center justify-between">
-              <h4 className="text-sm font-bold text-slate-100 truncate">
-                {previewModalTitle}
-              </h4>
+        <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-[#1C2541] rounded-2xl max-w-5xl w-full h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-[#3A4868]">
+            <div className="p-4 border-b border-[#2E3A59] flex items-center justify-between shrink-0">
+              <h4 className="text-sm font-bold text-slate-100 truncate pr-4">{previewModalTitle || 'Vista previa'}</h4>
               <button
                 type="button"
                 onClick={() => setPreviewModalUrl(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-[#18223A] cursor-pointer"
+                className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-[#18223A] cursor-pointer shrink-0"
+                aria-label="Cerrar vista previa"
               >
                 ✕
               </button>
             </div>
-            <div className="p-4 overflow-auto flex-1 flex items-center justify-center bg-[#18223A]">
-              {previewModalUrl.startsWith('data:application/pdf') ? (
-                <>
-                  <div className="hidden md:flex w-full h-[70vh] items-center justify-center">
-                    <iframe
-                      src={previewModalUrl}
-                      title="PDF Preview"
-                      className="w-full h-full border-0 rounded-xl bg-white"
-                    />
-                  </div>
-                  <div className="md:hidden w-full rounded-2xl border border-[#2E3A59] bg-[#121824] p-6 text-center">
-                    <FileText className="w-12 h-12 text-red-400 mx-auto mb-3" />
-                    <h5 className="text-base font-black text-white">PDF listo para visualizar</h5>
-                    <p className="text-xs text-slate-400 mt-2 mb-5">Ábrelo directamente en el visor del celular para verlo completo.</p>
-                    <div className="grid grid-cols-1 gap-2">
-                      <a href={previewModalUrl} target="_blank" rel="noopener noreferrer" className="py-3 px-4 bg-red-600 text-white rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2">
+
+            <div className="p-3 overflow-hidden flex-1 min-h-0 flex items-center justify-center bg-[#0B132B]">
+              {previewModalUrl.startsWith('data:application/pdf') || /\.pdf(?:$|[?#])/i.test(previewModalUrl) ? (
+                <div className="w-full h-full flex flex-col gap-3">
+                  <object
+                    data={previewModalUrl}
+                    type="application/pdf"
+                    aria-label={previewModalTitle || 'Vista previa PDF'}
+                    className="w-full h-full rounded-xl bg-white border border-[#2E3A59]"
+                  >
+                    <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-[#121824] rounded-xl">
+                      <FileText className="w-14 h-14 text-red-400 mx-auto mb-3" />
+                      <h5 className="text-base font-black text-white">PDF listo para visualizar</h5>
+                      <p className="text-xs text-slate-400 mt-2 mb-5">Tu navegador no pudo mostrar el PDF dentro de la ventana.</p>
+                      <a
+                        href={previewModalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="py-3 px-4 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2"
+                      >
                         <ExternalLink className="w-4 h-4" /> Abrir PDF
                       </a>
-                      <a href={previewModalUrl} download={previewModalTitle || 'documento.pdf'} className="py-3 px-4 bg-[#1C2541] border border-[#2E3A59] text-white rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2">
-                        <Download className="w-4 h-4" /> Descargar PDF
-                      </a>
                     </div>
-                  </div>
-                </>
+                  </object>
+                </div>
               ) : (
-                <img
-                  src={previewModalUrl}
-                  alt="Vista previa"
-                  className="max-h-[70vh] max-w-full object-contain rounded-xl shadow-xs"
-                />
+                <div className="w-full h-full flex items-center justify-center overflow-auto rounded-xl bg-[#121824]">
+                  <img
+                    src={previewModalUrl}
+                    alt={previewModalTitle || 'Vista previa del documento'}
+                    className="max-h-full max-w-full object-contain rounded-xl"
+                    onError={(event) => {
+                      event.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
               )}
             </div>
           </div>
         </div>
       )}
-
       {/* Camera Capture Modal fallback */}
       <CameraCaptureModal
         isOpen={cameraOpen}
