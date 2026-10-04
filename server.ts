@@ -2227,12 +2227,16 @@ function parseGeminiJson(textValue: string) {
 }
 
 function parseStatementMoney(value: any) {
+  return Math.abs(parseSignedStatementMoney(value));
+}
+
+function parseSignedStatementMoney(value: any) {
   if (value === null || value === undefined || value === '') return 0;
 
   let raw = String(value).trim();
   if (!raw) return 0;
 
-  const negative = /^(.*)$/.test(raw) || /^-/.test(raw);
+  const negative = /^\(.*\)$/.test(raw) || /^-/.test(raw);
   raw = raw.replace(/[()$\s]/g, '');
 
   // Acepta 43,400.00 y 43.400,00 sin tratar el separador decimal como millar.
@@ -2246,7 +2250,7 @@ function parseStatementMoney(value: any) {
 
   const n = Number(raw);
   if (!Number.isFinite(n)) return 0;
-  return negative ? Math.abs(n) : Math.abs(n);
+  return negative ? -Math.abs(n) : Math.abs(n);
 }
 
 function statementFingerprint(row: any) {
@@ -2347,8 +2351,8 @@ function validateStatementResult(parsed: any, detail: any) {
       continue;
     }
 
-    const previousSaldo = parseStatementMoney(previousSaldoRaw);
-    const currentSaldo = parseStatementMoney(currentSaldoRaw);
+    const previousSaldo = parseSignedStatementMoney(previousSaldoRaw);
+    const currentSaldo = parseSignedStatementMoney(currentSaldoRaw);
     const cargo = parseStatementMoney(current?.cargo ?? current?.cargos);
     const abono = parseStatementMoney(current?.abono ?? current?.abonos);
     const expected = Math.round((previousSaldo + abono - cargo) * 100) / 100;
