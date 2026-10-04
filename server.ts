@@ -10,7 +10,15 @@ import { createClient } from '@supabase/supabase-js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const archiverModule = require('archiver');
-const archiver = archiverModule?.default || archiverModule;
+const archiver = typeof archiverModule === 'function'
+  ? archiverModule
+  : typeof archiverModule?.default === 'function'
+    ? archiverModule.default
+    : typeof archiverModule?.create === 'function'
+      ? archiverModule.create
+      : typeof archiverModule?.archiver === 'function'
+        ? archiverModule.archiver
+        : null;
 import * as XLSX from 'xlsx';
 
 dotenv.config();
