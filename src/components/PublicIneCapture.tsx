@@ -144,6 +144,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const [nombreUbicacionEmpleo, setNombreUbicacionEmpleo] = useState('');
   const [direccionEmpleo, setDireccionEmpleo] = useState('');
   const [giroActividadEmpresa, setGiroActividadEmpresa] = useState('');
+  const [nominas, setNominas] = useState<Array<{ archivoUrl: string; archivoNombre: string; archivoTipo?: string; archivoTamano?: number; fechaSubida?: string }>>([]);
   const [dependientesEconomicos, setDependientesEconomicos] = useState<number>(0);
   const [estadoCivil, setEstadoCivil] = useState<'SOLTERO' | 'CASADO' | 'UNION_LIBRE' | 'DIVORCIADO' | 'VIUDO' | ''>('SOLTERO');
 
@@ -219,6 +220,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [savedExpediente, setSavedExpediente] = useState<ExpedienteCredito | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const nominaInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (lotes.length > 0 && !selectedLoteId) {
@@ -448,6 +450,59 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     reader.readAsDataURL(file);
   };
 
+  const handleNominaFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+
+    if (!files.length) return;
+
+    const available = Math.max(0, 3 - nominas.length);
+    if (available <= 0) {
+      setScanError('Puedes adjuntar hasta 3 comprobantes de nómina.');
+      return;
+    }
+
+    const selected = files.slice(0, available);
+    const invalidType = selected.find((file) => !/^(application\/pdf|image\/png|image\/jpeg|image\/webp)$/i.test(file.type));
+    if (invalidType) {
+      setScanError('Las nóminas deben ser PDF, PNG, JPG o WEBP.');
+      return;
+    }
+
+    const oversized = selected.find((file) => file.size > 10 * 1024 * 1024);
+    if (oversized) {
+      setScanError('Cada comprobante de nómina puede pesar máximo 10 MB.');
+      return;
+    }
+
+    Promise.all(
+      selected.map((file) => new Promise<{ archivoUrl: string; archivoNombre: string; archivoTipo: string; archivoTamano: number }>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            resolve({
+              archivoUrl: reader.result,
+              archivoNombre: file.name,
+              archivoTipo: file.type,
+              archivoTamano: file.size,
+            });
+          } else {
+            reject(new Error('No se pudo leer el comprobante de nómina.'));
+          }
+        };
+        reader.onerror = () => reject(new Error('No se pudo leer el comprobante de nómina.'));
+        reader.readAsDataURL(file);
+      }))
+    )
+      .then((items) => {
+        setNominas((prev) => [...prev, ...items].slice(0, 3));
+        setScanError(null);
+      })
+      .catch((error: any) => {
+        setScanError(error?.message || 'No se pudieron cargar las nóminas.');
+      });
+  };
+
   // Readiness evaluation for analysis
   const hasIneCompleta = Boolean(fotoFrente && fotoReverso);
   const hasComprobanteDomicilio = Boolean(comprobanteDomicilioDoc);
@@ -568,6 +623,13 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         comprobanteDomicilioActualNombre: comprobanteDomicilioNombre || '',
         tipoComprobanteDomicilio: tipoComprobante,
         estadosCuenta: estadosCuentaPayload,
+        nominas: nominas.map((doc) => ({
+          archivoUrl: doc.archivoUrl,
+          archivoNombre: doc.archivoNombre,
+          archivoTipo: doc.archivoTipo,
+          archivoTamano: doc.archivoTamano,
+          fechaSubida: new Date().toISOString(),
+        })),
         telefono,
         correo,
         ingresoMensualAprox: Number(ingresoMensual) || 0,
@@ -696,6 +758,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     setMes3Nombre('');
     setConsolidadoDoc(null);
     setConsolidadoNombre('');
+    setNominas([]);
     setIneData({
       nombre: '',
       primerApellido: '',
@@ -2060,6 +2123,78 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 <option value="VIUDO">Viudo(a)</option>
               </select>
             </div>
+          </div>
+
+          <div className="pt-2 border-t border-[#2E3A59]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+              <div>
+                <h4 className="text-sm font-black text-slate-100 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-red-600" />
+                  Comprobantes de nómina <span className="text-[10px] font-bold text-slate-500 uppercase">(Opcional)</span>
+                </h4>
+                <p className="text-xs text-slate-500 mt-1">
+                  Puedes adjuntar hasta 3 recibos recientes de nómina para fortalecer el expediente. No se realiza OCR todavía.
+                </p>
+              </div>
+              <span className="text-[11px] font-bold text-slate-400">{nominas.length}/3 cargados</span>
+            </div>
+
+            {nominas.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                {nominas.map((doc, index) => (
+                  <div key={index} className="rounded-xl border border-[#2E3A59] bg-[#121824] p-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-red-400 shrink-0" />
+                      <p className="text-xs font-semibold text-slate-200 truncate">{doc.archivoNombre || `Nómina ${index + 1}`}</p>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      Nómina {index + 1} · {doc.archivoTamano ? (doc.archivoTamano / 1024 / 1024).toFixed(2) + ' MB' : 'Archivo adjunto'}
+                    </p>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewModalUrl(doc.archivoUrl);
+                          setPreviewModalTitle(`Comprobante de nómina ${index + 1}`);
+                        }}
+                        className="flex-1 py-1.5 bg-[#1C2541] border border-[#3A4868] text-slate-300 rounded-lg text-[11px] font-semibold"
+                      >
+                        <Eye className="w-3 h-3 inline mr-1" /> Ver
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNominas((prev) => prev.filter((_, i) => i !== index))}
+                        className="py-1.5 px-2.5 bg-[#1C2541] border border-rose-200 text-rose-500 rounded-lg text-[11px] font-semibold"
+                      >
+                        <Trash2 className="w-3 h-3 inline" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {nominas.length < 3 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => nominaInputRef.current?.click()}
+                  className="w-full py-4 border-2 border-dashed border-[#3A4868] rounded-xl bg-[#121824] hover:bg-[#18223A] text-center transition"
+                >
+                  <Upload className="w-4 h-4 text-slate-400 mx-auto mb-1" />
+                  <span className="text-xs font-bold text-slate-300 block">Subir nóminas</span>
+                  <span className="text-[10px] text-slate-500 block">PDF, PNG, JPG o WEBP · Máx. 10 MB por archivo</span>
+                </button>
+                <input
+                  ref={nominaInputRef}
+                  type="file"
+                  multiple
+                  accept="application/pdf,image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={handleNominaFiles}
+                />
+              </>
+            )}
           </div>
 
           <div className="pt-2">
