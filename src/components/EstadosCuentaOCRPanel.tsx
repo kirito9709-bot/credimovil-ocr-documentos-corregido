@@ -106,15 +106,15 @@ export const EstadosCuentaOCRPanel: React.FC<Props> = ({ expediente, onUpdate })
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="rounded-2xl bg-[#1C2541] border border-emerald-500/20 p-4">
           <div className="flex items-center gap-2 text-[11px] uppercase text-slate-400"><TrendingUp className="w-4 h-4 text-emerald-400" /> Ingresos</div>
-          <div className="text-2xl font-black text-emerald-400 mt-2">\${(resumen?.ingresos || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+          <div className="text-2xl font-black text-emerald-400 mt-2">${(resumen?.ingresos || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
         </div>
         <div className="rounded-2xl bg-[#1C2541] border border-red-500/20 p-4">
           <div className="flex items-center gap-2 text-[11px] uppercase text-slate-400"><TrendingDown className="w-4 h-4 text-red-400" /> Egresos</div>
-          <div className="text-2xl font-black text-red-400 mt-2">\${(resumen?.egresos || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+          <div className="text-2xl font-black text-red-400 mt-2">${(resumen?.egresos || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
         </div>
         <div className="rounded-2xl bg-[#1C2541] border border-blue-500/20 p-4">
           <div className="text-[11px] uppercase text-slate-400">Flujo neto</div>
-          <div className="text-2xl font-black text-blue-400 mt-2">\${(resumen?.diferencia || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+          <div className="text-2xl font-black text-blue-400 mt-2">${(resumen?.diferencia || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
         </div>
       </div>
 
@@ -126,7 +126,7 @@ export const EstadosCuentaOCRPanel: React.FC<Props> = ({ expediente, onUpdate })
               <div className="text-[11px] text-slate-500">{detail.nombreArchivo || 'Documento'} · {detail.movimientos?.length || 0} movimientos</div>
             </div>
             <span className="text-xs font-bold text-slate-300">
-              \${((detail.resumen?.ingresos || 0) - (detail.resumen?.egresos || 0)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+              ${((detail.resumen?.ingresos || 0) - (detail.resumen?.egresos || 0)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
             </span>
           </div>
         </div>
