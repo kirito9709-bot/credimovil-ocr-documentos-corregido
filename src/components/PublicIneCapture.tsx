@@ -199,7 +199,6 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const [tiempoEnTrabajo, setTiempoEnTrabajo] = useState('');
   const [nombreUbicacionEmpleo, setNombreUbicacionEmpleo] = useState('');
   const [direccionEmpleo, setDireccionEmpleo] = useState('');
-  const [giroActividadEmpresa, setGiroActividadEmpresa] = useState('');
   const [nominas, setNominas] = useState<Array<{ archivoUrl: string; archivoNombre: string; archivoTipo?: string; archivoTamano?: number; fechaSubida?: string }>>([]);
   const [dependientesEconomicos, setDependientesEconomicos] = useState<number>(0);
   const [estadoCivil, setEstadoCivil] = useState<'SOLTERO' | 'CASADO' | 'UNION_LIBRE' | 'DIVORCIADO' | 'VIUDO' | ''>('SOLTERO');
@@ -219,7 +218,6 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const [obligadoTiempoEnTrabajo, setObligadoTiempoEnTrabajo] = useState('');
   const [obligadoNombreUbicacionEmpleo, setObligadoNombreUbicacionEmpleo] = useState('');
   const [obligadoDireccionEmpleo, setObligadoDireccionEmpleo] = useState('');
-  const [obligadoGiroActividadEmpresa, setObligadoGiroActividadEmpresa] = useState('');
   const [obligadoDependientesEconomicos, setObligadoDependientesEconomicos] = useState<number>(0);
   const [obligadoEstadoCivil, setObligadoEstadoCivil] = useState<'SOLTERO' | 'CASADO' | 'UNION_LIBRE' | 'DIVORCIADO' | 'VIUDO' | ''>('');
   const [obligadoReferencias, setObligadoReferencias] = useState<ReferenciaPersonal[]>([
@@ -583,7 +581,6 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
       obligadoTiempoEnTrabajo.trim() &&
       obligadoNombreUbicacionEmpleo.trim() &&
       obligadoDireccionEmpleo.trim() &&
-      obligadoGiroActividadEmpresa.trim() &&
       obligadoEstadoCivil &&
       !obligadoReferenciasIncompletas &&
       new Set(obligadoReferencias.map((r) => r.telefono.replace(/\D/g, ''))).size === 3 &&
@@ -694,7 +691,6 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
         tiempoEnTrabajo,
         nombreUbicacionEmpleo,
         direccionEmpleo,
-        giroActividadEmpresa,
         dependientesEconomicos: Number(dependientesEconomicos) || 0,
         estadoCivil,
         referenciasPersonales: referencias,
@@ -708,7 +704,6 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
           tiempoEnTrabajo: obligadoTiempoEnTrabajo.trim(),
           nombreUbicacionEmpleo: obligadoNombreUbicacionEmpleo.trim(),
           direccionEmpleo: obligadoDireccionEmpleo.trim(),
-          giroActividadEmpresa: obligadoGiroActividadEmpresa.trim(),
           dependientesEconomicos: Number(obligadoDependientesEconomicos) || 0,
           estadoCivil: obligadoEstadoCivil,
           referenciasPersonales: obligadoReferencias,
@@ -2164,10 +2159,6 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Dirección del empleo <span className="text-red-500">*</span></label>
               <input type="text" required value={direccionEmpleo} onChange={(e) => setDireccionEmpleo(e.target.value)} placeholder="Calle, número, colonia, municipio, estado" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none" />
             </div>
-            <div className="lg:col-span-2">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Giro / actividad de la empresa <span className="text-red-500">*</span></label>
-              <input type="text" required value={giroActividadEmpresa} onChange={(e) => setGiroActividadEmpresa(e.target.value)} placeholder="ej. Comercio, industria, servicios" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none" />
-            </div>
             <div>
               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Estado civil <span className="text-red-500">*</span></label>
               <select required value={estadoCivil} onChange={(e) => setEstadoCivil(e.target.value as any)} className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-red-500 focus:outline-none">
@@ -2642,10 +2633,6 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   <div className="md:col-span-3">
                     <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Dirección del empleo <span className="text-red-500">*</span></label>
                     <input type="text" required value={obligadoDireccionEmpleo} onChange={(e) => setObligadoDireccionEmpleo(e.target.value)} placeholder="Calle, número, colonia, municipio, estado" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Giro / actividad de la empresa <span className="text-red-500">*</span></label>
-                    <input type="text" required value={obligadoGiroActividadEmpresa} onChange={(e) => setObligadoGiroActividadEmpresa(e.target.value)} placeholder="ej. Comercio, industria, servicios" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
                   </div>
                 </div>
               </div>
