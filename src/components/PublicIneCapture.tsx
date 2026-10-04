@@ -133,6 +133,62 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   // Preview Modal for any uploaded document
   const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);
   const [previewModalTitle, setPreviewModalTitle] = useState<string>('');
+  const [previewRenderableUrl, setPreviewRenderableUrl] = useState<string | null>(null);
+  const [previewMimeType, setPreviewMimeType] = useState<string>('');
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+
+    if (!previewModalUrl) {
+      setPreviewRenderableUrl(null);
+      setPreviewMimeType('');
+      return () => {};
+    }
+
+    const buildPreviewUrl = () => {
+      if (!previewModalUrl.startsWith('data:')) {
+        const inferredMime =
+          /\.pdf(?:$|[?#])/i.test(previewModalUrl)
+            ? 'application/pdf'
+            : '';
+        setPreviewRenderableUrl(previewModalUrl);
+        setPreviewMimeType(inferredMime);
+        return;
+      }
+
+      try {
+        const commaIndex = previewModalUrl.indexOf(',');
+        if (commaIndex < 0) throw new Error('Data URI inválido.');
+
+        const metadata = previewModalUrl.slice(0, commaIndex);
+        const payload = previewModalUrl.slice(commaIndex + 1);
+        const mimeMatch = metadata.match(/^data:([^;]+)/i);
+        const mimeType = mimeMatch?.[1] || 'application/octet-stream';
+
+        let bytes: Uint8Array;
+        if (/;base64/i.test(metadata)) {
+          const binary = window.atob(payload);
+          bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+        } else {
+          bytes = new TextEncoder().encode(decodeURIComponent(payload));
+        }
+
+        objectUrl = URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+        setPreviewRenderableUrl(objectUrl);
+        setPreviewMimeType(mimeType);
+      } catch (error) {
+        console.error('No se pudo preparar la vista previa:', error);
+        setPreviewRenderableUrl(null);
+        setPreviewMimeType('');
+      }
+    };
+
+    buildPreviewUrl();
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [previewModalUrl]);
 
   // 4. Checklist Inicio de Crédito Automotriz (CrediMóvil)
   const [telefono, setTelefono] = useState('');
@@ -2731,39 +2787,44 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
             </div>
 
             <div className="p-3 overflow-hidden flex-1 min-h-0 flex items-center justify-center bg-[#0B132B]">
-              {previewModalUrl.startsWith('data:application/pdf') || /\.pdf(?:$|[?#])/i.test(previewModalUrl) ? (
-                <div className="w-full h-full flex flex-col gap-3">
-                  <object
-                    data={previewModalUrl}
-                    type="application/pdf"
-                    aria-label={previewModalTitle || 'Vista previa PDF'}
-                    className="w-full h-full rounded-xl bg-white border border-[#2E3A59]"
-                  >
-                    <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-[#121824] rounded-xl">
-                      <FileText className="w-14 h-14 text-red-400 mx-auto mb-3" />
-                      <h5 className="text-base font-black text-white">PDF listo para visualizar</h5>
-                      <p className="text-xs text-slate-400 mt-2 mb-5">Tu navegador no pudo mostrar el PDF dentro de la ventana.</p>
-                      <a
-                        href={previewModalUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="py-3 px-4 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2"
-                      >
-                        <ExternalLink className="w-4 h-4" /> Abrir PDF
-                      </a>
-                    </div>
-                  </object>
-                </div>
+              {previewRenderableUrl ? (
+                previewMimeType === 'application/pdf' ? (
+                  <div className="w-full h-full flex flex-col gap-3">
+                    <object
+                      data={previewRenderableUrl}
+                      type="application/pdf"
+                      aria-label={previewModalTitle || 'Vista previa PDF'}
+                      className="w-full h-full rounded-xl bg-white border border-[#2E3A59]"
+                    >
+                      <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-[#121824] rounded-xl">
+                        <FileText className="w-14 h-14 text-red-400 mx-auto mb-3" />
+                        <h5 className="text-base font-black text-white">PDF listo para visualizar</h5>
+                        <p className="text-xs text-slate-400 mt-2 mb-5">Tu navegador no pudo mostrar el PDF dentro de la ventana.</p>
+                        <a
+                          href={previewRenderableUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="py-3 px-4 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2"
+                        >
+                          Abrir PDF
+                        </a>
+                      </div>
+                    </object>
+                  </div>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center overflow-auto rounded-xl bg-[#121824]">
+                    <img
+                      src={previewRenderableUrl}
+                      alt={previewModalTitle || 'Vista previa del documento'}
+                      className="max-h-full max-w-full object-contain rounded-xl"
+                    />
+                  </div>
+                )
               ) : (
-                <div className="w-full h-full flex items-center justify-center overflow-auto rounded-xl bg-[#121824]">
-                  <img
-                    src={previewModalUrl}
-                    alt={previewModalTitle || 'Vista previa del documento'}
-                    className="max-h-full max-w-full object-contain rounded-xl"
-                    onError={(event) => {
-                      event.currentTarget.style.display = 'none';
-                    }}
-                  />
+                <div className="h-full w-full flex flex-col items-center justify-center text-center p-6 bg-[#121824] rounded-xl">
+                  <FileText className="w-14 h-14 text-slate-500 mx-auto mb-3" />
+                  <h5 className="text-base font-black text-white">Preparando documento...</h5>
+                  <p className="text-xs text-slate-400 mt-2">La vista previa se está preparando. Cierra y vuelve a abrir el documento si tarda demasiado.</p>
                 </div>
               )}
             </div>
