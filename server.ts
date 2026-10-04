@@ -2221,25 +2221,52 @@ function parseGeminiJson(textValue: string) {
   return JSON.parse(cleaned);
 }
 
+function parseStatementMoney(value: any) {
+  if (value === null || value === undefined || value === '') return 0;
+  const n = Number(String(value).replace(/[$,\\s]/g, '').replace(/[()]/g, ''));
+  return Number.isFinite(n) ? Math.abs(n) : 0;
+}
+
 function normalizeStatementResult(parsed: any, docType: string) {
-  const movimientos = Array.isArray(parsed?.movimientos) ? parsed.movimientos : [];
-  const normalized = movimientos.map((m: any) => ({
-    fecha: String(m?.fecha || ''),
-    descripcion: String(m?.descripcion || '').trim(),
-    referencia: String(m?.referencia || ''),
-    tipo: String(m?.tipo || '').toUpperCase() === 'INGRESO' ? 'INGRESO' : 'EGRESO',
-    monto: Number(m?.monto || 0),
-    categoria: String(m?.categoria || 'OTROS').trim() || 'OTROS',
-    saldo: Number.isFinite(Number(m?.saldo)) ? Number(m.saldo) : undefined,
-    mes: docType,
-  })).filter((m: any) => m.descripcion && m.monto > 0);
+  const raw = Array.isArray(parsed?.movimientos) ? parsed.movimientos : [];
+  const normalized = raw.flatMap((m: any) => {
+    const cargo = parseStatementMoney(m?.cargo ?? m?.cargos);
+    const abono = parseStatementMoney(m?.abono ?? m?.abonos);
+    const base = {
+      fecha: String(m?.fecha || ''),
+      descripcion: String(m?.descripcion || '').trim(),
+      referencia: String(m?.referencia || ''),
+      categoria: String(m?.categoria || 'OTROS').trim() || 'OTROS',
+      saldo: Number.isFinite(Number(m?.saldo)) ? Number(m.saldo) : undefined,
+      mes: docType,
+    };
+    if (!base.descripcion) return [];
+    // For BBVA, the column itself is authoritative: ABONOS = income, CARGOS = expense.
+    if (abono > 0 && cargo === 0) return [{ ...base, tipo: 'INGRESO', monto: abono }];
+    if (cargo > 0 && abono === 0) return [{ ...base, tipo: 'EGRESO', monto: cargo }];
+    if (cargo > 0 && abono > 0) {
+      return [
+        { ...base, tipo: 'EGRESO', monto: cargo },
+        { ...base, tipo: 'INGRESO', monto: abono },
+      ];
+    }
+    const tipo = String(m?.tipo || '').toUpperCase() === 'INGRESO' ? 'INGRESO' : 'EGRESO';
+    const monto = parseStatementMoney(m?.monto);
+    return monto > 0 ? [{ ...base, tipo, monto }] : [];
+  });
+
   const ingresos = normalized.filter((m: any) => m.tipo === 'INGRESO').reduce((s: number, m: any) => s + m.monto, 0);
   const egresos = normalized.filter((m: any) => m.tipo === 'EGRESO').reduce((s: number, m: any) => s + m.monto, 0);
   return {
     bancoEmisor: String(parsed?.bancoEmisor || ''),
     cuentaUltimos4: String(parsed?.cuentaUltimos4 || ''),
     movimientos: normalized,
-    resumen: { ingresos: Math.round(ingresos * 100) / 100, egresos: Math.round(egresos * 100) / 100, diferencia: Math.round((ingresos - egresos) * 100) / 100, movimientos: normalized.length }
+    resumen: {
+      ingresos: Math.round(ingresos * 100) / 100,
+      egresos: Math.round(egresos * 100) / 100,
+      diferencia: Math.round((ingresos - egresos) * 100) / 100,
+      movimientos: normalized.length
+    }
   };
 }
 
@@ -2264,7 +2291,24 @@ app.post('/api/expedientes/:id/estados-cuenta/ocr', async (req, res) => {
       const buffer = Buffer.from(await fileBlob.arrayBuffer());
       const lowerName = String(doc.nombre || doc.storage_path || '').toLowerCase();
       const mimeType = lowerName.endsWith('.pdf') ? 'application/pdf' : lowerName.endsWith('.png') ? 'image/png' : lowerName.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
-      const prompt = 'Eres un sistema OCR financiero de CrediMóvil. Analiza el estado de cuenta bancario adjunto y devuelve EXCLUSIVAMENTE JSON válido. Extrae TODOS los movimientos visibles sin duplicarlos entre páginas. Clasifica cada movimiento como INGRESO si el dinero entra o EGRESO si sale. No cuentes saldos iniciales o finales como movimientos. Conserva el importe absoluto y el saldo posterior si aparece. Formato: {"bancoEmisor":"","cuentaUltimos4":"","movimientos":[{"fecha":"YYYY-MM-DD o fecha visible","descripcion":"","referencia":"","tipo":"INGRESO" o "EGRESO","monto":0,"categoria":"NOMINA|TRANSFERENCIA|DEPOSITO|COMPRA|SERVICIOS|RENTA|IMPUESTOS|COMISION|RETIRO|OTROS","saldo":0}]}. No inventes datos.';
+      const prompt = `Eres un sistema OCR financiero especializado en estados de cuenta bancarios de México. Analiza visualmente TODO el estado de cuenta y devuelve EXCLUSIVAMENTE JSON válido.
+
+REGLA CRÍTICA PARA BBVA: en la tabla "Detalle de Movimientos Realizados", las columnas son FECHA OPER, FECHA LIQ, DESCRIPCIÓN, REFERENCIA, CARGOS, ABONOS y SALDO LIQUIDACIÓN.
+- CARGOS = dinero que SALE de la cuenta = EGRESO.
+- ABONOS = dinero que ENTRA a la cuenta = INGRESO.
+- El importe debe salir de la columna CARGOS o ABONOS, no de la descripción.
+- NO confundas SALDO LIQUIDACIÓN con CARGOS o ABONOS.
+- No cuentes saldos iniciales/finales, totales, "Cargos Objetados" o "Abonos Objetados" como movimientos.
+- No dupliques movimientos entre páginas.
+- Conserva cargo y abono como números positivos.
+- Si una fila tiene cargo y abono, conserva ambos.
+- Si puedes leer saldo anterior y posterior, úsalo solo para validar; nunca inventes o corrijas importes.
+- Para otros bancos, identifica las columnas equivalentes.
+
+Devuelve exactamente:
+{"bancoEmisor":"","cuentaUltimos4":"","movimientos":[{"fecha":"YYYY-MM-DD o fecha visible","descripcion":"","referencia":"","cargo":0,"abono":0,"categoria":"NOMINA|TRANSFERENCIA|DEPOSITO|COMPRA|SERVICIOS|RENTA|IMPUESTOS|COMISION|RETIRO|OTROS","saldo":0}]}
+
+No agregues texto fuera del JSON. No inventes datos.`;
       const responseText = await callGeminiWithResilience([{ inlineData: { mimeType, data: buffer.toString('base64') } }, { text: prompt }], 'ESTADOS_CUENTA_' + doc.tipo);
       const detail = normalizeStatementResult(parseGeminiJson(responseText), doc.tipo);
       meses[doc.tipo] = { ...detail, nombreArchivo: doc.nombre, procesadoEn: new Date().toISOString() };
