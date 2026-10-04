@@ -397,6 +397,13 @@ function stripDocumentValues(exp: any) {
     }
   }
 
+  if (Array.isArray(copy.nominas)) {
+    copy.nominas = copy.nominas.map((doc: any) => ({
+      ...doc,
+      archivoUrl: '',
+    }));
+  }
+
   copy.documentosFondeo = (copy.documentosFondeo || []).map((doc: any) => ({
     ...doc,
     archivoUrl: '',
@@ -546,6 +553,65 @@ async function storeExpedienteDocuments(exp: any, dbExpedienteId: string) {
     }
   }
 
+  if (Array.isArray(working.nominas)) {
+    const nominas = working.nominas.slice(0, 3);
+    working.nominas = [];
+
+    for (let index = 0; index < nominas.length; index++) {
+      const nomina = nominas[index] || {};
+      const tipo = `NOMINA_${index + 1}`;
+      const value = nomina.archivoUrl || '';
+
+      if (isDataUri(value)) {
+        await uploadDataUriToSupabase(
+          dbExpedienteId,
+          tipo,
+          value,
+          nomina.archivoNombre || `Nomina_${index + 1}`,
+          'SUBIDO',
+          '',
+          {
+            categoria: 'NOMINA',
+            indice: index + 1,
+            origen: 'Solicitud inicial',
+            fechaSubida: nomina.fechaSubida || new Date().toISOString(),
+          }
+        );
+
+        working.nominas.push({
+          archivoUrl: '',
+          archivoNombre: nomina.archivoNombre || `Nomina_${index + 1}`,
+          archivoTipo: nomina.archivoTipo || '',
+          archivoTamano: Number(nomina.archivoTamano) || 0,
+          fechaSubida: nomina.fechaSubida || new Date().toISOString(),
+        });
+      } else if (isSignedOrApiDocumentUrl(value)) {
+        const stored = await supabase
+          .from('documentos')
+          .select('nombre,mime_type,tamano,created_at')
+          .eq('expediente_id', dbExpedienteId)
+          .eq('tipo', tipo)
+          .maybeSingle();
+
+        working.nominas.push({
+          archivoUrl: '',
+          archivoNombre: stored.data?.nombre || nomina.archivoNombre || '',
+          archivoTipo: stored.data?.mime_type || nomina.archivoTipo || '',
+          archivoTamano: Number(stored.data?.tamano || nomina.archivoTamano || 0),
+          fechaSubida: stored.data?.created_at || nomina.fechaSubida || new Date().toISOString(),
+        });
+      } else {
+        working.nominas.push({
+          archivoUrl: '',
+          archivoNombre: nomina.archivoNombre || '',
+          archivoTipo: nomina.archivoTipo || '',
+          archivoTamano: Number(nomina.archivoTamano) || 0,
+          fechaSubida: nomina.fechaSubida || '',
+        });
+      }
+    }
+  }
+
   if (working.obligadoSolidario?.requerido) {
     const os = working.obligadoSolidario;
 
@@ -661,6 +727,22 @@ function applyStoredDocumentsToExpediente(exp: any, documentRows: any[]) {
     result.fotoIneFrente = await loadUrl(byType.get('INE_FRENTE'));
     result.fotoIneReverso = await loadUrl(byType.get('INE_REVERSO'));
     result.comprobanteDomicilioActualUrl = await loadUrl(byType.get('COMPROBANTE_DOMICILIO'));
+
+    const nominaSource = Array.isArray(result.nominas) ? result.nominas : [];
+    result.nominas = await Promise.all(
+      [1, 2, 3].map(async (index) => {
+        const stored = byType.get(`NOMINA_${index}`);
+        const fallback = nominaSource[index - 1] || {};
+        return {
+          archivoUrl: await loadUrl(stored),
+          archivoNombre: stored?.nombre || fallback.archivoNombre || '',
+          archivoTipo: stored?.mime_type || fallback.archivoTipo || '',
+          archivoTamano: Number(stored?.tamano || fallback.archivoTamano || 0),
+          fechaSubida: stored?.metadata?.fechaSubida || stored?.created_at || fallback.fechaSubida || '',
+        };
+      })
+    );
+    result.nominas = result.nominas.filter((doc: any) => Boolean(doc.archivoUrl || doc.archivoNombre));
 
     if (result.obligadoSolidario?.requerido) {
       const os = result.obligadoSolidario;
@@ -2553,6 +2635,9 @@ app.post('/api/expedientes/:id/documentos', async (req, res) => {
       'ESTADO_CUENTA_MES2',
       'ESTADO_CUENTA_MES3',
       'ESTADO_CUENTA_CONSOLIDADO',
+      'NOMINA_1',
+      'NOMINA_2',
+      'NOMINA_3',
     ]);
 
     if (!allowed.has(String(tipo || ''))) {
