@@ -7,7 +7,9 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
-import archiver from 'archiver';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const archiver = require('archiver');
 import * as XLSX from 'xlsx';
 
 dotenv.config();
