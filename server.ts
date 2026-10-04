@@ -7,6 +7,8 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import archiver from 'archiver';
+import * as XLSX from 'xlsx';
 
 dotenv.config();
 
@@ -2172,6 +2174,131 @@ app.delete('/api/expedientes/:id', async (req, res) => {
   }
 });
 
+app.get('/api/expedientes/:id/documentos/zip', async (req, res) => {
+  const session = requireStaff(req, res);
+  if (!session) return;
+  try {
+    const expedientes = (await getSupabaseExpedientes()) || [];
+    const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
+    if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    const row = await getSupabaseExpedienteRowByFolio(exp.folio);
+    if (!row?.id) return res.status(404).json({ success: false, message: 'No se encontró el expediente en Supabase.' });
+    const { data: docs, error } = await supabase.from('documentos').select('id,tipo,nombre,storage_path,mime_type,tamano').eq('expediente_id', row.id).order('created_at', { ascending: true });
+    if (error) throw new Error('Supabase documentos: ' + error.message);
+    if (!docs?.length) return res.status(404).json({ success: false, message: 'Este expediente no tiene documentos almacenados.' });
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="CrediMovil_' + sanitizeFileName(exp.folio) + '_Documentos.zip"');
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    archive.on('error', (err: any) => { if (!res.headersSent) res.status(500).json({ success: false, message: err.message }); else res.destroy(err); });
+    archive.pipe(res);
+    for (const doc of docs) {
+      const { data: fileBlob, error: downloadError } = await supabase.storage.from(SUPABASE_BUCKET).download(doc.storage_path);
+      if (downloadError || !fileBlob) { console.warn('No se pudo incluir ' + doc.storage_path, downloadError?.message || 'sin archivo'); continue; }
+      const buffer = Buffer.from(await fileBlob.arrayBuffer());
+      const folder = String(doc.tipo || '').startsWith('ESTADO_CUENTA') ? 'Estados_Cuenta' : 'Documentos';
+      archive.append(buffer, { name: folder + '/' + sanitizeFileName(doc.tipo || 'DOCUMENTO') + '_' + sanitizeFileName(doc.nombre || 'archivo') });
+    }
+    await archive.finalize();
+  } catch (error: any) {
+    console.error('ZIP documentos error:', error);
+    if (!res.headersSent) res.status(500).json({ success: false, message: error?.message || 'No se pudieron preparar los documentos.' });
+  }
+});
+
+function parseGeminiJson(textValue: string) {
+  const cleaned = String(textValue || '').replace(/```json/gi, '').replace(/```/g, '').trim();
+  return JSON.parse(cleaned);
+}
+
+function normalizeStatementResult(parsed: any, docType: string) {
+  const movimientos = Array.isArray(parsed?.movimientos) ? parsed.movimientos : [];
+  const normalized = movimientos.map((m: any) => ({
+    fecha: String(m?.fecha || ''),
+    descripcion: String(m?.descripcion || '').trim(),
+    referencia: String(m?.referencia || ''),
+    tipo: String(m?.tipo || '').toUpperCase() === 'INGRESO' ? 'INGRESO' : 'EGRESO',
+    monto: Number(m?.monto || 0),
+    categoria: String(m?.categoria || 'OTROS').trim() || 'OTROS',
+    saldo: Number.isFinite(Number(m?.saldo)) ? Number(m.saldo) : undefined,
+    mes: docType,
+  })).filter((m: any) => m.descripcion && m.monto > 0);
+  const ingresos = normalized.filter((m: any) => m.tipo === 'INGRESO').reduce((s: number, m: any) => s + m.monto, 0);
+  const egresos = normalized.filter((m: any) => m.tipo === 'EGRESO').reduce((s: number, m: any) => s + m.monto, 0);
+  return {
+    bancoEmisor: String(parsed?.bancoEmisor || ''),
+    cuentaUltimos4: String(parsed?.cuentaUltimos4 || ''),
+    movimientos: normalized,
+    resumen: { ingresos: Math.round(ingresos * 100) / 100, egresos: Math.round(egresos * 100) / 100, diferencia: Math.round((ingresos - egresos) * 100) / 100, movimientos: normalized.length }
+  };
+}
+
+app.post('/api/expedientes/:id/estados-cuenta/ocr', async (req, res) => {
+  const session = requireStaff(req, res);
+  if (!session) return;
+  try {
+    const expedientes = (await getSupabaseExpedientes()) || [];
+    const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
+    if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    const row = await getSupabaseExpedienteRowByFolio(exp.folio);
+    if (!row?.id) return res.status(404).json({ success: false, message: 'No se encontró el expediente en Supabase.' });
+    const requestedTypes = Array.isArray(req.body?.tipos) && req.body.tipos.length ? req.body.tipos.map((t: any) => String(t)) : ['ESTADO_CUENTA_MES1','ESTADO_CUENTA_MES2','ESTADO_CUENTA_MES3'];
+    const { data: docs, error: docsError } = await supabase.from('documentos').select('tipo,nombre,storage_path').eq('expediente_id', row.id).in('tipo', requestedTypes);
+    if (docsError) throw new Error('Supabase estados de cuenta: ' + docsError.message);
+    if (!docs?.length) return res.status(404).json({ success: false, message: 'No hay estados de cuenta almacenados para analizar.' });
+    const meses: Record<string, any> = { ...(row.data?.estadosCuentaAnalisis?.meses || {}) };
+    const allMovimientos: any[] = [];
+    for (const doc of docs) {
+      const { data: fileBlob, error: fileError } = await supabase.storage.from(SUPABASE_BUCKET).download(doc.storage_path);
+      if (fileError || !fileBlob) throw new Error('No se pudo leer ' + doc.nombre + ': ' + (fileError?.message || 'archivo no disponible'));
+      const buffer = Buffer.from(await fileBlob.arrayBuffer());
+      const lowerName = String(doc.nombre || doc.storage_path || '').toLowerCase();
+      const mimeType = lowerName.endsWith('.pdf') ? 'application/pdf' : lowerName.endsWith('.png') ? 'image/png' : lowerName.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
+      const prompt = 'Eres un sistema OCR financiero de CrediMóvil. Analiza el estado de cuenta bancario adjunto y devuelve EXCLUSIVAMENTE JSON válido. Extrae TODOS los movimientos visibles sin duplicarlos entre páginas. Clasifica cada movimiento como INGRESO si el dinero entra o EGRESO si sale. No cuentes saldos iniciales o finales como movimientos. Conserva el importe absoluto y el saldo posterior si aparece. Formato: {"bancoEmisor":"","cuentaUltimos4":"","movimientos":[{"fecha":"YYYY-MM-DD o fecha visible","descripcion":"","referencia":"","tipo":"INGRESO" o "EGRESO","monto":0,"categoria":"NOMINA|TRANSFERENCIA|DEPOSITO|COMPRA|SERVICIOS|RENTA|IMPUESTOS|COMISION|RETIRO|OTROS","saldo":0}]}. No inventes datos.';
+      const responseText = await callGeminiWithResilience([{ inlineData: { mimeType, data: buffer.toString('base64') } }, { text: prompt }], 'ESTADOS_CUENTA_' + doc.tipo);
+      const detail = normalizeStatementResult(parseGeminiJson(responseText), doc.tipo);
+      meses[doc.tipo] = { ...detail, nombreArchivo: doc.nombre, procesadoEn: new Date().toISOString() };
+      allMovimientos.push(...detail.movimientos);
+    }
+    const previous = Object.entries(meses).filter(([type]) => !requestedTypes.includes(type)).flatMap(([, detail]: any) => detail?.movimientos || []);
+    const movimientos = [...previous, ...allMovimientos];
+    const ingresos = movimientos.filter((m: any) => m.tipo === 'INGRESO').reduce((s: number, m: any) => s + m.monto, 0);
+    const egresos = movimientos.filter((m: any) => m.tipo === 'EGRESO').reduce((s: number, m: any) => s + m.monto, 0);
+    const analysis = { procesadoEn: new Date().toISOString(), meses, movimientos, resumen: { ingresos: Math.round(ingresos * 100) / 100, egresos: Math.round(egresos * 100) / 100, diferencia: Math.round((ingresos - egresos) * 100) / 100, movimientos: movimientos.length } };
+    const { error: updateError } = await supabase.from('expedientes').update({ data: { ...(row.data || {}), estadosCuentaAnalisis: analysis } }).eq('id', row.id);
+    if (updateError) throw new Error('Supabase análisis estados de cuenta: ' + updateError.message);
+    res.json({ success: true, analysis, message: 'Estados de cuenta analizados con OCR y guardados en Supabase.' });
+  } catch (error: any) {
+    console.error('OCR estados de cuenta error:', error);
+    res.status(500).json({ success: false, message: error?.message || 'No se pudieron analizar los estados de cuenta.' });
+  }
+});
+
+app.get('/api/expedientes/:id/estados-cuenta/excel', async (req, res) => {
+  const session = requireStaff(req, res);
+  if (!session) return;
+  try {
+    const expedientes = (await getSupabaseExpedientes()) || [];
+    const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
+    if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    const analysis = exp.estadosCuentaAnalisis;
+    if (!analysis?.movimientos?.length) return res.status(404).json({ success: false, message: 'Primero analiza los estados de cuenta con OCR.' });
+    const movimientos = analysis.movimientos || [];
+    const ingresos = movimientos.filter((m: any) => m.tipo === 'INGRESO');
+    const egresos = movimientos.filter((m: any) => m.tipo === 'EGRESO');
+    const wb = XLSX.utils.book_new();
+    const resumen = [['CrediMóvil - Análisis de Estados de Cuenta'],['Folio',exp.folio],['Cliente',exp.ine?.nombreCompleto || exp.ine?.nombre || ''],[],['Resumen','Monto'],['Ingresos',analysis.resumen.ingresos],['Egresos',analysis.resumen.egresos],['Diferencia',analysis.resumen.diferencia],['Movimientos',analysis.resumen.movimientos]];
+    const wsResumen = XLSX.utils.aoa_to_sheet(resumen); wsResumen['!cols'] = [{wch:30},{wch:24}]; XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+    const makeSheet = (rows: any[], name: string) => { const data = rows.map((m: any) => ({ Fecha:m.fecha, Descripcion:m.descripcion, Referencia:m.referencia, Categoria:m.categoria, Monto:m.monto, Saldo:m.saldo ?? '', Mes:m.mes })); const ws = XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:14},{wch:48},{wch:24},{wch:18},{wch:15},{wch:15},{wch:20}]; XLSX.utils.book_append_sheet(wb, ws, name); };
+    makeSheet(ingresos, 'Ingresos'); makeSheet(egresos, 'Egresos'); makeSheet(movimientos, 'Movimientos');
+    const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+    res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition','attachment; filename="CrediMovil_' + sanitizeFileName(exp.folio) + '_Ingresos_Egresos.xlsx"');
+    res.send(Buffer.from(buffer));
+  } catch (error: any) {
+    console.error('Excel estados de cuenta error:', error);
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo generar el Excel.' });
+  }
+});
 app.post('/api/expedientes/:id/documentos', async (req, res) => {
   if (!requireStaff(req, res)) return;
 
