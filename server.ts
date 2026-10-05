@@ -397,6 +397,13 @@ function stripDocumentValues(exp: any) {
     }
   }
 
+  if (copy.obligadoSolidario?.nominas) {
+    copy.obligadoSolidario.nominas = copy.obligadoSolidario.nominas.map((doc: any) => ({
+      ...doc,
+      archivoUrl: '',
+    }));
+  }
+
   if (Array.isArray(copy.nominas)) {
     copy.nominas = copy.nominas.map((doc: any) => ({
       ...doc,
@@ -638,6 +645,66 @@ async function storeExpedienteDocuments(exp: any, dbExpedienteId: string) {
       }
     }
 
+    if (Array.isArray(os.nominas)) {
+      const nominas = os.nominas.slice(0, 3);
+      os.nominas = [];
+
+      for (let index = 0; index < nominas.length; index++) {
+        const nomina = nominas[index] || {};
+        const tipo = `OBLIGADO_SOLIDARIO_NOMINA_${index + 1}`;
+        const value = nomina.archivoUrl || '';
+
+        if (isDataUri(value)) {
+          await uploadDataUriToSupabase(
+            dbExpedienteId,
+            tipo,
+            value,
+            nomina.archivoNombre || `Obligado_Nomina_${index + 1}`,
+            'SUBIDO',
+            '',
+            {
+              categoria: 'NOMINA',
+              participante: 'OBLIGADO_SOLIDARIO',
+              indice: index + 1,
+              origen: 'Solicitud inicial',
+              fechaSubida: nomina.fechaSubida || new Date().toISOString(),
+            }
+          );
+
+          os.nominas.push({
+            archivoUrl: '',
+            archivoNombre: nomina.archivoNombre || `Obligado_Nomina_${index + 1}`,
+            archivoTipo: nomina.archivoTipo || '',
+            archivoTamano: Number(nomina.archivoTamano) || 0,
+            fechaSubida: nomina.fechaSubida || new Date().toISOString(),
+          });
+        } else if (isSignedOrApiDocumentUrl(value)) {
+          const stored = await supabase
+            .from('documentos')
+            .select('nombre,mime_type,tamano,created_at')
+            .eq('expediente_id', dbExpedienteId)
+            .eq('tipo', tipo)
+            .maybeSingle();
+
+          os.nominas.push({
+            archivoUrl: '',
+            archivoNombre: stored.data?.nombre || nomina.archivoNombre || '',
+            archivoTipo: stored.data?.mime_type || nomina.archivoTipo || '',
+            archivoTamano: Number(stored.data?.tamano || nomina.archivoTamano || 0),
+            fechaSubida: stored.data?.created_at || nomina.fechaSubida || '',
+          });
+        } else {
+          os.nominas.push({
+            archivoUrl: '',
+            archivoNombre: nomina.archivoNombre || '',
+            archivoTipo: nomina.archivoTipo || '',
+            archivoTamano: Number(nomina.archivoTamano) || 0,
+            fechaSubida: nomina.fechaSubida || '',
+          });
+        }
+      }
+    }
+
     if (os.estadosCuenta) {
       for (const key of ['mes1Url', 'mes2Url', 'mes3Url', 'archivoConsolidadoUrl']) {
         const value = os.estadosCuenta[key];
@@ -749,6 +816,21 @@ function applyStoredDocumentsToExpediente(exp: any, documentRows: any[]) {
       os.fotoIneFrente = await loadUrl(byType.get('OBLIGADO_SOLIDARIO_INE_FRENTE'));
       os.fotoIneReverso = await loadUrl(byType.get('OBLIGADO_SOLIDARIO_INE_REVERSO'));
       os.comprobanteDomicilioUrl = await loadUrl(byType.get('OBLIGADO_SOLIDARIO_COMPROBANTE_DOMICILIO'));
+      const osNominaSource = Array.isArray(os.nominas) ? os.nominas : [];
+      os.nominas = await Promise.all(
+        [1, 2, 3].map(async (index) => {
+          const stored = byType.get(`OBLIGADO_SOLIDARIO_NOMINA_${index}`);
+          const fallback = osNominaSource[index - 1] || {};
+          return {
+            archivoUrl: await loadUrl(stored),
+            archivoNombre: stored?.nombre || fallback.archivoNombre || '',
+            archivoTipo: stored?.mime_type || fallback.archivoTipo || '',
+            archivoTamano: Number(stored?.tamano || fallback.archivoTamano || 0),
+            fechaSubida: stored?.metadata?.fechaSubida || stored?.created_at || fallback.fechaSubida || '',
+          };
+        })
+      );
+      os.nominas = os.nominas.filter((doc: any) => Boolean(doc.archivoUrl || doc.archivoNombre));
       if (!os.estadosCuenta) os.estadosCuenta = {};
       os.estadosCuenta.mes1Url = await loadUrl(byType.get('OBLIGADO_SOLIDARIO_ESTADO_CUENTA_MES1'));
       os.estadosCuenta.mes2Url = await loadUrl(byType.get('OBLIGADO_SOLIDARIO_ESTADO_CUENTA_MES2'));
@@ -2638,6 +2720,9 @@ app.post('/api/expedientes/:id/documentos', async (req, res) => {
       'NOMINA_1',
       'NOMINA_2',
       'NOMINA_3',
+      'OBLIGADO_SOLIDARIO_NOMINA_1',
+      'OBLIGADO_SOLIDARIO_NOMINA_2',
+      'OBLIGADO_SOLIDARIO_NOMINA_3',
     ]);
 
     if (!allowed.has(String(tipo || ''))) {
