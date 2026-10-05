@@ -254,6 +254,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const [obligadoMes3Nombre, setObligadoMes3Nombre] = useState('');
   const [obligadoConsolidado, setObligadoConsolidado] = useState<string | null>(null);
   const [obligadoConsolidadoNombre, setObligadoConsolidadoNombre] = useState('');
+  const [obligadoNominas, setObligadoNominas] = useState<Array<{ archivoUrl: string; archivoNombre: string; archivoTipo?: string; archivoTamano?: number; fechaSubida?: string }>>([]);
   const obligadoIneFrenteInput = useRef<HTMLInputElement | null>(null);
   const obligadoIneReversoInput = useRef<HTMLInputElement | null>(null);
   const obligadoComprobanteInput = useRef<HTMLInputElement | null>(null);
@@ -261,6 +262,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const obligadoMes2Input = useRef<HTMLInputElement | null>(null);
   const obligadoMes3Input = useRef<HTMLInputElement | null>(null);
   const obligadoConsolidadoInput = useRef<HTMLInputElement | null>(null);
+  const obligadoNominaInputRef = useRef<HTMLInputElement | null>(null);
 
   // Referencias Personales
   const [referencias, setReferencias] = useState<ReferenciaPersonal[]>([
@@ -618,6 +620,51 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     }
   };
 
+  const handleObligadoNominaFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!files.length) return;
+
+    const available = Math.max(0, 3 - obligadoNominas.length);
+    if (available <= 0) {
+      setObligadoOcrError('Puedes adjuntar hasta 3 comprobantes de nómina para el obligado.');
+      return;
+    }
+
+    const selected = files.slice(0, available);
+    const invalid = selected.find((file) => !/^(application\/pdf|image\/png|image\/jpeg|image\/webp)$/i.test(file.type));
+    if (invalid) {
+      setObligadoOcrError('Las nóminas deben ser PDF, PNG, JPG o WEBP.');
+      return;
+    }
+
+    const oversized = selected.find((file) => file.size > 10 * 1024 * 1024);
+    if (oversized) {
+      setObligadoOcrError('Cada nómina puede pesar máximo 10 MB.');
+      return;
+    }
+
+    Promise.all(selected.map((file) => new Promise<any>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => typeof reader.result === 'string'
+        ? resolve({
+            archivoUrl: reader.result,
+            archivoNombre: file.name,
+            archivoTipo: file.type,
+            archivoTamano: file.size,
+            fechaSubida: new Date().toISOString(),
+          })
+        : reject(new Error('No se pudo leer la nómina.'));
+      reader.onerror = () => reject(new Error('No se pudo leer la nómina.'));
+      reader.readAsDataURL(file);
+    }))).then((items) => {
+      setObligadoNominas((prev) => [...prev, ...items].slice(0, 3));
+      setObligadoOcrError(null);
+    }).catch((error: any) => {
+      setObligadoOcrError(error?.message || 'No se pudieron cargar las nóminas.');
+    });
+  };
+
   const handleRunObligadoComprobanteOcr = async () => {
     if (!obligadoComprobante) {
       setObligadoDomicilioOcrError('Sube primero el comprobante de domicilio del obligado solidario.');
@@ -847,6 +894,13 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 mes3Nombre: obligadoMes3Nombre || undefined,
                 fechaSubida: new Date().toISOString(),
               },
+          nominas: obligadoNominas.map((doc) => ({
+            archivoUrl: doc.archivoUrl,
+            archivoNombre: doc.archivoNombre,
+            archivoTipo: doc.archivoTipo,
+            archivoTamano: doc.archivoTamano,
+            fechaSubida: doc.fechaSubida || new Date().toISOString(),
+          })),
         } : { requerido: false },
         loteId: selectedLoteId === 'otro' ? undefined : selectedLoteId,
         loteNombre: loteNombreFinal,
@@ -926,6 +980,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     setConsolidadoDoc(null);
     setConsolidadoNombre('');
     setNominas([]);
+    setObligadoNominas([]);
     setIsScanningObligado(false);
     setObligadoOcrError(null);
     setObligadoDomicilio({
@@ -3044,6 +3099,73 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     </div>
                   )}
                 </div>
+
+                <div className="mt-4 border border-[#2E3A59] rounded-2xl p-4 bg-[#121824]/60">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                    <div>
+                      <p className="text-xs font-black text-slate-200">Comprobantes de nómina <span className="text-[10px] text-slate-500 uppercase">(Opcional)</span></p>
+                      <p className="text-[11px] text-slate-500 mt-1">Puedes adjuntar hasta 3 nóminas del obligado solidario. No se realiza OCR.</p>
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-400">{obligadoNominas.length}/3 cargados</span>
+                  </div>
+
+                  {obligadoNominas.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                      {obligadoNominas.map((doc, index) => (
+                        <div key={index} className="rounded-xl border border-[#2E3A59] bg-[#121824] p-3">
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <p className="text-xs font-semibold text-slate-200 truncate">{doc.archivoNombre || `Nómina ${index + 1}`}</p>
+                          </div>
+                          <p className="text-[10px] text-slate-500 mt-1">Nómina {index + 1}</p>
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPreviewModalUrl(doc.archivoUrl);
+                                setPreviewModalTitle(`Comprobante de Nómina del Obligado ${index + 1}`);
+                              }}
+                              className="flex-1 py-1.5 bg-[#1C2541] border border-[#3A4868] text-slate-300 rounded-lg text-[11px] font-semibold"
+                            >
+                              <Eye className="w-3 h-3 inline mr-1" /> Ver
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setObligadoNominas((prev) => prev.filter((_, i) => i !== index))}
+                              className="py-1.5 px-2.5 bg-[#1C2541] border border-rose-200 text-rose-500 rounded-lg text-[11px] font-semibold"
+                              title="Quitar nómina"
+                            >
+                              <Trash2 className="w-3 h-3 inline" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {obligadoNominas.length < 3 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => obligadoNominaInputRef.current?.click()}
+                        className="w-full py-3 border-2 border-dashed border-[#3A4868] rounded-xl bg-[#121824] hover:bg-[#18223A] text-center"
+                      >
+                        <Upload className="w-4 h-4 text-slate-400 mx-auto mb-1" />
+                        <span className="text-xs font-bold text-slate-300 block">Subir nóminas del obligado</span>
+                        <span className="text-[10px] text-slate-500 block">PDF, PNG, JPG o WEBP · Opcional</span>
+                      </button>
+                      <input
+                        ref={obligadoNominaInputRef}
+                        type="file"
+                        multiple
+                        accept="application/pdf,image/png,image/jpeg,image/webp"
+                        className="hidden"
+                        onChange={handleObligadoNominaFiles}
+                      />
+                    </>
+                  )}
+                </div>
+
               </div>
 
               <div className="flex items-center gap-2 text-xs">
