@@ -157,7 +157,7 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
             </div>
             <div className='px-3 py-2 rounded-xl bg-slate-900 border border-slate-800'>
               <div className='text-[10px] uppercase text-slate-500'>Monto fondeado</div>
-              <div className='text-base font-black text-emerald-400'>{'
+              <div className='text-base font-black text-emerald-400'>{'$' + yearFundedAmount.toLocaleString('es-MX')}</div>
         <div className='relative flex-1'><Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500' /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder='Buscar por folio, cliente o vehículo...' className='w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm outline-none focus:border-red-500' /></div>
         <select value={estatus} onChange={(e) => setEstatus(e.target.value)} className='lg:w-64 py-2.5 px-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm outline-none'>
           <option value='TODOS'>Todos los estatus</option>
@@ -372,7 +372,7 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
                       <td className='py-2 pr-3 text-slate-300'>{m.label}{m.month === currentMonth ? ' *' : ''}</td>
                       <td className='py-2 pr-3 text-white font-bold'>{m.submitted}</td>
                       <td className='py-2 pr-3 text-emerald-400 font-bold'>{m.funded}</td>
-                      <td className='py-2 text-emerald-400 font-bold'>{'
+                      <td className='py-2 text-emerald-400 font-bold'>{'$' + m.fundedAmount.toLocaleString('es-MX') + ' MXN'}</td>
         <div className='relative flex-1'><Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500' /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder='Buscar por folio, cliente o vehículo...' className='w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm outline-none focus:border-red-500' /></div>
         <select value={estatus} onChange={(e) => setEstatus(e.target.value)} className='lg:w-64 py-2.5 px-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm outline-none'>
           <option value='TODOS'>Todos los estatus</option>
