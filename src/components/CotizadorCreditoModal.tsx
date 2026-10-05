@@ -37,7 +37,8 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
   const montoSeguroFinanciado = seguroModo === 'FINANCIADO' ? seguro : 0;
   const totalCapitalFinanciado = montoFinanciar + montoSeguroFinanciado;
   const comisionApertura = Math.round(totalCapitalFinanciado * 0.03 * 100) / 100;
-  const desembolsoTotal = enganche + comisionApertura + montoSeguroFinanciado;
+  const seguroDeContado = seguroModo === 'CONTADO' ? seguro : 0;
+  const desembolsoTotal = enganche + comisionApertura + seguroDeContado;
   const capitalMensual = totalCapitalFinanciado > 0 ? totalCapitalFinanciado / plazo : 0;
   const interesMensual = totalCapitalFinanciado * 0.02;
   const ivaInteres = interesMensual * 0.16;
@@ -99,6 +100,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
     seguroResumenLabel + ': ' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro)),
     'Total capital financiado: ' + money(totalCapitalFinanciado),
     'Comisión por apertura (3%): ' + money(comisionApertura),
+    'Seguro de contado: ' + (seguroDeContado > 0 ? money(seguroDeContado) : 'No aplica'),
     'Desembolso total: ' + money(desembolsoTotal),
     'Plazo: ' + plazo + ' meses',
     'Mensualidad estimada: ' + money(mensualidad),
@@ -121,7 +123,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
     if (!popup) return;
 
     const schedulePages: string[] = [];
-    const rowsPerPage = 12;
+    const rowsPerPage = 18;
     for (let pageStart = 0; pageStart < monthlySchedule.length; pageStart += rowsPerPage) {
       const pageRows = monthlySchedule.slice(pageStart, pageStart + rowsPerPage);
       schedulePages.push(
@@ -158,17 +160,17 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
       '@page{size:A4 portrait;margin:10mm}' +
       '*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}' +
       'html,body{margin:0;padding:0;background:#fff;color:#071A33}' +
-      'body{font-family:Arial,Helvetica,sans-serif;font-size:11px}' +
+      'body{font-family:Arial,Helvetica,sans-serif;font-size:10px}' +
       '.print-page{width:100%;page-break-after:always}' +
       '.print-page:last-child{page-break-after:auto}' +
-      '.print-header{background:#071A33;color:#fff;border-bottom:5px solid #C81E2B;border-radius:12px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}' +
-      '.brand{font-size:25px;font-weight:900;letter-spacing:-.3px}.brand span{color:#E3262F}.subtitle{font-size:9px;color:#B9C7DA;text-transform:uppercase;letter-spacing:1.2px;margin-top:3px}.meta{font-size:9px;color:#B9C7DA;text-align:right}.meta strong{display:block;font-size:13px;color:#fff;margin:2px 0}.meta span{display:block;color:#8FA8C0;font-size:8px}' +
-      '.client{background:#EEF3F8;border:1px solid #CBD7E3;border-radius:12px;padding:12px 14px;margin-bottom:12px}.client-name{font-size:14px;font-weight:800;color:#071A33}.vehicle{font-size:10px;color:#46617D;margin-top:4px}' +
+      '.print-header{background:#071A33;color:#fff;border-bottom:4px solid #C81E2B;border-radius:10px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}' +
+      '.brand{font-size:21px;font-weight:900;letter-spacing:-.3px}.brand span{color:#E3262F}.subtitle{font-size:9px;color:#B9C7DA;text-transform:uppercase;letter-spacing:1.2px;margin-top:3px}.meta{font-size:9px;color:#B9C7DA;text-align:right}.meta strong{display:block;font-size:13px;color:#fff;margin:2px 0}.meta span{display:block;color:#8FA8C0;font-size:8px}' +
+      '.client{background:#EEF3F8;border:1px solid #CBD7E3;border-radius:9px;padding:8px 10px;margin-bottom:8px}.client-name{font-size:12px;font-weight:800;color:#071A33}.vehicle{font-size:10px;color:#46617D;margin-top:4px}' +
       '.quote{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #CBD7E3;border-radius:12px;overflow:hidden}.quote td{padding:9px 10px;border-bottom:1px solid #D9E2EB;font-size:10px}.quote tr:last-child td{border-bottom:0}.quote td:first-child{font-weight:800;color:#294767;width:52%}.quote td:last-child{color:#071A33}.highlight td{background:#FFF1F2}.highlight td:last-child{font-size:24px;font-weight:900;color:#C81E2B}' +
-      '.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.box{border:1px solid #CBD7E3;border-radius:10px;padding:10px;background:#F6F8FB}.box span{display:block;color:#60778E;font-size:8px;text-transform:uppercase;letter-spacing:.5px}.box strong{display:block;margin-top:4px;font-size:12px;color:#071A33}' +
-      '.note{margin-top:10px;padding:10px 12px;border-left:4px solid #C81E2B;background:#F6F8FB;color:#536B83;font-size:8px;line-height:1.45}.disbursement{margin-top:10px;border:1px solid #CBD7E3;border-radius:12px;background:#F6F8FB;padding:11px 12px}.disbursement-title{font-size:9px;font-weight:900;text-transform:uppercase;color:#18365C;margin-bottom:7px}.disbursement-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #E1E7ED;font-size:9px;color:#46617D}.disbursement-row:last-child{border-bottom:0;font-weight:900;color:#C81E2B;font-size:11px}' +
-      '.cover-footer{text-align:center;color:#8092A5;font-size:8px;margin-top:12px}' +
-      '.schedule-page{min-height:275mm}.schedule-title{font-size:13px;font-weight:900;color:#071A33;text-transform:uppercase;letter-spacing:.8px;margin:2px 0 8px}' +
+      '.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:7px}.box{border:1px solid #CBD7E3;border-radius:8px;padding:7px;background:#F6F8FB}.box span{display:block;color:#60778E;font-size:8px;text-transform:uppercase;letter-spacing:.5px}.box strong{display:block;margin-top:4px;font-size:12px;color:#071A33}' +
+      '.note{margin-top:7px;padding:10px 12px;border-left:4px solid #C81E2B;background:#F6F8FB;color:#536B83;font-size:8px;line-height:1.45}.disbursement{margin-top:10px;border:1px solid #CBD7E3;border-radius:12px;background:#F6F8FB;padding:11px 12px}.disbursement-title{font-size:9px;font-weight:900;text-transform:uppercase;color:#18365C;margin-bottom:7px}.disbursement-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #E1E7ED;font-size:9px;color:#46617D}.disbursement-row:last-child{border-bottom:0;font-weight:900;color:#C81E2B;font-size:11px}' +
+      '.cover-footer{text-align:center;color:#8092A5;font-size:7px;margin-top:7px}' +
+      '.schedule-page{min-height:275mm}.schedule-title{font-size:11px;font-weight:900;color:#071A33;text-transform:uppercase;letter-spacing:.8px;margin:2px 0 8px}' +
       '.schedule{width:100%;border-collapse:collapse;border:1px solid #CBD7E3}.schedule th{background:#18365C;color:#fff;padding:8px 6px;font-size:8px;text-align:right}.schedule th:first-child{text-align:center}.schedule td{padding:8px 6px;border-bottom:1px solid #D9E2EB;font-size:9px;text-align:right;white-space:nowrap;color:#18365C}.schedule tr:nth-child(even) td{background:#F6F8FB}.schedule td.center{text-align:center;font-weight:800}.schedule td.payment{font-weight:900;color:#C81E2B}.schedule td.balance{font-weight:800;color:#047857}.page-footer{margin-top:12px;padding-top:8px;border-top:1px solid #CBD7E3;color:#8092A5;font-size:8px}' +
       '</style></head><body>' +
 
@@ -198,10 +200,10 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
           '<div class="disbursement-title">Desembolso total inicial</div>' +
           '<div class="disbursement-row"><span>Enganche</span><span>' + money(enganche) + '</span></div>' +
           '<div class="disbursement-row"><span>Comisión por apertura (3%)</span><span>' + money(comisionApertura) + '</span></div>' +
-          (montoSeguroFinanciado > 0 ? '<div class="disbursement-row"><span>Seguro financiado</span><span>' + money(montoSeguroFinanciado) + '</span></div>' : '') +
+          (seguroDeContado > 0 ? '<div class="disbursement-row"><span>Seguro de contado</span><span>' + money(seguroDeContado) + '</span></div>' : '') +
           '<div class="disbursement-row"><span>Desembolso total</span><span>' + money(desembolsoTotal) + '</span></div>' +
         '</div>' +
-        '<div class="note">Cotización estimada sujeta a validación y aprobación final. El seguro financiado se incorpora al capital; el seguro de contado se paga por separado. GPS $260 + SDD $142 están incluidos en la mensualidad.</div>' +
+        '<div class="note">Cotización estimada sujeta a validación y aprobación final. El seguro financiado se integra al capital y no forma parte del desembolso inicial; el seguro de contado se paga al inicio. GPS $260 + SDD $142 están incluidos en la mensualidad.</div>' +
         '<div class="cover-footer">CrediMóvil · Tu auto, más cerca de tus planes</div>' +
       '</section>' +
       schedulePages.join('') +
@@ -312,7 +314,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
 
             <div className="mt-3 text-xs text-slate-400">
               {seguroModo === 'NINGUNO' && 'No se agrega seguro a la cotización.'}
-              {seguroModo === 'CONTADO' && <>El cliente paga <strong className="text-white">{money(seguro)}</strong> por separado; la mensualidad no cambia y el seguro de contado no se suma al desembolso financiero mostrado.</>}
+              {seguroModo === 'CONTADO' && <>El cliente paga <strong className="text-white">{money(seguro)}</strong> al inicio; la mensualidad no cambia y este importe sí se suma al desembolso inicial.</>}
               {seguroModo === 'FINANCIADO' && <>Se agregan <strong className="text-white">{money(seguro)}</strong> al capital financiado; la mensualidad cambia a <strong className="text-red-300">{money(mensualidad)}</strong>.</>}
             </div>
           </div>
@@ -342,8 +344,8 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
                 <div className="text-sm font-black text-white mt-1">{money(comisionApertura)}</div>
               </div>
               <div className="rounded-xl bg-black/20 border border-white/10 p-3">
-                <div className="text-[10px] text-slate-400 uppercase">Seguro financiado</div>
-                <div className="text-sm font-black text-white mt-1">{money(montoSeguroFinanciado)}</div>
+                <div className="text-[10px] text-slate-400 uppercase">Seguro (contado)</div>
+                <div className="text-sm font-black text-white mt-1">{money(seguroDeContado)}</div>
               </div>
             </div>
           </div>
