@@ -2780,6 +2780,114 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     <input type="text" required value={obligadoDireccionEmpleo} onChange={(e) => setObligadoDireccionEmpleo(e.target.value)} placeholder="Calle, número, colonia, municipio, estado" className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none" />
                   </div>
                 </div>
+
+                {/* Domicilio actual del obligado: se puede completar automáticamente con el OCR del comprobante */}
+                <div className="mt-5 pt-5 border-t border-[#2E3A59]">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                    <div>
+                      <h4 className="text-xs font-black text-slate-100 uppercase tracking-wider">Dirección de vivienda</h4>
+                      <p className="text-[11px] text-slate-500 mt-1">
+                        Puedes capturarla manualmente o usar el OCR del comprobante de domicilio.
+                      </p>
+                    </div>
+                    {obligadoComprobante && (
+                      <button
+                        type="button"
+                        onClick={handleRunObligadoComprobanteOcr}
+                        disabled={obligadoDomicilioOcrLoading}
+                        className="py-2 px-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-[11px] font-black flex items-center gap-1.5"
+                      >
+                        {obligadoDomicilioOcrLoading ? (
+                          <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Leyendo domicilio...</>
+                        ) : (
+                          <><Scan className="w-3.5 h-3.5" /> Llenar con OCR</>
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="lg:col-span-2">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Calle</label>
+                      <input
+                        type="text"
+                        value={obligadoDomicilio.calle}
+                        onChange={(e) => setObligadoDomicilio((prev) => ({ ...prev, calle: e.target.value, domicilioCompleto: [e.target.value, prev.numExterior ? `#${prev.numExterior}` : '', prev.numInterior ? `Int. ${prev.numInterior}` : '', prev.colonia ? `Col. ${prev.colonia}` : '', prev.codigoPostal ? `C.P. ${prev.codigoPostal}` : '', prev.municipio, prev.estado].filter(Boolean).join(', ') }))}
+                        placeholder="Calle"
+                        className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">No. exterior</label>
+                      <input
+                        type="text"
+                        value={obligadoDomicilio.numExterior}
+                        onChange={(e) => setObligadoDomicilio((prev) => ({ ...prev, numExterior: e.target.value, domicilioCompleto: [prev.calle, e.target.value ? `#${e.target.value}` : '', prev.numInterior ? `Int. ${prev.numInterior}` : '', prev.colonia ? `Col. ${prev.colonia}` : '', prev.codigoPostal ? `C.P. ${prev.codigoPostal}` : '', prev.municipio, prev.estado].filter(Boolean).join(', ') }))}
+                        placeholder="No."
+                        className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">No. interior</label>
+                      <input
+                        type="text"
+                        value={obligadoDomicilio.numInterior}
+                        onChange={(e) => setObligadoDomicilio((prev) => ({ ...prev, numInterior: e.target.value, domicilioCompleto: [prev.calle, prev.numExterior ? `#${prev.numExterior}` : '', e.target.value ? `Int. ${e.target.value}` : '', prev.colonia ? `Col. ${prev.colonia}` : '', prev.codigoPostal ? `C.P. ${prev.codigoPostal}` : '', prev.municipio, prev.estado].filter(Boolean).join(', ') }))}
+                        placeholder="Int."
+                        className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+                    <div className="lg:col-span-2">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Colonia</label>
+                      <input
+                        type="text"
+                        value={obligadoDomicilio.colonia}
+                        onChange={(e) => setObligadoDomicilio((prev) => ({ ...prev, colonia: e.target.value, domicilioCompleto: [prev.calle, prev.numExterior ? `#${prev.numExterior}` : '', prev.numInterior ? `Int. ${prev.numInterior}` : '', e.target.value ? `Col. ${e.target.value}` : '', prev.codigoPostal ? `C.P. ${prev.codigoPostal}` : '', prev.municipio, prev.estado].filter(Boolean).join(', ') }))}
+                        placeholder="Colonia / fraccionamiento"
+                        className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Código postal</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={5}
+                        value={obligadoDomicilio.codigoPostal}
+                        onChange={(e) => setObligadoDomicilio((prev) => ({ ...prev, codigoPostal: e.target.value.replace(/\D/g, '').slice(0, 5), domicilioCompleto: [prev.calle, prev.numExterior ? `#${prev.numExterior}` : '', prev.numInterior ? `Int. ${prev.numInterior}` : '', prev.colonia ? `Col. ${prev.colonia}` : '', e.target.value ? `C.P. ${e.target.value.replace(/\D/g, '').slice(0, 5)}` : '', prev.municipio, prev.estado].filter(Boolean).join(', ') }))}
+                        placeholder="C.P."
+                        className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Municipio / Alcaldía</label>
+                      <input
+                        type="text"
+                        value={obligadoDomicilio.municipio}
+                        onChange={(e) => setObligadoDomicilio((prev) => ({ ...prev, municipio: e.target.value, domicilioCompleto: [prev.calle, prev.numExterior ? `#${prev.numExterior}` : '', prev.numInterior ? `Int. ${prev.numInterior}` : '', prev.colonia ? `Col. ${prev.colonia}` : '', prev.codigoPostal ? `C.P. ${prev.codigoPostal}` : '', e.target.value, prev.estado].filter(Boolean).join(', ') }))}
+                        placeholder="Municipio"
+                        className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Estado</label>
+                      <input
+                        type="text"
+                        value={obligadoDomicilio.estado}
+                        onChange={(e) => setObligadoDomicilio((prev) => ({ ...prev, estado: e.target.value, domicilioCompleto: [prev.calle, prev.numExterior ? `#${prev.numExterior}` : '', prev.numInterior ? `Int. ${prev.numInterior}` : '', prev.colonia ? `Col. ${prev.colonia}` : '', prev.codigoPostal ? `C.P. ${prev.codigoPostal}` : '', prev.municipio, e.target.value].filter(Boolean).join(', ') }))}
+                        placeholder="Estado"
+                        className="w-full py-2.5 px-3 bg-[#1C2541] border border-[#3A4868] rounded-xl text-slate-100 text-sm focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {obligadoDomicilio.domicilioCompleto && (
+                    <div className="mt-3 rounded-xl bg-[#121824] border border-[#2E3A59] p-3">
+                      <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Domicilio completo</p>
+                      <p className="text-xs text-slate-200">{obligadoDomicilio.domicilioCompleto}</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
