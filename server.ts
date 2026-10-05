@@ -2361,13 +2361,23 @@ app.post('/api/expedientes', async (req, res) => {
   try {
     const expedientes = (await getSupabaseExpedientes()) || [];
     const highestFolio = expedientes.reduce((max: number, exp: any) => {
-      const match = String(exp?.folio || '').match(/^EXP-\\d{4}-(\\d+)$/);
+      const match = String(exp?.folio || '').match(/^EXP-\d{4}-(\d+)$/);
       const n = match ? Number(match[1]) : 0;
       return Number.isFinite(n) ? Math.max(max, n) : max;
     }, 1000);
 
-    const nextNum = highestFolio + 1;
-    const folio = `EXP-2026-${nextNum}`;
+    let nextNum = highestFolio + 1;
+    let folio = `EXP-2026-${nextNum}`;
+
+    // Evita reutilizar un folio existente incluso si hubo expedientes creados
+    // con una versión anterior que no calculaba correctamente el consecutivo.
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const existingFolio = await getSupabaseExpedienteRowByFolio(folio);
+      if (!existingFolio) break;
+      nextNum += 1;
+      folio = `EXP-2026-${nextNum}`;
+    }
+
     const pinFondeo = Math.floor(1000 + Math.random() * 9000).toString();
     const body = req.body || {};
     const now = new Date().toISOString();
