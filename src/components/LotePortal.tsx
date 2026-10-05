@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Building2, Car, Clock3, FileText, RefreshCw, Search, ShieldCheck, Wallet, MessageCircle, Calculator } from 'lucide-react';
+import { Building2, Car, Clock3, FileText, RefreshCw, Search, ShieldCheck, Wallet, MessageCircle, Calculator, TrendingUp, BarChart3 } from 'lucide-react';
 import { api } from '../services/api';
 import { ChatLoteModal } from './ChatLoteModal';
 import { ExpedienteComentariosModal } from './ExpedienteComentariosModal';
@@ -12,7 +12,7 @@ interface LotePortalProps {
 type LoteExpediente = {
   id: string; folio: string; estatus: string; clienteNombre: string; telefono: string;
   autoMarca: string; autoModelo: string; autoAno?: number | null; montoFinanciar: number;
-  fechaCreacion: string; fechaActualizacion?: string; docsSubidos: number; docsRequeridos: number;
+  fechaCreacion: string; fechaActualizacion?: string; fechaFondeo?: string; docsSubidos: number; docsRequeridos: number;
 };
 
 const statusLabel: Record<string, string> = {
@@ -60,6 +60,24 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
     fondeados: expedientes.filter((e) => e.estatus === 'FONDEADO').length,
     monto: expedientes.filter((e) => e.estatus !== 'RECHAZADO').reduce((sum, e) => sum + (Number(e.montoFinanciar) || 0), 0),
   };
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth();
+  const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const monthlyStats = Array.from({ length: currentMonth + 1 }, (_, month) => {
+    const submitted = expedientes.filter((e) => {
+      const d = new Date(e.fechaCreacion);
+      return d.getFullYear() === currentYear && d.getMonth() === month;
+    });
+    const funded = expedientes.filter((e) => {
+      const d = new Date(e.fechaFondeo || '');
+      return e.estatus === 'FONDEADO' && d.getFullYear() === currentYear && d.getMonth() === month;
+    });
+    return { month, label: monthNames[month], submitted: submitted.length, funded: funded.length, fundedAmount: funded.reduce((sum, e) => sum + (Number(e.montoFinanciar) || 0), 0) };
+  });
+  const chartMax = Math.max(1, ...monthlyStats.flatMap((m) => [m.submitted, m.funded]));
+  const yearSubmitted = monthlyStats.reduce((sum, m) => sum + m.submitted, 0);
+  const yearFunded = monthlyStats.reduce((sum, m) => sum + m.funded, 0);
+  const yearFundedAmount = monthlyStats.reduce((sum, m) => sum + m.fundedAmount, 0);
 
   const statusClass = (value: string) => {
     if (value === 'FONDEADO') return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20';
@@ -91,6 +109,47 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
         <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'><span className='text-[11px] uppercase tracking-wider text-slate-500'>Aprobados</span><div className='text-2xl font-black text-blue-400 mt-1'>{stats.aprobados}</div></div>
         <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'><span className='text-[11px] uppercase tracking-wider text-slate-500'>Fondeados</span><div className='text-2xl font-black text-emerald-400 mt-1'>{stats.fondeados}</div></div>
       </div>
+
+      <section className='bg-[#071A33] border border-[#18365C] rounded-2xl p-5 sm:p-6 shadow-lg space-y-5'>
+        <div className='flex flex-col lg:flex-row lg:items-center justify-between gap-3'>
+          <div>
+            <div className='flex items-center gap-2'><BarChart3 className='w-5 h-5 text-red-400' /><h2 className='text-base sm:text-lg font-black text-white'>Control mensual de créditos</h2></div>
+            <p className='text-xs text-slate-400 mt-1'>Créditos registrados por mes y créditos fondeados. El mes actual se actualiza conforme llegan nuevos expedientes.</p>
+          </div>
+          <div className='grid grid-cols-3 gap-2 text-center'>
+            <div className='px-3 py-2 rounded-xl bg-slate-900 border border-slate-800'><div className='text-[10px] uppercase text-slate-500'>Año</div><div className='text-base font-black text-white'>{yearSubmitted}</div><div className='text-[10px] text-slate-500'>registrados</div></div>
+            <div className='px-3 py-2 rounded-xl bg-slate-900 border border-slate-800'><div className='text-[10px] uppercase text-slate-500'>Fondeados</div><div className='text-base font-black text-emerald-400'>{yearFunded}</div><div className='text-[10px] text-slate-500'>créditos</div></div>
+            <div className='px-3 py-2 rounded-xl bg-slate-900 border border-slate-800'><div className='text-[10px] uppercase text-slate-500'>Monto fondeado</div><div className='text-base font-black text-emerald-400'>${yearFundedAmount.toLocaleString('es-MX')}</div><div className='text-[10px] text-slate-500'>MXN</div></div>
+          </div>
+        </div>
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-5'>
+          <div className='rounded-2xl bg-slate-900/70 border border-slate-800 p-4'>
+            <div className='flex items-center gap-2 text-xs font-bold text-slate-200 mb-4'><TrendingUp className='w-4 h-4 text-red-400' /> Créditos por mes</div>
+            <div className='space-y-3'>
+              {monthlyStats.map((m) => (
+                <div key={m.month}>
+                  <div className='flex items-center justify-between text-[11px] mb-1'><span className='text-slate-400'>{m.label}{m.month === currentMonth ? ' · En curso' : ''}</span><span className='text-white font-black'>{m.submitted} registrados · <span className='text-emerald-400'>{m.funded} fondeados</span></span></div>
+                  <div className='h-2.5 rounded-full bg-slate-950 overflow-hidden flex'>
+                    <div className='bg-red-500/80 h-full' style={{ width: (m.submitted / chartMax) * 100 + '%' }} />
+                    <div className='bg-emerald-500 h-full' style={{ width: (m.funded / chartMax) * 100 + '%' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className='mt-4 flex items-center gap-4 text-[10px] text-slate-500'><span className='inline-flex items-center gap-1'><span className='w-2.5 h-2.5 rounded bg-red-500/80' /> Registrados</span><span className='inline-flex items-center gap-1'><span className='w-2.5 h-2.5 rounded bg-emerald-500' /> Fondeados</span></div>
+          </div>
+          <div className='rounded-2xl bg-slate-900/70 border border-slate-800 p-4'>
+            <div className='text-xs font-bold text-slate-200 mb-4'>Detalle mensual</div>
+            <div className='overflow-x-auto'>
+              <table className='w-full text-left text-[11px]'>
+                <thead className='text-slate-500 uppercase border-b border-slate-800'><tr><th className='py-2 pr-3'>Mes</th><th className='py-2 pr-3'>Registrados</th><th className='py-2 pr-3'>Fondeados</th><th className='py-2'>Monto fondeado</th></tr></thead>
+                <tbody>{monthlyStats.map((m) => (<tr key={m.month} className='border-b border-slate-800/60 last:border-0'><td className='py-2 pr-3 text-slate-300'>{m.label}{m.month === currentMonth ? ' *' : ''}</td><td className='py-2 pr-3 text-white font-bold'>{m.submitted}</td><td className='py-2 pr-3 text-emerald-400 font-bold'>{m.funded}</td><td className='py-2 text-emerald-400 font-bold'>${m.fundedAmount.toLocaleString('es-MX')} MXN</td></tr>))}</tbody>
+              </table>
+            </div>
+            <p className='mt-3 text-[10px] text-slate-500'>* El mes en curso puede estar incompleto; se actualiza conforme cambian los créditos.</p>
+          </div>
+        </div>
+      </section>
 
       <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col lg:flex-row gap-3'>
         <div className='relative flex-1'><Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500' /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder='Buscar por folio, cliente o vehículo...' className='w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm outline-none focus:border-red-500' /></div>
@@ -138,7 +197,9 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
                     <div className='mt-2 text-white font-bold truncate'>{e.clienteNombre || 'Cliente sin nombre'}</div>
                     <div className='mt-1 text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-1'>
                       <span className='inline-flex items-center gap-1.5'><Car className='w-3.5 h-3.5' />{e.autoMarca} {e.autoModelo} {e.autoAno ? '(' + e.autoAno + ')' : ''}</span>
-                      <span className='inline-flex items-center gap-1.5'><Clock3 className='w-3.5 h-3.5' />{e.fechaCreacion ? new Date(e.fechaCreacion).toLocaleDateString('es-MX') : '—'}</span>
+                      <span className='inline-flex items-center gap-1.5'><Clock3 className='w-3.5 h-3.5' />Alta: {e.fechaCreacion ? new Date(e.fechaCreacion).toLocaleDateString('es-MX') : '—'}</span>
+                      <span className='inline-flex items-center gap-1.5 text-slate-500'>Última actualización: {e.fechaActualizacion ? new Date(e.fechaActualizacion).toLocaleDateString('es-MX') : '—'}</span>
+                      {e.fechaFondeo && <span className='inline-flex items-center gap-1.5 text-emerald-400 font-semibold'>Fondeado: {new Date(e.fechaFondeo).toLocaleDateString('es-MX')}</span>}
                     </div>
                   </div>
                   <div className='flex items-center gap-3 shrink-0'>
