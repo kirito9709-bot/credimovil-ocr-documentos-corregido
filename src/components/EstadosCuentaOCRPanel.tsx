@@ -39,8 +39,48 @@ export const EstadosCuentaOCRPanel: React.FC<Props> = ({ expediente, onUpdate })
     setMensaje(null);
     try {
       const response = await api.analyzeEstadosCuenta(expediente.id, tipos.length ? tipos : ['ESTADO_CUENTA_CONSOLIDADO']);
-      if (response.success) {
-        setMensaje('OCR terminado. Los ingresos y egresos quedaron guardados en Supabase.');
+
+      if (response.queued && response.jobId) {
+        setMensaje('OCR enviado a la cola. El servidor puede seguir atendiendo a otros usuarios mientras se procesa.');
+
+        const startedAt = Date.now();
+        while (Date.now() - startedAt < 10 * 60 * 1000) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          const status = await api.getEstadosCuentaOcrJob(expediente.id, response.jobId);
+          const job = status?.job;
+
+          if (!job) continue;
+
+          setMensaje(
+            job.estado === 'PROCESANDO'
+              ? 'Procesando estados de cuenta...'
+              : `OCR en cola: ${job.progreso || 0}%`
+          );
+
+          if (job.estado === 'COMPLETADO' || job.estado === 'REVISAR') {
+            setMensaje(
+              job.estado === 'REVISAR'
+                ? 'OCR terminado, pero la validación financiera requiere revisión.'
+                : 'OCR terminado. Los ingresos y egresos quedaron guardados en Supabase.'
+            );
+
+            if (job.resultado) {
+              onUpdate?.({ ...expediente, estadosCuentaAnalisis: job.resultado });
+            }
+            break;
+          }
+
+          if (job.estado === 'ERROR') {
+            throw new Error(job.error || 'El worker OCR reportó un error.');
+          }
+        }
+      } else if (response.success) {
+        setMensaje(
+          response.analysis?.validacionGlobal?.estado === 'REVISAR'
+            ? 'OCR terminado, pero la validación financiera requiere revisión.'
+            : 'OCR terminado. Los ingresos y egresos quedaron guardados en Supabase.'
+        );
         if (response.expediente) onUpdate?.(response.expediente);
         else if (response.analysis) onUpdate?.({ ...expediente, estadosCuentaAnalisis: response.analysis });
       }

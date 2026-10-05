@@ -10,7 +10,8 @@
     "preview": "vite build && tsx server.ts",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "postinstall": "vite build"
+    "postinstall": "vite build",
+    "ocr-worker": "tsx ocr-worker.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -25,7 +26,9 @@
     "motion": "^12.23.24",
     "@supabase/supabase-js": "^2.58.0",
     "archiver": "^8.0.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "@google-cloud/documentai": "^10.1.1",
+    "pdfjs-dist": "^6.3.289"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

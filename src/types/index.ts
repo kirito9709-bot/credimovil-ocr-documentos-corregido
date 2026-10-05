@@ -93,6 +93,8 @@ export interface EstadoCuentaMovimiento {
   categoria?: string;
   saldo?: number;
   mes?: string;
+  confianza?: number;
+  fuente?: string;
 }
 
 export interface EstadosCuentaValidacion {
@@ -111,6 +113,9 @@ export interface EstadosCuentaAnalisisDetalle {
   filasLeidas?: number;
   filasDuplicadas?: number;
   validacion?: EstadosCuentaValidacion;
+  proveedorOCR?: string;
+  confianzaOCR?: number;
+  advertenciasOCR?: string[];
   movimientos: EstadoCuentaMovimiento[];
   resumen: {
     ingresos: number;

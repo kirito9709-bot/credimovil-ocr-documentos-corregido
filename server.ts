@@ -9,6 +9,8 @@ import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { ZipArchive } from 'archiver';
 import * as XLSX from 'xlsx';
+import { documentAiConfigured, extractWithDocumentAi } from './server/ocr/documentAi';
+import { parseBankTables } from './server/ocr/bankParser';
 
 dotenv.config();
 
@@ -1455,6 +1457,8 @@ app.get('/api/health', (req, res) => {
     name: 'CrediMóvil OCR & Fondeo API',
     geminiConfigured: Boolean(GEMINI_API_KEY),
     geminiKeySource: process.env.GEMINI_API_KEY ? 'GEMINI_API_KEY' : (process.env.GOOGLE_API_KEY ? 'GOOGLE_API_KEY' : 'none'),
+    documentAiConfigured: documentAiConfigured(),
+    ocrProvider: String(process.env.OCR_PROVIDER || 'auto'),
     supabaseConfigured: Boolean(supabase),
     supabaseUrl: SUPABASE_URL || null,
   });
@@ -2648,6 +2652,8 @@ function normalizeStatementResult(parsed: any, docType: string) {
       cargo: cargo || undefined,
       abono: abono || undefined,
       clasificacion: hasExplicitColumns ? 'COLUMNAS' : 'INFERIDA',
+      confianza: Number.isFinite(Number(m?.confianza)) ? Number(m.confianza) : undefined,
+      fuente: String(m?.fuente || parsed?._ocrMeta?.provider || 'GEMINI_VISION'),
     };
 
     if (!base.descripcion) return [];
@@ -2747,8 +2753,16 @@ function validateStatementResult(parsed: any, detail: any) {
 }
 
 app.post('/api/expedientes/:id/estados-cuenta/ocr', async (req, res) => {
-  const session = requireStaff(req, res);
+  const expectedWorkerSecret = String(process.env.OCR_WORKER_SECRET || '').trim();
+  const providedWorkerSecret = String(req.headers['x-credimovil-ocr-worker-secret'] || '').trim();
+  const workerRequest = Boolean(expectedWorkerSecret && providedWorkerSecret && expectedWorkerSecret === providedWorkerSecret);
+
+  const session = workerRequest
+    ? { role: 'admin', username: 'ocr-worker', nombre: 'OCR Worker' }
+    : requireStaff(req, res);
+
   if (!session) return;
+
   try {
     const expedientes = (await getSupabaseExpedientes()) || [];
     const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
@@ -2756,6 +2770,66 @@ app.post('/api/expedientes/:id/estados-cuenta/ocr', async (req, res) => {
     const row = await getSupabaseExpedienteRowByFolio(exp.folio);
     if (!row?.id) return res.status(404).json({ success: false, message: 'No se encontró el expediente en Supabase.' });
     const requestedTypes = Array.isArray(req.body?.tipos) && req.body.tipos.length ? req.body.tipos.map((t: any) => String(t)) : ['ESTADO_CUENTA_MES1','ESTADO_CUENTA_MES2','ESTADO_CUENTA_MES3'];
+
+    if (!workerRequest && process.env.OCR_ASYNC === 'true') {
+      if (!ocrQueueConfigured()) {
+        return res.status(503).json({
+          success: false,
+          message: 'OCR asíncrono está activado, pero la cola Supabase no está configurada.'
+        });
+      }
+
+      const { data: job, error: jobError } = await supabase
+        .from('ocr_jobs')
+        .insert({
+          expediente_id: row.id,
+          tipos: requestedTypes,
+          estado: 'PENDIENTE',
+          progreso: 0,
+          solicitado_por: String((session as any).username || (session as any).nombre || ''),
+        })
+        .select('id,estado,progreso,created_at')
+        .single();
+
+      if (jobError || !job) {
+        throw new Error('No se pudo crear el trabajo OCR: ' + (jobError?.message || 'sin respuesta'));
+      }
+
+      try {
+        await enqueueOcrJob(supabase, {
+          jobId: job.id,
+          expedienteId: row.id,
+          expedienteRef: exp.folio,
+          tipos: requestedTypes,
+          createdAt: new Date().toISOString(),
+        });
+      } catch (queueError: any) {
+        await supabase.from('ocr_jobs').update({
+          estado: 'ERROR',
+          error: String(queueError?.message || queueError),
+          completed_at: new Date().toISOString(),
+        }).eq('id', job.id);
+        throw queueError;
+      }
+
+      return res.status(202).json({
+        success: true,
+        queued: true,
+        jobId: job.id,
+        message: 'OCR enviado a la cola. El servidor web queda libre para otros usuarios.',
+      });
+    }
+
+    const workerJobId = workerRequest ? String(req.body?.jobId || '') : '';
+    if (workerJobId) {
+      await supabase.from('ocr_jobs').update({
+        estado: 'PROCESANDO',
+        progreso: 5,
+        intentos: 1,
+        started_at: new Date().toISOString(),
+        error: '',
+      }).eq('id', workerJobId);
+    }
     const { data: docs, error: docsError } = await supabase.from('documentos').select('tipo,nombre,storage_path').eq('expediente_id', row.id).in('tipo', requestedTypes);
     if (docsError) throw new Error('Supabase estados de cuenta: ' + docsError.message);
     if (!docs?.length) return res.status(404).json({ success: false, message: 'No hay estados de cuenta almacenados para analizar.' });
@@ -2798,13 +2872,63 @@ Devuelve exactamente:
 {"bancoEmisor":"","cuentaUltimos4":"","movimientos":[{"fecha":"YYYY-MM-DD o fecha visible","descripcion":"","referencia":"","cargo":0,"abono":0,"categoria":"NOMINA|TRANSFERENCIA|DEPOSITO|COMPRA|SERVICIOS|RENTA|IMPUESTOS|COMISION|RETIRO|OTROS","saldo":0}]}
 
 No agregues texto fuera del JSON. No inventes datos.`;
-      const responseText = await callGeminiWithResilience([{ inlineData: { mimeType, data: buffer.toString('base64') } }, { text: prompt }], 'ESTADOS_CUENTA_' + doc.tipo);
-      const parsed = parseGeminiJson(responseText);
+      let parsed: any;
+      let provider = 'GEMINI_VISION';
+      let providerConfidence: number | undefined;
+      let providerWarnings: string[] = [];
+
+      const ocrProvider = String(process.env.OCR_PROVIDER || 'auto').toLowerCase();
+      const useDocumentAi = (ocrProvider === 'document-ai' || ocrProvider === 'auto') && documentAiConfigured();
+
+      if (useDocumentAi) {
+        try {
+          const extracted = await extractWithDocumentAi(buffer, mimeType);
+          const bankParsed = parseBankTables(extracted.text, extracted.tableRows);
+
+          if (bankParsed.movimientos.length > 0) {
+            provider = bankParsed.parser;
+            providerConfidence = bankParsed.confidence;
+            providerWarnings = bankParsed.warnings;
+            parsed = {
+              bancoEmisor: bankParsed.bancoEmisor,
+              movimientos: bankParsed.movimientos,
+              _ocrMeta: {
+                provider: extracted.provider,
+                parser: bankParsed.parser,
+                confidence: bankParsed.confidence,
+                pageCount: extracted.pageCount,
+                tableDetected: bankParsed.tableDetected,
+                warnings: bankParsed.warnings,
+              },
+            };
+            console.log(
+              `[CrediMóvil OCR - ${doc.tipo}] Document AI encontró ${bankParsed.movimientos.length} movimientos; parser=${bankParsed.parser}; confianza=${bankParsed.confidence}`
+            );
+          } else {
+            console.warn(
+              `[CrediMóvil OCR - ${doc.tipo}] Document AI no encontró filas utilizables; se utilizará Gemini como fallback.`
+            );
+          }
+        } catch (documentAiError: any) {
+          console.warn(
+            `[CrediMóvil OCR - ${doc.tipo}] Document AI falló y se utilizará Gemini: ${String(documentAiError?.message || documentAiError).slice(0, 240)}`
+          );
+        }
+      }
+
+      if (!parsed) {
+        const responseText = await callGeminiWithResilience(
+          [{ inlineData: { mimeType, data: buffer.toString('base64') } }, { text: prompt }],
+          'ESTADOS_CUENTA_' + doc.tipo
+        );
+        parsed = parseGeminiJson(responseText);
+      }
+
       const detail = normalizeStatementResult(parsed, doc.tipo);
       const validacion = validateStatementResult(parsed, detail);
 
       console.log(
-        `[CrediMóvil OCR - ${doc.tipo}] Filas=${detail.filasLeidas}; duplicadas=${detail.filasDuplicadas}; saldo OK=${validacion.filasSaldoCorrectas}/${validacion.filasConSaldoComparables}; estado=${validacion.estado}`
+        `[CrediMóvil OCR - ${doc.tipo}] proveedor=${provider}; confianza=${providerConfidence ?? 'n/a'}; filas=${detail.filasLeidas}; duplicadas=${detail.filasDuplicadas}; saldo OK=${validacion.filasSaldoCorrectas}/${validacion.filasConSaldoComparables}; estado=${validacion.estado}`
       );
 
       if (validacion.inconsistencias.length > 0) {
@@ -2816,6 +2940,9 @@ No agregues texto fuera del JSON. No inventes datos.`;
       meses[doc.tipo] = {
         ...detail,
         validacion,
+        proveedorOCR: provider,
+        confianzaOCR: providerConfidence,
+        advertenciasOCR: providerWarnings,
         nombreArchivo: doc.nombre,
         procesadoEn: new Date().toISOString()
       };
@@ -2850,10 +2977,55 @@ No agregues texto fuera del JSON. No inventes datos.`;
     };
     const { error: updateError } = await supabase.from('expedientes').update({ data: { ...(row.data || {}), estadosCuentaAnalisis: analysis } }).eq('id', row.id);
     if (updateError) throw new Error('Supabase análisis estados de cuenta: ' + updateError.message);
+
+    if (workerJobId) {
+      await supabase.from('ocr_jobs').update({
+        estado: analysis.validacionGlobal?.estado === 'REVISAR' ? 'REVISAR' : 'COMPLETADO',
+        progreso: 100,
+        proveedor: String(Object.values(meses).map((detail: any) => detail?.proveedorOCR || '').filter(Boolean).join(',') || 'GEMINI_VISION'),
+        resumen: analysis.resumen,
+        resultado: analysis,
+        completed_at: new Date().toISOString(),
+      }).eq('id', workerJobId);
+    }
+
     res.json({ success: true, analysis, message: 'Estados de cuenta analizados con OCR y guardados en Supabase.' });
   } catch (error: any) {
     console.error('OCR estados de cuenta error:', error);
+
+    const workerJobId = workerRequest ? String(req.body?.jobId || '') : '';
+    if (workerJobId) {
+      await supabase.from('ocr_jobs').update({
+        estado: 'ERROR',
+        error: String(error?.message || error),
+        completed_at: new Date().toISOString(),
+      }).eq('id', workerJobId);
+    }
+
     res.status(500).json({ success: false, message: error?.message || 'No se pudieron analizar los estados de cuenta.' });
+  }
+});
+
+app.get('/api/expedientes/:id/estados-cuenta/ocr-job/:jobId', async (req, res) => {
+  if (!requireStaff(req, res)) return;
+
+  try {
+    const expediente = await getExpedienteRowByIdOrFolio(req.params.id);
+    if (!expediente?.id) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+
+    const { data: job, error } = await supabase
+      .from('ocr_jobs')
+      .select('id,expediente_id,estado,progreso,proveedor,resumen,resultado,error,created_at,started_at,completed_at')
+      .eq('id', req.params.jobId)
+      .eq('expediente_id', expediente.id)
+      .maybeSingle();
+
+    if (error) throw new Error('Supabase OCR job: ' + error.message);
+    if (!job) return res.status(404).json({ success: false, message: 'Trabajo OCR no encontrado.' });
+
+    res.json({ success: true, job });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo consultar el trabajo OCR.' });
   }
 });
 
@@ -2884,10 +3056,12 @@ app.get('/api/expedientes/:id/estados-cuenta/excel', async (req, res) => {
         Monto: m.monto,
         Saldo: m.saldo ?? '',
         Clasificacion: m.clasificacion || '',
+        Confianza: typeof m.confianza === 'number' ? Math.round(m.confianza * 100) + '%' : '',
+        Fuente: m.fuente || '',
         Mes: m.mes
       }));
       const ws = XLSX.utils.json_to_sheet(data);
-      ws['!cols'] = [{wch:14},{wch:48},{wch:24},{wch:18},{wch:12},{wch:15},{wch:15},{wch:15},{wch:15},{wch:18},{wch:20}];
+      ws['!cols'] = [{wch:14},{wch:48},{wch:24},{wch:18},{wch:12},{wch:15},{wch:15},{wch:15},{wch:15},{wch:18},{wch:14},{wch:24},{wch:20}];
       XLSX.utils.book_append_sheet(wb, ws, name);
     };
     makeSheet(ingresos, 'Ingresos'); makeSheet(egresos, 'Egresos'); makeSheet(movimientos, 'Movimientos');
