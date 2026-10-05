@@ -123,7 +123,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
     if (!popup) return;
 
     const schedulePages: string[] = [];
-    const rowsPerPage = 18;
+    const rowsPerPage = 24;
     for (let pageStart = 0; pageStart < monthlySchedule.length; pageStart += rowsPerPage) {
       const pageRows = monthlySchedule.slice(pageStart, pageStart + rowsPerPage);
       schedulePages.push(
@@ -170,8 +170,8 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
       '.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:7px}.box{border:1px solid #CBD7E3;border-radius:8px;padding:7px;background:#F6F8FB}.box span{display:block;color:#60778E;font-size:8px;text-transform:uppercase;letter-spacing:.5px}.box strong{display:block;margin-top:4px;font-size:12px;color:#071A33}' +
       '.note{margin-top:7px;padding:10px 12px;border-left:4px solid #C81E2B;background:#F6F8FB;color:#536B83;font-size:8px;line-height:1.45}.disbursement{margin-top:10px;border:1px solid #CBD7E3;border-radius:12px;background:#F6F8FB;padding:11px 12px}.disbursement-title{font-size:9px;font-weight:900;text-transform:uppercase;color:#18365C;margin-bottom:7px}.disbursement-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #E1E7ED;font-size:9px;color:#46617D}.disbursement-row:last-child{border-bottom:0;font-weight:900;color:#C81E2B;font-size:11px}' +
       '.cover-footer{text-align:center;color:#8092A5;font-size:7px;margin-top:7px}' +
-      '.schedule-page{min-height:275mm}.schedule-title{font-size:11px;font-weight:900;color:#071A33;text-transform:uppercase;letter-spacing:.8px;margin:2px 0 8px}' +
-      '.schedule{width:100%;border-collapse:collapse;border:1px solid #CBD7E3}.schedule th{background:#18365C;color:#fff;padding:8px 6px;font-size:8px;text-align:right}.schedule th:first-child{text-align:center}.schedule td{padding:8px 6px;border-bottom:1px solid #D9E2EB;font-size:9px;text-align:right;white-space:nowrap;color:#18365C}.schedule tr:nth-child(even) td{background:#F6F8FB}.schedule td.center{text-align:center;font-weight:800}.schedule td.payment{font-weight:900;color:#C81E2B}.schedule td.balance{font-weight:800;color:#047857}.page-footer{margin-top:12px;padding-top:8px;border-top:1px solid #CBD7E3;color:#8092A5;font-size:8px}' +
+      '.schedule-page{min-height:275mm}.schedule-title{font-size:10px;font-weight:900;color:#071A33;text-transform:uppercase;letter-spacing:.6px;margin:2px 0 5px}' +
+      '.schedule{width:100%;border-collapse:collapse;border:1px solid #CBD7E3}.schedule th{background:#18365C;color:#fff;padding:4px 4px;font-size:7px;line-height:1.1;text-align:right}.schedule th:first-child{text-align:center}.schedule td{padding:3.5px 4px;border-bottom:1px solid #D9E2EB;font-size:8px;line-height:1.1;text-align:right;white-space:nowrap;color:#18365C}.schedule tr:nth-child(even) td{background:#F6F8FB}.schedule td.center{text-align:center;font-weight:800}.schedule td.payment{font-weight:900;color:#C81E2B}.schedule td.balance{font-weight:800;color:#047857}.page-footer{margin-top:5px;padding-top:4px;border-top:1px solid #CBD7E3;color:#8092A5;font-size:7px}' +
       '</style></head><body>' +
 
       '<section class="print-page">' +
