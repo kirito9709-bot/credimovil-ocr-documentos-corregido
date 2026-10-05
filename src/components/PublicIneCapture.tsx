@@ -113,7 +113,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const comprobanteCameraInputRef = useRef<HTMLInputElement | null>(null);
   const comprobanteFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 3. Estados de Cuenta de los últimos 3 meses (Obligatorio para Análisis)
+  // 3. Estados de Cuenta de los últimos 3 meses (Opcional)
   const [modoEstadosCuenta, setModoEstadosCuenta] = useState<'individual' | 'consolidado'>('individual');
   const [bancoEmisor, setBancoEmisor] = useState<string>('');
   const [mes1Doc, setMes1Doc] = useState<string | null>(null);
@@ -2965,10 +2965,10 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
               </div>
 
               <div>
-                <h3 className="text-sm font-black text-slate-100 mb-3">4. Documentación obligatoria</h3>
+                <h3 className="text-sm font-black text-slate-100 mb-3">4. Documentación</h3>
                 <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 mb-4">
                   <p className="text-xs font-bold text-slate-100">Los mismos documentos solicitados al titular</p>
-                  <p className="text-[11px] text-slate-400 mt-1">INE ambos lados, comprobante de domicilio y 3 estados de cuenta individuales o PDF consolidado. Todo queda dentro del mismo expediente.</p>
+                  <p className="text-[11px] text-slate-400 mt-1">INE ambos lados y comprobante de domicilio son obligatorios. Los estados de cuenta son opcionales y pueden agregarse después.</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3081,7 +3081,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 </div>
 
                 <div className="mt-4 border border-[#2E3A59] rounded-2xl p-4 bg-[#121824]/60">
-                  <p className="text-xs font-bold text-slate-200 mb-3">Estados de cuenta <span className="text-red-500">*</span></p>
+                  <div className="flex items-center justify-between gap-3 mb-3"><p className="text-xs font-bold text-slate-200">Estados de cuenta <span className="text-[10px] text-slate-500 uppercase font-black">(Opcionales)</span></p><span className="text-[10px] text-amber-400 font-bold">No bloquean el envío</span></div>
                   {modoEstadosCuenta === 'individual' ? (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {[
