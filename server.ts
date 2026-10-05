@@ -419,6 +419,118 @@ function stripDocumentValues(exp: any) {
   return copy;
 }
 
+function getCredimovilDefaultDocs(esLegalizado = false) {
+  const docs: any[] = [
+    {
+      id: 'INE_FRENTE',
+      categoria: 'INICIO_CREDITO',
+      tipo: 'IDENTIFICACION',
+      nombre: 'INE Frente',
+      descripcion: 'Identificación oficial frente',
+      requerido: true,
+      estatus: 'PENDIENTE',
+      archivoUrl: '',
+    },
+    {
+      id: 'INE_REVERSO',
+      categoria: 'INICIO_CREDITO',
+      tipo: 'IDENTIFICACION',
+      nombre: 'INE Reverso',
+      descripcion: 'Identificación oficial reverso',
+      requerido: true,
+      estatus: 'PENDIENTE',
+      archivoUrl: '',
+    },
+    {
+      id: 'COMPROBANTE_DOMICILIO',
+      categoria: 'INICIO_CREDITO',
+      tipo: 'DOMICILIO',
+      nombre: 'Comprobante de domicilio',
+      descripcion: 'Recibo de agua o luz',
+      requerido: true,
+      estatus: 'PENDIENTE',
+      archivoUrl: '',
+    },
+    {
+      id: 'ESTADO_CUENTA_MES1',
+      categoria: 'INICIO_CREDITO',
+      tipo: 'ESTADO_CUENTA',
+      nombre: 'Estado de cuenta Mes 1',
+      descripcion: 'Estado de cuenta bancario más reciente',
+      requerido: true,
+      estatus: 'PENDIENTE',
+      archivoUrl: '',
+    },
+    {
+      id: 'ESTADO_CUENTA_MES2',
+      categoria: 'INICIO_CREDITO',
+      tipo: 'ESTADO_CUENTA',
+      nombre: 'Estado de cuenta Mes 2',
+      descripcion: 'Estado de cuenta bancario',
+      requerido: true,
+      estatus: 'PENDIENTE',
+      archivoUrl: '',
+    },
+    {
+      id: 'ESTADO_CUENTA_MES3',
+      categoria: 'INICIO_CREDITO',
+      tipo: 'ESTADO_CUENTA',
+      nombre: 'Estado de cuenta Mes 3',
+      descripcion: 'Estado de cuenta bancario',
+      requerido: true,
+      estatus: 'PENDIENTE',
+      archivoUrl: '',
+    },
+    {
+      id: 'FACTURA_VEHICULO',
+      categoria: 'VEHICULO_BASICA',
+      tipo: 'VEHICULO',
+      nombre: 'Factura del vehículo',
+      descripcion: 'Factura o documento de propiedad',
+      requerido: true,
+      estatus: 'PENDIENTE',
+      archivoUrl: '',
+    },
+    {
+      id: 'TARJETA_CIRCULACION',
+      categoria: 'VEHICULO_BASICA',
+      tipo: 'VEHICULO',
+      nombre: 'Tarjeta de circulación',
+      descripcion: 'Tarjeta de circulación vigente',
+      requerido: true,
+      estatus: 'PENDIENTE',
+      archivoUrl: '',
+    },
+  ];
+
+  if (esLegalizado) {
+    docs.push(
+      {
+        id: 'PEDIMENTO',
+        categoria: 'VEHICULO_LEGALIZADO',
+        tipo: 'LEGALIZADO',
+        nombre: 'Pedimento',
+        descripcion: 'Pedimento de importación',
+        requerido: true,
+        estatus: 'PENDIENTE',
+        archivoUrl: '',
+      },
+      {
+        id: 'TITULO_PROPIEDAD',
+        categoria: 'VEHICULO_LEGALIZADO',
+        tipo: 'LEGALIZADO',
+        nombre: 'Título de propiedad',
+        descripcion: 'Título de propiedad del vehículo',
+        requerido: true,
+        estatus: 'PENDIENTE',
+        archivoUrl: '',
+      }
+    );
+  }
+
+  return docs;
+}
+
 function documentTypeForStateKey(key: string) {
   const map: Record<string, string> = {
     mes1Url: 'ESTADO_CUENTA_MES1',
