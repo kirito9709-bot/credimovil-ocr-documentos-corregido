@@ -26,6 +26,7 @@ import {
   Loader2,
   MessageSquare,
   Calculator,
+  Users,
 } from 'lucide-react';
 import { ExpedienteCredito, EstatusCredito } from '../types';
 import { api } from '../services/api';
