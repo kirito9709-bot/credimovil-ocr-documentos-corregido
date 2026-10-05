@@ -2555,14 +2555,28 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 Actívalo solo cuando la financiera lo solicite. Al activarlo, se deberán capturar los mismos datos y documentación del titular.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setRequiereObligadoSolidario((value) => !value)}
-              className={`relative w-14 h-7 rounded-full transition ${requiereObligadoSolidario ? 'bg-amber-500' : 'bg-slate-300'}`}
-              aria-pressed={requiereObligadoSolidario}
-            >
-              <span className={`absolute top-1 w-5 h-5 rounded-full bg-[#1C2541] shadow transition ${requiereObligadoSolidario ? 'left-8' : 'left-1'}`} />
-            </button>
+            <div className="flex items-center gap-2">
+              {requiereObligadoSolidario && obligadoIneFrente && (
+                <button
+                  type="button"
+                  onClick={handleRunObligadoOcr}
+                  disabled={isScanningObligado}
+                  className="py-2 px-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-[11px] font-black flex items-center gap-1.5"
+                  title="Extraer nombre, CURP, RFC, fecha y sexo desde el INE"
+                >
+                  {isScanningObligado ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Scan className="w-3.5 h-3.5" />}
+                  {isScanningObligado ? 'Leyendo INE...' : 'OCR del obligado'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setRequiereObligadoSolidario((value) => !value)}
+                className={`relative w-14 h-7 rounded-full transition ${requiereObligadoSolidario ? 'bg-amber-500' : 'bg-slate-300'}`}
+                aria-pressed={requiereObligadoSolidario}
+              >
+                <span className={`absolute top-1 w-5 h-5 rounded-full bg-[#1C2541] shadow transition ${requiereObligadoSolidario ? 'left-8' : 'left-1'}`} />
+              </button>
+            </div>
           </div>
 
           {requiereObligadoSolidario && (
