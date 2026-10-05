@@ -187,6 +187,7 @@ export interface ExpedienteCredito {
   pinFondeo: string; // 4 digits for dealership access
   fechaCreacion: string;
   fechaActualizacion: string;
+  fechaFondeo?: string;
   estatus: EstatusCredito;
 
   // 1. Identificación Oficial (INE por los 2 lados)
