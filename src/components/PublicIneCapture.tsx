@@ -752,8 +752,8 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
 
   let docsCompletadosCount = 0;
   if (hasIneCompleta) docsCompletadosCount++;
-  if (hasDomicilioCompleto) docsCompletadosCount++;
-  // Los estados de cuenta son opcionales y no incrementan los documentos obligatorios.
+  if (hasComprobanteDomicilio) docsCompletadosCount++;
+  // Los estados de cuenta son opcionales y nunca incrementan ni bloquean los documentos requeridos.
 
   // Calculations: enganche expressed as a percentage, minimum 20%.
   const precioSeguro = Number(autoPrecio) || 0;
@@ -785,6 +785,16 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
 
     if (!ineData.nombreCompleto && (!ineData.nombre || !ineData.primerApellido)) {
       setScanError('Debe ingresar al menos el nombre y apellido del cliente.');
+      return;
+    }
+
+    if (!hasIneCompleta) {
+      setScanError('Para enviar el expediente debes cargar el INE por ambos lados.');
+      return;
+    }
+
+    if (!hasComprobanteDomicilio) {
+      setScanError('Para enviar el expediente debes cargar el comprobante de domicilio.');
       return;
     }
 
@@ -1232,7 +1242,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     <Check className="w-3 h-3" /> Completo
                   </span>
                 ) : (
-                  <span className="text-[11px] font-medium text-slate-500">Opcional</span>
+                  <span className="text-[11px] font-medium text-slate-500">Pendiente</span>
                 )}
               </div>
               <p className="text-[11px] text-slate-400">
@@ -1268,7 +1278,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     <Check className="w-3 h-3" /> Estados opcionales listos
                   </span>
                 ) : (
-                  <span className="text-[11px] font-medium text-slate-500">Pendiente</span>
+                  <span className="text-[11px] font-medium text-slate-500">Opcional</span>
                 )}
               </div>
               <p className="text-[11px] text-slate-400">
@@ -1304,8 +1314,8 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
             {/* Progress Badge */}
             <div className="flex items-center gap-2 bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-700 shrink-0">
               <span className="text-[11px] text-slate-400 font-semibold">Documentación requerida:</span>
-              <span className={`text-xs font-black ${docsCompletadosCount === 3 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {docsCompletadosCount} de 3 listos
+              <span className={`text-xs font-black ${docsCompletadosCount === 2 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {docsCompletadosCount} de 2 listos
               </span>
             </div>
           </div>
