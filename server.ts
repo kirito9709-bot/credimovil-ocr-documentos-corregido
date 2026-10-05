@@ -1362,9 +1362,19 @@ async function upsertExpedienteSupabase(exp: any) {
     data: baseClean,
   };
 
-  const { error: baseError } = await supabase
-    .from('expedientes')
-    .upsert(basePayload, { onConflict: 'folio' });
+  let baseError: any = null;
+
+  if (isNew) {
+    const { error } = await supabase
+      .from('expedientes')
+      .insert(basePayload);
+    baseError = error;
+  } else {
+    const { error } = await supabase
+      .from('expedientes')
+      .upsert(basePayload, { onConflict: 'folio' });
+    baseError = error;
+  }
 
   if (baseError) {
     throw new Error(`Supabase expediente (alta inicial) ${exp.folio}: ${baseError.message}`);
@@ -1399,6 +1409,38 @@ async function upsertExpedienteSupabase(exp: any) {
     }
     throw error;
   }
+}
+
+async function generateNextExpedienteFolio() {
+  if (!supabase) throw new Error('Supabase no está configurado.');
+
+  try {
+    const { data, error } = await supabase.rpc('next_credimovil_folio');
+    if (!error && typeof data === 'string' && /^EXP-\d{4}-\d+$/.test(data)) {
+      return data;
+    }
+  } catch {
+    // Compatibilidad: si la función SQL aún no está instalada, usa el método anterior.
+  }
+
+  const expedientes = (await getSupabaseExpedientes()) || [];
+  const highestFolio = expedientes.reduce((max: number, exp: any) => {
+    const match = String(exp?.folio || '').match(/^EXP-\d{4}-(\d+)$/);
+    const n = match ? Number(match[1]) : 0;
+    return Number.isFinite(n) ? Math.max(max, n) : max;
+  }, 1000);
+
+  let nextNum = highestFolio + 1;
+  let folio = `EXP-${new Date().getFullYear()}-${nextNum}`;
+
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const existing = await getSupabaseExpedienteRowByFolio(folio);
+    if (!existing) return folio;
+    nextNum += 1;
+    folio = `EXP-${new Date().getFullYear()}-${nextNum}`;
+  }
+
+  throw new Error('No se pudo generar un folio único para el expediente.');
 }
 
 function sanitizeLoteForPublic(lote: any) {
@@ -2359,24 +2401,7 @@ app.post('/api/expedientes', async (req, res) => {
   if (!supabase) return res.status(503).json({ success: false, message: 'Supabase no está configurado.' });
 
   try {
-    const expedientes = (await getSupabaseExpedientes()) || [];
-    const highestFolio = expedientes.reduce((max: number, exp: any) => {
-      const match = String(exp?.folio || '').match(/^EXP-\d{4}-(\d+)$/);
-      const n = match ? Number(match[1]) : 0;
-      return Number.isFinite(n) ? Math.max(max, n) : max;
-    }, 1000);
-
-    let nextNum = highestFolio + 1;
-    let folio = `EXP-2026-${nextNum}`;
-
-    // Evita reutilizar un folio existente incluso si hubo expedientes creados
-    // con una versión anterior que no calculaba correctamente el consecutivo.
-    for (let attempt = 0; attempt < 100; attempt++) {
-      const existingFolio = await getSupabaseExpedienteRowByFolio(folio);
-      if (!existingFolio) break;
-      nextNum += 1;
-      folio = `EXP-2026-${nextNum}`;
-    }
+    const folio = await generateNextExpedienteFolio();
 
     const pinFondeo = Math.floor(1000 + Math.random() * 9000).toString();
     const body = req.body || {};
