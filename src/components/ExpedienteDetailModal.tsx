@@ -1138,7 +1138,66 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                 )}
               </div>
 
-              {/* 3. Estados de Cuenta Bancarios (3 Meses) */}
+              {/* 3. Documentos del Obligado Solidario */}
+              {expediente.obligadoSolidario?.requerido && (
+                <div className="pt-2 border-t border-slate-800">
+                  <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-amber-600 text-white text-[10px] flex items-center justify-center font-bold">O</span>
+                    Documentos del Obligado Solidario
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {[
+                      ['INE Frente', expediente.obligadoSolidario.fotoIneFrente],
+                      ['INE Reverso', expediente.obligadoSolidario.fotoIneReverso],
+                      ['Comprobante de domicilio', expediente.obligadoSolidario.comprobanteDomicilioUrl],
+                      ['Estado de cuenta Mes 1', expediente.obligadoSolidario.estadosCuenta?.mes1Url],
+                      ['Estado de cuenta Mes 2', expediente.obligadoSolidario.estadosCuenta?.mes2Url],
+                      ['Estado de cuenta Mes 3', expediente.obligadoSolidario.estadosCuenta?.mes3Url],
+                      ['Estados de cuenta consolidados', expediente.obligadoSolidario.estadosCuenta?.archivoConsolidadoUrl],
+                      ...(expediente.obligadoSolidario.nominas || []).map((nomina, index) => [
+                        `Nómina ${index + 1}`,
+                        nomina.archivoUrl,
+                      ]),
+                    ]
+                      .filter(([, url]) => Boolean(url))
+                      .map(([label, url]) => (
+                        <button
+                          key={String(label)}
+                          type="button"
+                          onClick={() => {
+                            setPreviewDocUrl(String(url));
+                            setPreviewDocTitle(`Obligado Solidario - ${label}`);
+                          }}
+                          className="p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/40 text-left transition"
+                        >
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-amber-400" />
+                            <span className="text-xs font-bold text-slate-200">{label}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 mt-1 block">Ver documento</span>
+                        </button>
+                      ))}
+                  </div>
+
+                  {![
+                    expediente.obligadoSolidario.fotoIneFrente,
+                    expediente.obligadoSolidario.fotoIneReverso,
+                    expediente.obligadoSolidario.comprobanteDomicilioUrl,
+                    expediente.obligadoSolidario.estadosCuenta?.mes1Url,
+                    expediente.obligadoSolidario.estadosCuenta?.mes2Url,
+                    expediente.obligadoSolidario.estadosCuenta?.mes3Url,
+                    expediente.obligadoSolidario.estadosCuenta?.archivoConsolidadoUrl,
+                    ...(expediente.obligadoSolidario.nominas || []).map((nomina) => nomina.archivoUrl),
+                  ].some(Boolean) && (
+                    <p className="text-xs text-slate-500 italic">
+                      No se adjuntaron documentos del obligado solidario.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* 4. Estados de Cuenta Bancarios (3 Meses) */}
               <div className="pt-2 border-t border-slate-800">
                 <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center font-bold">3</span>
