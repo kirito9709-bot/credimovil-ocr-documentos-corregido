@@ -2237,7 +2237,13 @@ app.post('/api/expedientes', async (req, res) => {
       tipoComprobanteDomicilio: body.tipoComprobanteDomicilio || 'CFE_LUZ',
       estadosCuenta: body.estadosCuenta || {},
       nominas: Array.isArray(body.nominas) ? body.nominas : [],
-      obligadoSolidario: body.obligadoSolidario || { requerido: false },
+      obligadoSolidario: body.obligadoSolidario
+        ? {
+            ...body.obligadoSolidario,
+            requerido: Boolean(body.obligadoSolidario.requerido),
+            nominas: Array.isArray(body.obligadoSolidario.nominas) ? body.obligadoSolidario.nominas : [],
+          }
+        : { requerido: false, nominas: [] },
       telefono: body.telefono || '',
       correo: body.correo || '',
       ingresoMensualAprox: Number(body.ingresoMensualAprox) || 0,
