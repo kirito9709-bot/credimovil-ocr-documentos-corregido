@@ -177,6 +177,7 @@ export interface ObligadoSolidarioDocumentos {
   comprobanteDomicilioUrl?: string;
   comprobanteDomicilioNombre?: string;
   estadosCuenta?: EstadosCuentaAnalisis;
+  nominas?: NominaDocumento[];
   estadosCuentaAnalisis?: { procesadoEn: string; meses: Record<string, EstadosCuentaAnalisisDetalle>; movimientos: EstadoCuentaMovimiento[]; resumen: { ingresos: number; egresos: number; diferencia: number; movimientos: number } };
 }
 
