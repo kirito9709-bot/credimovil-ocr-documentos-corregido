@@ -53,6 +53,16 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
     });
   }, [expedientes, search, estatus]);
 
+  const groupedMonthly = useMemo(() => {
+    const groups: Record<string, LoteExpediente[]> = {};
+    [...filtered].sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime()).forEach((exp) => {
+      const d = new Date(exp.fechaCreacion);
+      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(exp);
+    });
+    return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
+  }, [filtered]);
   const stats = {
     total: expedientes.length,
     analisis: expedientes.filter((e) => e.estatus === 'EN_EVALUACION' || e.estatus === 'NUEVO').length,
@@ -188,38 +198,46 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
         {filtered.length === 0 ? (
           <div className='p-12 text-center'><ShieldCheck className='w-10 h-10 text-slate-700 mx-auto mb-3' /><p className='text-sm font-semibold text-slate-300'>No hay créditos para mostrar</p><p className='text-xs text-slate-500 mt-1'>Cuando un crédito de este lote sea capturado, aparecerá aquí.</p></div>
         ) : (
-          <div className='divide-y divide-slate-800/80'>
-            {filtered.map((e) => (
-              <div key={e.id} className='p-5 hover:bg-slate-950/50 transition'>
-                <div className='flex flex-col lg:flex-row lg:items-center justify-between gap-4'>
-                  <div className='min-w-0'>
-                    <div className='flex flex-wrap items-center gap-2'><span className='font-mono text-red-400 font-black'>{e.folio}</span><span className={'px-2 py-0.5 rounded-full border text-[10px] font-bold ' + statusClass(e.estatus)}>{statusLabel[e.estatus] || e.estatus}</span></div>
-                    <div className='mt-2 text-white font-bold truncate'>{e.clienteNombre || 'Cliente sin nombre'}</div>
-                    <div className='mt-1 text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-1'>
-                      <span className='inline-flex items-center gap-1.5'><Car className='w-3.5 h-3.5' />{e.autoMarca} {e.autoModelo} {e.autoAno ? '(' + e.autoAno + ')' : ''}</span>
-                      <span className='inline-flex items-center gap-1.5'><Clock3 className='w-3.5 h-3.5' />Alta: {e.fechaCreacion ? new Date(e.fechaCreacion).toLocaleDateString('es-MX') : '—'}</span>
-                      <span className='inline-flex items-center gap-1.5 text-slate-500'>Última actualización: {e.fechaActualizacion ? new Date(e.fechaActualizacion).toLocaleDateString('es-MX') : '—'}</span>
-                      {e.fechaFondeo && <span className='inline-flex items-center gap-1.5 text-emerald-400 font-semibold'>Fondeado: {new Date(e.fechaFondeo).toLocaleDateString('es-MX')}</span>}
-                    </div>
+          <div className='space-y-5'>
+            {groupedMonthly.map(([key, monthCredits]) => {
+              const [year, month] = key.split('-');
+              const label = new Date(Number(year), Number(month) - 1, 1).toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+              const monthAmount = monthCredits.reduce((sum, item) => sum + (Number(item.montoFinanciar) || 0), 0);
+              return (
+                <section key={key} className='border-b border-slate-800/80 last:border-0'>
+                  <div className='px-5 py-3 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between'>
+                    <div><h3 className='text-xs font-black text-white uppercase'>{label}</h3><p className='text-[10px] text-slate-500 mt-0.5'>{monthCredits.length} crédito{monthCredits.length === 1 ? '' : 's'} registrado{monthCredits.length === 1 ? '' : 's'}</p></div>
+                    <div className='text-right'><div className='text-[10px] text-slate-500 uppercase'>Monto registrado</div><div className='text-sm font-black text-emerald-400'>'$' + monthAmount.toLocaleString('es-MX') + ' MXN'</div></div>
                   </div>
-                  <div className='flex items-center gap-3 shrink-0'>
-                    <button
-                      onClick={() => setCommentTarget({ id: e.folio, folio: e.folio })}
-                      className='inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold hover:text-white hover:bg-slate-700'
-                    >
-                      <MessageCircle className='w-3.5 h-3.5' /> Comentarios
-                    </button>
-                    <div className='flex items-center gap-8'>
-
-                    <div className='text-right'><div className='text-[10px] text-slate-500 uppercase tracking-wider'>Monto a financiar</div><div className='text-lg font-black text-emerald-400'>${(e.montoFinanciar || 0).toLocaleString('es-MX')} MXN</div></div>
-                    <div className='text-right hidden sm:block'><div className='text-[10px] text-slate-500 uppercase tracking-wider'>Documentos</div><div className='text-sm font-bold text-slate-200'>{e.docsSubidos} / {e.docsRequeridos}</div></div>
-                    </div>
+                  <div className='divide-y divide-slate-800/80'>
+                    {monthCredits.map((item) => (
+                      <div key={item.id} className='p-5 hover:bg-slate-950/50 transition'>
+                        <div className='flex flex-col lg:flex-row lg:items-center justify-between gap-4'>
+                          <div className='min-w-0'>
+                            <div className='flex flex-wrap items-center gap-2'><span className='font-mono text-red-400 font-black'>{item.folio}</span><span className={'px-2 py-0.5 rounded-full border text-[10px] font-bold ' + statusClass(item.estatus)}>{statusLabel[item.estatus] || item.estatus}</span></div>
+                            <div className='mt-2 text-white font-bold truncate'>{item.clienteNombre || 'Cliente sin nombre'}</div>
+                            <div className='mt-1 text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-1'>
+                              <span className='inline-flex items-center gap-1.5'><Car className='w-3.5 h-3.5' />{item.autoMarca} {item.autoModelo} {item.autoAno ? '(' + item.autoAno + ')' : ''}</span>
+                              <span className='inline-flex items-center gap-1.5'><Clock3 className='w-3.5 h-3.5' />Alta: {item.fechaCreacion ? new Date(item.fechaCreacion).toLocaleDateString('es-MX') : '—'}</span>
+                              <span className='inline-flex items-center gap-1.5 text-slate-500'>Última actualización: {item.fechaActualizacion ? new Date(item.fechaActualizacion).toLocaleDateString('es-MX') : '—'}</span>
+                              {item.fechaFondeo && <span className='inline-flex items-center gap-1.5 text-emerald-400 font-semibold'>Fondeado: {new Date(item.fechaFondeo).toLocaleDateString('es-MX')}</span>}
+                            </div>
+                          </div>
+                          <div className='flex items-center gap-3 shrink-0'>
+                            <button onClick={() => setCommentTarget({ id: item.folio, folio: item.folio })} className='inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold hover:text-white hover:bg-slate-700'><MessageCircle className='w-3.5 h-3.5' /> Comentarios</button>
+                            <div className='flex items-center gap-8'>
+                              <div className='text-right'><div className='text-[10px] text-slate-500 uppercase tracking-wider'>Monto a financiar</div><div className='text-lg font-black text-emerald-400'>'$' + (item.montoFinanciar || 0).toLocaleString('es-MX') + ' MXN'</div></div>
+                              <div className='text-right hidden sm:block'><div className='text-[10px] text-slate-500 uppercase tracking-wider'>Documentos</div><div className='text-sm font-bold text-slate-200'>{item.docsSubidos} / {item.docsRequeridos}</div></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              </div>
-            ))}
-
-          </div>
+                </section>
+              );
+            })}
+          </div>          </div>
         )}
       </div>
 
