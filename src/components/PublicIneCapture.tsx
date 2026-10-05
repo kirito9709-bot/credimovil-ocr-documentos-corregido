@@ -218,6 +218,19 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const [obligadoTiempoEnTrabajo, setObligadoTiempoEnTrabajo] = useState('');
   const [obligadoNombreUbicacionEmpleo, setObligadoNombreUbicacionEmpleo] = useState('');
   const [obligadoDireccionEmpleo, setObligadoDireccionEmpleo] = useState('');
+  const [obligadoDomicilio, setObligadoDomicilio] = useState<IneData['domicilio']>({
+    calle: '',
+    numExterior: '',
+    numInterior: '',
+    colonia: '',
+    codigoPostal: '',
+    municipio: '',
+    estado: '',
+    domicilioCompleto: '',
+  });
+  const [obligadoDomicilioOcrLoading, setObligadoDomicilioOcrLoading] = useState(false);
+  const [obligadoDomicilioOcrError, setObligadoDomicilioOcrError] = useState<string | null>(null);
+  const [obligadoDomicilioOcrSuccess, setObligadoDomicilioOcrSuccess] = useState<string | null>(null);
   const [obligadoDependientesEconomicos, setObligadoDependientesEconomicos] = useState<number>(0);
   const [obligadoEstadoCivil, setObligadoEstadoCivil] = useState<'SOLTERO' | 'CASADO' | 'UNION_LIBRE' | 'DIVORCIADO' | 'VIUDO' | ''>('');
   const [obligadoReferencias, setObligadoReferencias] = useState<ReferenciaPersonal[]>([
@@ -605,6 +618,60 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     }
   };
 
+  const handleRunObligadoComprobanteOcr = async () => {
+    if (!obligadoComprobante) {
+      setObligadoDomicilioOcrError('Sube primero el comprobante de domicilio del obligado solidario.');
+      return;
+    }
+
+    setObligadoDomicilioOcrLoading(true);
+    setObligadoDomicilioOcrError(null);
+    setObligadoDomicilioOcrSuccess(null);
+
+    try {
+      const res = await api.scanComprobanteDomicilio(obligadoComprobante);
+      if (!res.success || !res.data) {
+        throw new Error(res.message || 'No se pudo leer el comprobante de domicilio del obligado.');
+      }
+
+      const data = res.data;
+      const domicilio = {
+        calle: String(data.calle || ''),
+        numExterior: String(data.numExterior || ''),
+        numInterior: String(data.numInterior || ''),
+        colonia: String(data.colonia || ''),
+        codigoPostal: String(data.codigoPostal || ''),
+        municipio: String(data.municipio || ''),
+        estado: String(data.estado || ''),
+        domicilioCompleto: String(
+          data.domicilioCompleto ||
+          [
+            data.calle,
+            data.numExterior ? `#${data.numExterior}` : '',
+            data.numInterior ? `Int. ${data.numInterior}` : '',
+            data.colonia ? `Col. ${data.colonia}` : '',
+            data.codigoPostal ? `C.P. ${data.codigoPostal}` : '',
+            data.municipio,
+            data.estado,
+          ].filter(Boolean).join(', ')
+        ),
+      };
+
+      setObligadoDomicilio(domicilio);
+      setObligadoDomicilioOcrSuccess(
+        `${data.companiaEmisora || 'Comprobante'} leído correctamente. Dirección extraída: ${domicilio.domicilioCompleto || 'revisa los campos'}.`
+      );
+    } catch (error: any) {
+      console.error(error);
+      setObligadoDomicilioOcrError(
+        error?.message ||
+        'No se pudo leer el comprobante de domicilio del obligado. Puedes capturar el domicilio manualmente.'
+      );
+    } finally {
+      setObligadoDomicilioOcrLoading(false);
+    }
+  };
+
   // Readiness evaluation for analysis
   const hasIneCompleta = Boolean(fotoFrente && fotoReverso);
   const hasComprobanteDomicilio = Boolean(comprobanteDomicilioDoc);
@@ -752,6 +819,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
           tiempoEnTrabajo: obligadoTiempoEnTrabajo.trim(),
           nombreUbicacionEmpleo: obligadoNombreUbicacionEmpleo.trim(),
           direccionEmpleo: obligadoDireccionEmpleo.trim(),
+          domicilio: obligadoDomicilio,
           dependientesEconomicos: Number(obligadoDependientesEconomicos) || 0,
           estadoCivil: obligadoEstadoCivil,
           referenciasPersonales: obligadoReferencias,
@@ -860,6 +928,19 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     setNominas([]);
     setIsScanningObligado(false);
     setObligadoOcrError(null);
+    setObligadoDomicilio({
+      calle: '',
+      numExterior: '',
+      numInterior: '',
+      colonia: '',
+      codigoPostal: '',
+      municipio: '',
+      estado: '',
+      domicilioCompleto: '',
+    });
+    setObligadoDomicilioOcrLoading(false);
+    setObligadoDomicilioOcrError(null);
+    setObligadoDomicilioOcrSuccess(null);
     setIneData({
       nombre: '',
       primerApellido: '',
@@ -2772,10 +2853,62 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 )}
 
                 <div className="mt-4 border border-[#2E3A59] rounded-2xl p-4 bg-[#121824]/60">
-                  <div className="flex items-center justify-between"><span className="text-xs font-bold text-slate-200">Comprobante de domicilio <span className="text-red-500">*</span></span>{obligadoComprobante && <Check className="w-4 h-4 text-emerald-600" />}</div>
-                  <button type="button" onClick={() => obligadoComprobanteInput.current?.click()} className="w-full mt-3 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold"><Upload className="w-3.5 h-3.5 inline mr-1" /> Subir comprobante</button>
-                  <input ref={obligadoComprobanteInput} type="file" accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden" onChange={(e)=>handleObligadoFile(e,setObligadoComprobante,setObligadoComprobanteNombre)} />
-                  {obligadoComprobanteNombre && <p className="text-[11px] text-slate-500 mt-2 truncate">{obligadoComprobanteNombre}</p>}
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-bold text-slate-200">Comprobante de domicilio <span className="text-red-500">*</span></span>
+                    {obligadoComprobante && <Check className="w-4 h-4 text-emerald-600" />}
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                    <button
+                      type="button"
+                      onClick={() => obligadoComprobanteInput.current?.click()}
+                      className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold"
+                    >
+                      <Upload className="w-3.5 h-3.5 inline mr-1" /> Subir comprobante
+                    </button>
+                    {obligadoComprobante && (
+                      <button
+                        type="button"
+                        onClick={handleRunObligadoComprobanteOcr}
+                        disabled={obligadoDomicilioOcrLoading}
+                        className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold"
+                      >
+                        {obligadoDomicilioOcrLoading ? (
+                          <><RefreshCw className="w-3.5 h-3.5 inline mr-1 animate-spin" /> Leyendo domicilio...</>
+                        ) : (
+                          <><Scan className="w-3.5 h-3.5 inline mr-1" /> Extraer domicilio con OCR</>
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  <input ref={obligadoComprobanteInput} type="file" accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden" onChange={(e)=>{
+                    handleObligadoFile(e,setObligadoComprobante,setObligadoComprobanteNombre);
+                    setObligadoDomicilioOcrError(null);
+                    setObligadoDomicilioOcrSuccess(null);
+                  }} />
+                  {obligadoComprobanteNombre && (
+                    <p className="text-[11px] text-slate-500 mt-2 truncate">{obligadoComprobanteNombre}</p>
+                  )}
+
+                  {obligadoDomicilioOcrSuccess && (
+                    <div className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-300">
+                      {obligadoDomicilioOcrSuccess}
+                    </div>
+                  )}
+
+                  {obligadoDomicilioOcrError && (
+                    <div className="mt-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-300">
+                      {obligadoDomicilioOcrError}
+                    </div>
+                  )}
+
+                  {obligadoDomicilio.domicilioCompleto && (
+                    <div className="mt-3 rounded-xl bg-[#1C2541] border border-[#3A4868] p-3">
+                      <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Domicilio extraído</p>
+                      <p className="text-xs text-slate-200">{obligadoDomicilio.domicilioCompleto}</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-4 border border-[#2E3A59] rounded-2xl p-4 bg-[#121824]/60">
