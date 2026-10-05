@@ -64,7 +64,10 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
   const currentMonth = new Date().getMonth();
   const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-  const monthlyStats = Array.from({ length: currentMonth + 1 }, (_, month) => {
+  // El comparativo operativo muestra únicamente desde el mes actual hasta diciembre.
+  // Después podremos cambiar este rango por el periodo que necesitemos.
+  const monthlyStats = Array.from({ length: 12 - currentMonth }, (_, offset) => {
+    const month = currentMonth + offset;
     const submitted = expedientes.filter((e) => {
       const d = new Date(e.fechaCreacion);
       return d.getFullYear() === currentYear && d.getMonth() === month;
