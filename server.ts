@@ -1338,6 +1338,7 @@ async function getSupabaseExpedientes(folioFilter = '') {
       montoFinanciar: Number(row.monto_financiar || source.montoFinanciar || 0),
       fechaCreacion: source.fechaCreacion || row.created_at,
       fechaActualizacion: source.fechaActualizacion || row.updated_at,
+      fechaFondeo: source.fechaFondeo || '',
     };
     result.push(await applyStoredDocumentsToExpediente(exp, docsByExpediente.get(row.id) || []));
   }
@@ -1356,6 +1357,13 @@ async function upsertExpedienteSupabase(exp: any) {
   // public.documentos.expediente_id está relacionado con public.expedientes.id.
   // Después se pueden subir de forma segura INE, comprobante, estados de cuenta y nóminas.
   const baseClean = stripDocumentValues(exp);
+
+  if ((baseClean.estatus === 'FONDEADO' || baseClean.estatus === 'FONDEO') && !baseClean.fechaFondeo) {
+    baseClean.fechaFondeo = existing?.data?.fechaFondeo || new Date().toISOString();
+  } else if (existing?.data?.fechaFondeo && !baseClean.fechaFondeo) {
+    baseClean.fechaFondeo = existing.data.fechaFondeo;
+  }
+
   const basePayload = {
     ...expedienteToSupabasePayload(baseClean),
     id: dbId,
@@ -2023,6 +2031,7 @@ app.get('/api/lote/expedientes', async (req, res) => {
           montoFinanciar: Number(e.montoFinanciar) || 0,
           fechaCreacion: e.fechaCreacion,
           fechaActualizacion: e.fechaActualizacion,
+          fechaFondeo: e.fechaFondeo || '',
           docsSubidos: uploadedRequired.length,
           docsRequeridos: requiredDocs.length,
         };
