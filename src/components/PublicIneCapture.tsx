@@ -725,12 +725,12 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
   const hasDomicilioCompleto = !domicilioCoincideConIne
     ? Boolean(comprobanteDomicilioDoc)
     : Boolean(ineData.domicilio?.calle || ocrCompleted || fotoFrente);
-  const hasEstadosCuenta = modoEstadosCuenta === 'consolidado' ? Boolean(consolidadoDoc) : Boolean(mes1Doc && mes2Doc && mes3Doc);
+  const hasEstadosCuenta = modoEstadosCuenta === 'consolidado' ? Boolean(consolidadoDoc) : Boolean(mes1Doc || mes2Doc || mes3Doc);
   const hasObligadoIne = Boolean(obligadoIneFrente && obligadoIneReverso);
   const hasObligadoComprobante = Boolean(obligadoComprobante);
   const hasObligadoEstados = modoEstadosCuenta === 'consolidado'
     ? Boolean(obligadoConsolidado)
-    : Boolean(obligadoMes1 && obligadoMes2 && obligadoMes3);
+    : Boolean(obligadoMes1 || obligadoMes2 || obligadoMes3);
   const obligadoReferenciasIncompletas = obligadoReferencias.some((r) => !r.nombre.trim() || !r.telefono.trim());
   const obligadoSolidarioCompleto =
     !requiereObligadoSolidario ||
@@ -747,14 +747,13 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
       !obligadoReferenciasIncompletas &&
       new Set(obligadoReferencias.map((r) => r.telefono.replace(/\D/g, ''))).size === 3 &&
       hasObligadoIne &&
-      hasObligadoComprobante &&
-      hasObligadoEstados
+      hasObligadoComprobante
     );
 
   let docsCompletadosCount = 0;
   if (hasIneCompleta) docsCompletadosCount++;
   if (hasDomicilioCompleto) docsCompletadosCount++;
-  if (hasEstadosCuenta) docsCompletadosCount++;
+  // Los estados de cuenta son opcionales y no incrementan los documentos obligatorios.
 
   // Calculations: enganche expressed as a percentage, minimum 20%.
   const precioSeguro = Number(autoPrecio) || 0;
@@ -798,7 +797,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
     }
 
     if (requiereObligadoSolidario && !obligadoSolidarioCompleto) {
-      setScanError('El obligado solidario debe capturar los mismos datos socioeconómicos y de contacto del titular, las 3 referencias, INE ambos lados, comprobante de domicilio y estados de cuenta.');
+      setScanError('El obligado solidario debe capturar los datos socioeconómicos y de contacto, las 3 referencias, INE ambos lados y comprobante de domicilio. Los estados de cuenta son opcionales.');
       return;
     }
 
@@ -1262,18 +1261,18 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
             <div className={`p-3.5 rounded-2xl border transition ${hasEstadosCuenta ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-300' : 'bg-slate-950/60 border-slate-800 text-slate-300'}`}>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-blue-400" /> 3. Estados de Cuenta (3M)
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-blue-400" /> 3. Estados de Cuenta (3M) — OPCIONAL
                 </span>
                 {hasEstadosCuenta ? (
                   <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <Check className="w-3 h-3" /> 3 Meses Listos
+                    <Check className="w-3 h-3" /> Estados opcionales listos
                   </span>
                 ) : (
                   <span className="text-[11px] font-medium text-slate-500">Pendiente</span>
                 )}
               </div>
               <p className="text-[11px] text-slate-400">
-                Individuales mes 1, 2 y 3 o 1 archivo PDF consolidado de ingresos.
+                Opcional: individuales mes 1, 2 y 3 o 1 archivo PDF consolidado. Se pueden agregar después.
               </p>
             </div>
           </div>
@@ -3192,8 +3191,8 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
             </span>
             <span>
               {docsCompletadosCount === 3
-                ? '✓ Los 3 documentos obligatorios están listos para dictamen'
-                : `Se han cargado ${docsCompletadosCount} de los 3 documentos obligatorios`}
+                ? '✓ Documentación obligatoria lista para enviar. Estados de cuenta opcionales.'
+                : `Se han cargado ${docsCompletadosCount} de los 2 documentos obligatorios`}
             </span>
           </div>
 
