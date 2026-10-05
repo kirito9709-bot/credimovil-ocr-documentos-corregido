@@ -1152,13 +1152,19 @@ async function migrateEmbeddedDocumentsInSupabase() {
   }
 }
 
-async function getSupabaseExpedientes() {
+async function getSupabaseExpedientes(folioFilter = '') {
   if (!supabase) return null;
 
-  const { data, error } = await supabase
+  let expedienteQuery = supabase
     .from('expedientes')
     .select('*')
     .order('updated_at', { ascending: false });
+
+  if (folioFilter) {
+    expedienteQuery = expedienteQuery.eq('folio', String(folioFilter).toUpperCase());
+  }
+
+  const { data, error } = await expedienteQuery;
 
   if (error) throw new Error(`Supabase expedientes: ${error.message}`);
 
@@ -2317,7 +2323,7 @@ app.post('/api/expedientes', async (req, res) => {
     };
 
     await upsertExpedienteSupabase(newExpediente);
-    const saved = (await getSupabaseExpedientes())?.find((e: any) => e.folio === folio);
+    const saved = (await getSupabaseExpedientes(folio))?.find((e: any) => e.folio === folio);
 
     res.status(201).json({
       success: true,
