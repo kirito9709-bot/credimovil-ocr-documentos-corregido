@@ -1232,20 +1232,55 @@ async function upsertExpedienteSupabase(exp: any) {
 
   const existing = await getSupabaseExpedienteRowByFolio(exp.folio);
   const dbId = existing?.id || randomUUID();
-  const clean = await storeExpedienteDocuments(exp, dbId);
-  const payload = {
-    ...expedienteToSupabasePayload(clean),
+  const isNew = !existing?.id;
+
+  // Primero creamos/aseguramos el registro padre. Esto es importante porque
+  // public.documentos.expediente_id está relacionado con public.expedientes.id.
+  // Después se pueden subir de forma segura INE, comprobante, estados de cuenta y nóminas.
+  const baseClean = stripDocumentValues(exp);
+  const basePayload = {
+    ...expedienteToSupabasePayload(baseClean),
     id: dbId,
-    data: clean,
+    data: baseClean,
   };
 
-  const { error } = await supabase
+  const { error: baseError } = await supabase
     .from('expedientes')
-    .upsert(payload, { onConflict: 'folio' });
+    .upsert(basePayload, { onConflict: 'folio' });
 
-  if (error) throw new Error(`Supabase expediente ${exp.folio}: ${error.message}`);
+  if (baseError) {
+    throw new Error(`Supabase expediente (alta inicial) ${exp.folio}: ${baseError.message}`);
+  }
 
-  return dbId;
+  try {
+    console.log(`[CrediMóvil] Guardando documentos del expediente ${exp.folio}...`);
+    const clean = await storeExpedienteDocuments(exp, dbId);
+
+    const finalPayload = {
+      ...expedienteToSupabasePayload(clean),
+      id: dbId,
+      data: clean,
+    };
+
+    const { error: finalError } = await supabase
+      .from('expedientes')
+      .upsert(finalPayload, { onConflict: 'folio' });
+
+    if (finalError) {
+      throw new Error(`Supabase expediente (datos finales) ${exp.folio}: ${finalError.message}`);
+    }
+
+    console.log(`[CrediMóvil] Expediente ${exp.folio} guardado correctamente.`);
+    return dbId;
+  } catch (error) {
+    // Si era un expediente nuevo, evitamos dejar un expediente huérfano cuando
+    // alguna carga de documento falle a mitad del proceso.
+    if (isNew) {
+      await supabase.from('documentos').delete().eq('expediente_id', dbId).catch(() => undefined);
+      await supabase.from('expedientes').delete().eq('id', dbId).catch(() => undefined);
+    }
+    throw error;
+  }
 }
 
 function sanitizeLoteForPublic(lote: any) {
