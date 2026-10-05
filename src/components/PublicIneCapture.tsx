@@ -1232,7 +1232,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                     <Check className="w-3 h-3" /> Completo
                   </span>
                 ) : (
-                  <span className="text-[11px] font-medium text-slate-500">Pendiente</span>
+                  <span className="text-[11px] font-medium text-slate-500">Opcional</span>
                 )}
               </div>
               <p className="text-[11px] text-slate-400">
@@ -1293,17 +1293,17 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   1
                 </span>
                 <h2 className="text-lg font-black tracking-tight text-white">
-                  Documentación Obligatoria para Envío a Análisis
+                  Documentación para Envío a Análisis
                 </h2>
               </div>
               <p className="text-xs text-slate-300 mt-1">
-                La mesa de control automotriz requiere estos 3 documentos indispensables para dictaminar el crédito.
+                Para enviar el expediente solo son indispensables la INE por ambos lados y el comprobante de domicilio. Los estados de cuenta son opcionales.
               </p>
             </div>
 
             {/* Progress Badge */}
             <div className="flex items-center gap-2 bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-700 shrink-0">
-              <span className="text-[11px] text-slate-400 font-semibold">Avance Documental:</span>
+              <span className="text-[11px] text-slate-400 font-semibold">Documentación requerida:</span>
               <span className={`text-xs font-black ${docsCompletadosCount === 3 ? 'text-emerald-400' : 'text-amber-400'}`}>
                 {docsCompletadosCount} de 3 listos
               </span>
@@ -1805,15 +1805,15 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 <div>
                   <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                     <FileSpreadsheet className="w-4 h-4 text-red-600" />
-                    3. Estados de Cuenta Bancarios (Últimos 3 Meses)
+                    3. Estados de Cuenta Bancarios (Últimos 3 Meses) — OPCIONAL
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Comprobación de ingresos y capacidad financiera para dictamen formal de crédito automotriz.
+                    Opcional para el envío. Puedes agregarlos ahora o posteriormente para apoyar el análisis del crédito.
                   </p>
                 </div>
                 {hasEstadosCuenta && (
                   <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 self-start sm:self-auto">
-                    <Check className="w-3.5 h-3.5" /> 3 Meses Listos
+                    <Check className="w-3.5 h-3.5" /> Estados de cuenta opcionales listos
                   </span>
                 )}
               </div>
