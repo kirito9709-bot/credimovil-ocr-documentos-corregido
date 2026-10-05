@@ -926,10 +926,17 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
       };
 
       const res = await api.createExpediente(payload);
-      if (res.success && res.expediente) {
-        setSavedExpediente(res.expediente);
-        onExpedienteCreated(res.expediente);
+
+      if (!res?.success) {
+        throw new Error(res?.message || 'El servidor no confirmó la creación del expediente.');
       }
+
+      if (!res.expediente) {
+        throw new Error('El expediente se guardó, pero el servidor no devolvió los datos del expediente.');
+      }
+
+      setSavedExpediente(res.expediente);
+      onExpedienteCreated(res.expediente);
     } catch (err: any) {
       setScanError(err.message || 'Error al guardar el expediente.');
     } finally {
