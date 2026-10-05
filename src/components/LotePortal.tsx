@@ -246,6 +246,7 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
             })}
           </div>
         )}
+      </div>
       <div className='bg-slate-900/70 border border-slate-800 rounded-2xl p-4 flex items-center gap-3 text-xs text-slate-400'><Wallet className='w-4 h-4 text-emerald-400 shrink-0' /><span>Monto total actualmente en cartera: <strong className='text-white'>${stats.monto.toLocaleString('es-MX')} MXN</strong>.</span></div>
       <ChatLoteModal
         isOpen={showChat}
