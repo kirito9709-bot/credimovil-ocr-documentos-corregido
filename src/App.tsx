@@ -44,6 +44,8 @@ export default function App() {
           setIsAdminAuth(true);
           setAuthUser(res.user);
           localStorage.setItem('credimovil_auth_user', JSON.stringify(res.user));
+          // Recargar lotes autenticado para incluir usuarios del portal.
+          loadLotes();
         }
       })
       .catch(() => {
@@ -84,6 +86,9 @@ export default function App() {
   const handleAdminLoginSuccess = (user: any) => {
     setIsAdminAuth(true);
     setAuthUser(user);
+    // Después del login, volver a consultar lotes ya autenticado para mostrar
+    // correctamente los accesos de portal de cada lote.
+    loadLotes();
     setCurrentTab(user?.role === 'lote' ? 'loteportal' : 'admin');
   };
 
@@ -114,6 +119,10 @@ export default function App() {
 
   const handleLoteCreated = (newLote: LoteAuto) => {
     setLotes((prev) => [...prev, newLote]);
+  };
+
+  const handleLoteUpdated = (updatedLote: LoteAuto) => {
+    setLotes((prev) => prev.map((lote) => lote.id === updatedLote.id ? updatedLote : lote));
   };
 
   const handleLoteDeleted = (id: string) => {
@@ -249,6 +258,7 @@ export default function App() {
         onClose={() => setShowLotesModal(false)}
         lotes={lotes}
         onLoteCreated={handleLoteCreated}
+        onLoteUpdated={handleLoteUpdated}
         onLoteDeleted={handleLoteDeleted}
         canManage={isAdminAuth}
       />
