@@ -1380,8 +1380,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
         </div>
       </div>
 
-      {showQuote && (
-        <AgregarObligadoModal
+      <AgregarObligadoModal
         expediente={expediente}
         isOpen={showObligadoModal}
         onClose={() => setShowObligadoModal(false)}
@@ -1391,7 +1390,8 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
         }}
       />
 
-      <CotizadorCreditoModal
+      {showQuote && (
+        <CotizadorCreditoModal
           expediente={expediente}
           onClose={() => setShowQuote(false)}
         />
