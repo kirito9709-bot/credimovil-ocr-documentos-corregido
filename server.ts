@@ -2259,6 +2259,54 @@ app.post('/api/lotes', async (req, res) => {
   }
 });
 
+app.put('/api/lotes/:id', async (req, res) => {
+  if (!requireStaff(req, res)) return;
+
+  try {
+    const { data: existing, error: findError } = await supabase
+      .from('lotes')
+      .select('*')
+      .eq('id', req.params.id)
+      .maybeSingle();
+
+    if (findError) throw new Error(`Supabase lote: ${findError.message}`);
+    if (!existing) return res.status(404).json({ success: false, message: 'Lote no encontrado.' });
+
+    const nombre = String(req.body?.nombre ?? existing.nombre ?? '').trim();
+    if (!nombre) return res.status(400).json({ success: false, message: 'El nombre del lote es obligatorio.' });
+
+    const { data, error } = await supabase
+      .from('lotes')
+      .update({
+        nombre,
+        contacto: String(req.body?.contacto ?? existing.contacto ?? ''),
+        telefono: String(req.body?.telefono ?? existing.telefono ?? ''),
+        correo: String(req.body?.correo ?? existing.correo ?? ''),
+        direccion: String(req.body?.direccion ?? existing.direccion ?? ''),
+        ciudad: String(req.body?.ciudad ?? existing.ciudad ?? 'México'),
+        cuenta_clabe_default: String(req.body?.cuentaClabeDefault ?? existing.cuenta_clabe_default ?? ''),
+        banco_default: String(req.body?.bancoDefault ?? existing.banco_default ?? ''),
+      })
+      .eq('id', req.params.id)
+      .select('*')
+      .single();
+
+    if (error) throw new Error(`Supabase lote: ${error.message}`);
+
+    const lotes = (await getSupabaseLotes()) || [];
+    const updated = lotes.find((l: any) => l.id === req.params.id);
+
+    res.json({
+      success: true,
+      lote: updated || mapSupabaseLote(data),
+      message: 'Lote actualizado correctamente.',
+    });
+  } catch (error: any) {
+    console.error('PUT /api/lotes/:id error:', error);
+    res.status(500).json({ success: false, message: error?.message || 'No se pudo actualizar el lote.' });
+  }
+});
+
 app.delete('/api/lotes/:id', async (req, res) => {
   if (!requireStaff(req, res)) return;
 
