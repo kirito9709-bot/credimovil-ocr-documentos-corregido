@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, X, Plus, Phone, Mail, MapPin, Check, DollarSign } from 'lucide-react';
+import { Building2, X, Plus, Phone, Mail, MapPin, Edit3, UserRoundCheck } from 'lucide-react';
 import { LoteAuto } from '../types';
 import { api } from '../services/api';
 
@@ -8,6 +8,7 @@ interface LotesManagerModalProps {
   onClose: () => void;
   lotes: LoteAuto[];
   onLoteCreated: (lote: LoteAuto) => void;
+  onLoteUpdated: (lote: LoteAuto) => void;
   onLoteDeleted: (id: string) => void;
   canManage?: boolean;
 }
@@ -17,10 +18,12 @@ export const LotesManagerModal: React.FC<LotesManagerModalProps> = ({
   onClose,
   lotes,
   onLoteCreated,
+  onLoteUpdated,
   onLoteDeleted,
   canManage = false,
 }) => {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingLoteId, setEditingLoteId] = useState<string | null>(null);
   const [nombre, setNombre] = useState('');
   const [contacto, setContacto] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -43,36 +46,32 @@ export const LotesManagerModal: React.FC<LotesManagerModalProps> = ({
     }
   };
 
+  const resetForm = () => {
+    setShowAddForm(false);
+    setEditingLoteId(null);
+    setNombre(''); setContacto(''); setTelefono(''); setCorreo(''); setDireccion(''); setCiudad(''); setCuentaClabeDefault(''); setBancoDefault('');
+  };
+
+  const handleEdit = (lote: LoteAuto) => {
+    setEditingLoteId(lote.id);
+    setNombre(lote.nombre || ''); setContacto(lote.contacto || ''); setTelefono(lote.telefono || ''); setCorreo(lote.correo || '');
+    setDireccion(lote.direccion || ''); setCiudad(lote.ciudad || ''); setCuentaClabeDefault(lote.cuentaClabeDefault || ''); setBancoDefault(lote.bancoDefault || '');
+    setShowAddForm(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre.trim()) return;
-
     setIsSubmitting(true);
     try {
-      const res = await api.createLote({
-        nombre,
-        contacto,
-        telefono,
-        correo,
-        direccion,
-        ciudad,
-        cuentaClabeDefault,
-        bancoDefault,
-      });
+      const payload = { nombre, contacto, telefono, correo, direccion, ciudad, cuentaClabeDefault, bancoDefault };
+      const res = editingLoteId ? await api.updateLote(editingLoteId, payload) : await api.createLote(payload);
       if (res.success && res.lote) {
-        onLoteCreated(res.lote);
-        setShowAddForm(false);
-        setNombre('');
-        setContacto('');
-        setTelefono('');
-        setCorreo('');
-        setDireccion('');
-        setCiudad('');
-        setCuentaClabeDefault('');
-        setBancoDefault('');
+        if (editingLoteId) onLoteUpdated(res.lote); else onLoteCreated(res.lote);
+        resetForm();
       }
     } catch (err: any) {
-      alert(err.message || 'Error al registrar el lote');
+      alert(err.message || (editingLoteId ? 'Error al actualizar el lote' : 'Error al registrar el lote'));
     } finally {
       setIsSubmitting(false);
     }
@@ -116,10 +115,10 @@ export const LotesManagerModal: React.FC<LotesManagerModalProps> = ({
             <div className="p-5 bg-slate-950 rounded-2xl border border-slate-800 animate-fadeIn">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-sm font-bold text-white">
-                  Registrar Nuevo Lote / Concesionario
+                  {editingLoteId ? 'Editar información del lote' : 'Registrar Nuevo Lote / Concesionario'}
                 </h4>
                 <button
-                  onClick={() => setShowAddForm(false)}
+                  onClick={resetForm}
                   className="text-xs text-slate-400 hover:text-white"
                 >
                   Cancelar
@@ -218,7 +217,7 @@ export const LotesManagerModal: React.FC<LotesManagerModalProps> = ({
                     disabled={isSubmitting}
                     className="py-2 px-5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl"
                   >
-                    {isSubmitting ? 'Guardando...' : 'Guardar Lote'}
+                    {isSubmitting ? 'Guardando...' : (editingLoteId ? 'Guardar cambios' : 'Guardar Lote')}
                   </button>
                 </div>
               </form>
@@ -268,19 +267,33 @@ export const LotesManagerModal: React.FC<LotesManagerModalProps> = ({
                     </p>
                   )}
 
-                  <p>
-                    <span className="text-slate-500">Usuario portal:</span>{' '}
-                    {lote.usuariosPortal?.length
-                      ? lote.usuariosPortal
-                          .filter((u: any) => u.activo !== false)
-                          .map((u: any) => `@${u.username}`)
-                          .join(', ')
-                      : 'Sin acceso creado'}
-                  </p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p>
+                      <span className="text-slate-500">Usuario portal:</span>{' '}
+                      {lote.usuariosPortal?.filter((u: any) => u.activo !== false).length
+                        ? lote.usuariosPortal.filter((u: any) => u.activo !== false).map((u: any) => '@' + u.username).join(', ')
+                        : 'Sin acceso creado'}
+                    </p>
+                    {lote.usuariosPortal?.filter((u: any) => u.activo !== false).length ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 uppercase">
+                        <UserRoundCheck className="w-3 h-3" /> Acceso activo
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-slate-500 uppercase">Sin acceso</span>
+                    )}
+                  </div>
                 </div>
 
 {canManage && (
-                <div className="flex items-center justify-end pt-2">
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(lote)}
+                    className="py-1.5 px-2.5 text-[11px] text-emerald-300 bg-emerald-950/30 border border-emerald-800/50 rounded-lg hover:bg-emerald-950/50 inline-flex items-center gap-1.5"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    Editar lote
+                  </button>
                   <button
                     type="button"
                     onClick={() => handleDelete(lote)}
@@ -289,7 +302,6 @@ export const LotesManagerModal: React.FC<LotesManagerModalProps> = ({
                     Eliminar lote
                   </button>
                 </div>
-
                 )}
                 {/* Stats badge */}
                 <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-800/60">
