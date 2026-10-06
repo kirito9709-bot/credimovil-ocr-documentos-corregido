@@ -289,6 +289,16 @@ export const api = {
     return res.json();
   },
 
+  async updateLote(id: string, lote: Partial<LoteAuto>) {
+    const res = await fetch(`/api/lotes/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(lote),
+    });
+    if (!res.ok) await parseError(res, 'No se pudo actualizar el lote.');
+    return res.json();
+  },
+
   async getStats() {
     const res = await fetch('/api/stats', { headers: authHeaders() });
     if (!res.ok) await parseError(res, 'Error al obtener estadísticas');
