@@ -33,6 +33,7 @@ import { api } from '../services/api';
 import { ExpedienteComentariosModal } from './ExpedienteComentariosModal';
 import { CotizadorCreditoModal } from './CotizadorCreditoModal';
 import { EstadosCuentaOCRPanel } from './EstadosCuentaOCRPanel';
+import { AgregarObligadoModal } from './AgregarObligadoModal';
 
 interface ExpedienteDetailModalProps {
   expediente: ExpedienteCredito | null;
@@ -79,6 +80,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
   const [uploadingDocumentType, setUploadingDocumentType] = useState<string | null>(null);
   const [showComments, setShowComments] = useState(false);
   const [showQuote, setShowQuote] = useState(false);
+  const [showObligadoModal, setShowObligadoModal] = useState(false);
 
   const isPdfUrl = (url?: string | null) => Boolean(url && (/^data:application\/pdf/i.test(url) || /\.pdf(?:$|[?#])/i.test(url)));
 
@@ -327,6 +329,15 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
             >
               <Calculator className="w-3.5 h-3.5" />
               <span>Cotizar</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowObligadoModal(true)}
+              className="py-1.5 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black transition flex items-center gap-1.5"
+              title={expediente.obligadoSolidario?.requerido ? 'Editar obligado solidario' : 'Agregar obligado solidario'}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>{expediente.obligadoSolidario?.requerido ? 'Editar obligado' : 'Agregar obligado'}</span>
             </button>
 
             <button
@@ -1370,7 +1381,17 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
       </div>
 
       {showQuote && (
-        <CotizadorCreditoModal
+        <AgregarObligadoModal
+        expediente={expediente}
+        isOpen={showObligadoModal}
+        onClose={() => setShowObligadoModal(false)}
+        onSaved={(updated) => {
+          onUpdate(updated);
+          setShowObligadoModal(false);
+        }}
+      />
+
+      <CotizadorCreditoModal
           expediente={expediente}
           onClose={() => setShowQuote(false)}
         />
