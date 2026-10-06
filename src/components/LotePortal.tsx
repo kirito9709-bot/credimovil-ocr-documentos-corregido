@@ -56,7 +56,8 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
   const stats = {
     total: expedientes.length,
     analisis: expedientes.filter((e) => e.estatus === 'EN_EVALUACION' || e.estatus === 'NUEVO').length,
-    aprobados: expedientes.filter((e) => e.estatus === 'APROBADO' || e.estatus === 'PRE_APROBADO').length,
+    preAprobados: expedientes.filter((e) => e.estatus === 'PRE_APROBADO').length,
+    aprobados: expedientes.filter((e) => e.estatus === 'APROBADO').length,
     fondeados: expedientes.filter((e) => e.estatus === 'FONDEADO').length,
     monto: expedientes.filter((e) => e.estatus !== 'RECHAZADO').reduce((sum, e) => sum + (Number(e.montoFinanciar) || 0), 0),
   };
@@ -126,9 +127,10 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
         </div>
       </div>
 
-      <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
+      <div className='grid grid-cols-2 md:grid-cols-5 gap-3'>
         <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'><span className='text-[11px] uppercase tracking-wider text-slate-500'>Créditos enviados</span><div className='text-2xl font-black text-white mt-1'>{stats.total}</div></div>
         <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'><span className='text-[11px] uppercase tracking-wider text-slate-500'>En análisis</span><div className='text-2xl font-black text-amber-400 mt-1'>{stats.analisis}</div></div>
+        <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'><span className='text-[11px] uppercase tracking-wider text-slate-500'>Pre-aprobados</span><div className='text-2xl font-black text-violet-400 mt-1'>{stats.preAprobados}</div></div>
         <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'><span className='text-[11px] uppercase tracking-wider text-slate-500'>Aprobados</span><div className='text-2xl font-black text-blue-400 mt-1'>{stats.aprobados}</div></div>
         <div className='bg-slate-900 border border-slate-800 rounded-2xl p-4'><span className='text-[11px] uppercase tracking-wider text-slate-500'>Fondeados</span><div className='text-2xl font-black text-emerald-400 mt-1'>{stats.fondeados}</div></div>
       </div>
