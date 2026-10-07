@@ -195,8 +195,6 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
           '<tr><td>Enganche</td><td>' + money(enganche) + ' (' + porcentajeReal.toFixed(2) + '%)</td></tr>' +
           '<tr><td>Monto base a financiar</td><td>' + money(montoFinanciar) + '</td></tr>' +
           '<tr><td>' + seguroResumenLabel + '</td><td>' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro)) + '</td></tr>' +
-          '<tr><td>Monto aprobado</td><td>' + money(totalCapitalFinanciado) + '</td></tr>' +
-          '<tr><td>Seguro financiado</td><td>' + (seguroModo === 'FINANCIADO' ? money(montoSeguroFinanciado) : 'No aplica') + '</td></tr>' +
           '<tr><td>Comisión por apertura (3%)</td><td>' + money(comisionApertura) + '</td></tr>' +
           '<tr><td>Desembolso total inicial</td><td>' + money(desembolsoTotal) + '</td></tr>' +
           '<tr><td>Plazo</td><td>' + plazo + ' meses</td></tr>' +
