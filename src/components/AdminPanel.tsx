@@ -468,15 +468,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800">
                   <div className="text-[9px] uppercase text-slate-500">Enviados este mes</div>
-                  <div className="text-lg font-black text-white">\${monthActual.received}</div>
+                  <div className="text-lg font-black text-white">${monthActual.received}</div>
                 </div>
                 <div className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800">
                   <div className="text-[9px] uppercase text-slate-500">Fondeados este mes</div>
-                  <div className="text-lg font-black text-emerald-400">\${monthActual.funded}</div>
+                  <div className="text-lg font-black text-emerald-400">${monthActual.funded}</div>
                 </div>
                 <div className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800">
                   <div className="text-[9px] uppercase text-slate-500">Monto fondeado</div>
-                  <div className="text-lg font-black text-emerald-400">\$ \${monthActual.fundedAmount.toLocaleString('es-MX')}</div>
+                  <div className="text-lg font-black text-emerald-400">\$ ${monthActual.fundedAmount.toLocaleString('es-MX')}</div>
                 </div>
               </div>
             </div>
@@ -491,8 +491,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   {monthly.map((m) => (
                     <div key={m.month}>
                       <div className="flex items-center justify-between text-[10px] mb-1">
-                        <span className="text-slate-400">\${m.label}{m.month === currentMonth ? ' · En curso' : ''}</span>
-                        <span className="text-white font-black">\${m.received} enviados · <span className="text-emerald-400">\${m.funded} fondeados</span></span>
+                        <span className="text-slate-400">${m.label}{m.month === currentMonth ? ' · En curso' : ''}</span>
+                        <span className="text-white font-black">${m.received} enviados · <span className="text-emerald-400">${m.funded} fondeados</span></span>
                       </div>
                       <div className="h-2 rounded-full bg-slate-950 overflow-hidden">
                         <div className="h-full rounded-full bg-red-500/80" style={{ width: (m.received / maxCount) * 100 + '%' }} />
@@ -521,15 +521,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           <td className="py-2 pr-3 text-slate-300">{m.label}{m.month === currentMonth ? ' *' : ''}</td>
                           <td className="py-2 pr-3 text-white font-bold">{m.received}</td>
                           <td className="py-2 pr-3 text-emerald-400 font-bold">{m.funded}</td>
-                          <td className="py-2 text-emerald-400 font-bold">\$ \${m.fundedAmount.toLocaleString('es-MX')} MXN</td>
+                          <td className="py-2 text-emerald-400 font-bold">\$ ${m.fundedAmount.toLocaleString('es-MX')} MXN</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[10px]">
-                  <span className="text-slate-500">Acumulado periodo: <strong className="text-slate-300">\${totalFunded} fondeados</strong></span>
-                  <strong className="text-emerald-400">\$ \${totalFundedAmount.toLocaleString('es-MX')} MXN fondeados</strong>
+                  <span className="text-slate-500">Acumulado periodo: <strong className="text-slate-300">${totalFunded} fondeados</strong></span>
+                  <strong className="text-emerald-400">\$ ${totalFundedAmount.toLocaleString('es-MX')} MXN fondeados</strong>
                 </div>
               </div>
             </div>
