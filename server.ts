@@ -1338,7 +1338,9 @@ async function getSupabaseExpedientes(folioFilter = '') {
       montoFinanciar: Number(row.monto_financiar || source.montoFinanciar || 0),
       fechaCreacion: source.fechaCreacion || row.created_at,
       fechaActualizacion: source.fechaActualizacion || row.updated_at,
-      fechaFondeo: source.fechaFondeo || '',
+      fechaFondeo: source.fechaFondeo || row.data?.fechaFondeo || (
+        (row.estatus === 'FONDEADO' || row.estatus === 'FONDEO') ? row.updated_at : ''
+      ),
     };
     result.push(await applyStoredDocumentsToExpediente(exp, docsByExpediente.get(row.id) || []));
   }
