@@ -22,6 +22,8 @@ import {
   RefreshCw,
   FolderOpen,
   MessageCircle,
+  BarChart3,
+  TrendingUp,
 } from 'lucide-react';
 import { ExpedienteCredito, LoteAuto, EstatusCredito } from '../types';
 import { api } from '../services/api';
@@ -51,6 +53,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   authUser,
 }) => {
   const [expedientes, setExpedientes] = useState<ExpedienteCredito[]>([]);
+  const [allExpedientes, setAllExpedientes] = useState<ExpedienteCredito[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEstatus, setSelectedEstatus] = useState<string>('TODOS');
@@ -90,16 +93,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const loadData = async () => {
     setLoading(true);
     try {
-      const [expRes, statsRes] = await Promise.all([
+      const [expRes, allExpRes, statsRes] = await Promise.all([
         api.getExpedientes({
           q: searchQuery || undefined,
           estatus: selectedEstatus !== 'TODOS' ? selectedEstatus : undefined,
           loteId: selectedLoteId !== 'TODOS' ? selectedLoteId : undefined,
         }),
+        api.getExpedientes(),
         api.getStats(),
       ]);
 
       if (expRes.success) setExpedientes(expRes.expedientes);
+      if (allExpRes.success) setAllExpedientes(allExpRes.expedientes);
       if (statsRes.success) setStats(statsRes.stats);
     } catch (err) {
       console.error(err);
@@ -416,6 +421,120 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           Total de expedientes: <strong className="text-slate-300">{stats.total}</strong> • Financiado: <strong className="text-emerald-400">${(stats.montoTotalFinanciado || 0).toLocaleString('es-MX')} MXN</strong>
         </span>
       </div>
+      {/* Control mensual de fondeos para cierre de mes */}
+      {(() => {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+        const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+        const monthly = Array.from({ length: 12 - currentMonth }, (_, offset) => {
+          const month = currentMonth + offset;
+          const funded = allExpedientes.filter((e) => {
+            const d = new Date(e.fechaFondeo || '');
+            return e.estatus === 'FONDEADO' && d.getFullYear() === currentYear && d.getMonth() === month;
+          });
+          const received = allExpedientes.filter((e) => {
+            const d = new Date(e.fechaCreacion);
+            return d.getFullYear() === currentYear && d.getMonth() === month;
+          });
+
+          return {
+            month,
+            label: monthNames[month],
+            received: received.length,
+            funded: funded.length,
+            fundedAmount: funded.reduce((sum, e) => sum + (Number(e.montoFinanciar) || 0), 0),
+          };
+        });
+
+        const monthActual = monthly[0] || { received: 0, funded: 0, fundedAmount: 0, label: monthNames[currentMonth] };
+        const maxCount = Math.max(1, ...monthly.map((m) => Math.max(m.received, m.funded)));
+        const totalFunded = monthly.reduce((sum, m) => sum + m.funded, 0);
+        const totalFundedAmount = monthly.reduce((sum, m) => sum + m.fundedAmount, 0);
+        const periodLabel = monthNames[currentMonth] + '–' + monthNames[11];
+
+        return (
+          <section className="bg-[#071A33] border border-[#18365C] rounded-2xl p-4 sm:p-5 shadow-lg space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-red-400" />
+                  <h2 className="text-sm sm:text-base font-black text-white">Control mensual de fondeos</h2>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">Seguimiento de créditos enviados y créditos realmente fondeados para cierre de mes.</p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800">
+                  <div className="text-[9px] uppercase text-slate-500">Enviados este mes</div>
+                  <div className="text-lg font-black text-white">\${monthActual.received}</div>
+                </div>
+                <div className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800">
+                  <div className="text-[9px] uppercase text-slate-500">Fondeados este mes</div>
+                  <div className="text-lg font-black text-emerald-400">\${monthActual.funded}</div>
+                </div>
+                <div className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800">
+                  <div className="text-[9px] uppercase text-slate-500">Monto fondeado</div>
+                  <div className="text-lg font-black text-emerald-400">\$ \${monthActual.fundedAmount.toLocaleString('es-MX')}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="rounded-2xl bg-slate-900/70 border border-slate-800 p-4">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-200 mb-3">
+                  <TrendingUp className="w-4 h-4 text-red-400" />
+                  Comparativo mensual
+                </div>
+                <div className="space-y-3">
+                  {monthly.map((m) => (
+                    <div key={m.month}>
+                      <div className="flex items-center justify-between text-[10px] mb-1">
+                        <span className="text-slate-400">\${m.label}{m.month === currentMonth ? ' · En curso' : ''}</span>
+                        <span className="text-white font-black">\${m.received} enviados · <span className="text-emerald-400">\${m.funded} fondeados</span></span>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-950 overflow-hidden">
+                        <div className="h-full rounded-full bg-red-500/80" style={{ width: (m.received / maxCount) * 100 + '%' }} />
+                      </div>
+                      <div className="h-1.5 rounded-full bg-slate-950 overflow-hidden mt-1">
+                        <div className="h-full rounded-full bg-emerald-500" style={{ width: (m.funded / maxCount) * 100 + '%' }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-slate-900/70 border border-slate-800 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs font-bold text-slate-200">Resumen para cierre</div>
+                  <div className="text-[9px] text-slate-500 uppercase">{periodLabel}</div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-[10px]">
+                    <thead className="text-slate-500 uppercase border-b border-slate-800">
+                      <tr><th className="py-2 pr-3">Mes</th><th className="py-2 pr-3">Enviados</th><th className="py-2 pr-3">Fondeados</th><th className="py-2">Monto fondeado</th></tr>
+                    </thead>
+                    <tbody>
+                      {monthly.map((m) => (
+                        <tr key={m.month} className="border-b border-slate-800/60 last:border-0">
+                          <td className="py-2 pr-3 text-slate-300">{m.label}{m.month === currentMonth ? ' *' : ''}</td>
+                          <td className="py-2 pr-3 text-white font-bold">{m.received}</td>
+                          <td className="py-2 pr-3 text-emerald-400 font-bold">{m.funded}</td>
+                          <td className="py-2 text-emerald-400 font-bold">\$ \${m.fundedAmount.toLocaleString('es-MX')} MXN</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[10px]">
+                  <span className="text-slate-500">Acumulado periodo: <strong className="text-slate-300">\${totalFunded} fondeados</strong></span>
+                  <strong className="text-emerald-400">\$ \${totalFundedAmount.toLocaleString('es-MX')} MXN fondeados</strong>
+                </div>
+              </div>
+            </div>
+          </section>
+
       {/* Filter and Search Bar */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
