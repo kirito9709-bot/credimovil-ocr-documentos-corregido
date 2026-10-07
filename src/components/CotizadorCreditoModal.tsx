@@ -110,8 +110,6 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
     'Enganche: ' + money(enganche) + ' (' + porcentajeReal.toFixed(2) + '%)',
     'Monto a financiar: ' + money(montoFinanciar),
     seguroResumenLabel + ': ' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro)),
-    'Monto aprobado: ' + money(totalCapitalFinanciado),
-    'Seguro financiado: ' + (seguroModo === 'FINANCIADO' ? money(montoSeguroFinanciado) : 'No aplica'),
     'Comisión por apertura (3%): ' + money(comisionApertura),
     'Desembolso total: ' + money(desembolsoTotal),
     'Plazo: ' + plazo + ' meses',
@@ -340,7 +338,6 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="rounded-2xl bg-white/5 border border-white/10 p-4"><div className="text-[11px] text-slate-400">Enganche</div><div className="text-base font-black text-white mt-1">{money(enganche)}</div></div>
             <div className="rounded-2xl bg-white/5 border border-white/10 p-4"><div className="text-[11px] text-slate-400">Monto inicial</div><div className="text-base font-black text-emerald-400 mt-1">{money(montoFinanciar)}</div></div>
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-4"><div className="text-[11px] text-slate-400">Monto aprobado</div><div className="text-base font-black text-emerald-400 mt-1">{money(totalCapitalFinanciado)}</div></div>
             <div className="rounded-2xl bg-white/5 border border-white/10 p-4"><div className="text-[11px] text-slate-400">Mensualidad</div><div className="text-base font-black text-red-300 mt-1">{money(monthlySchedule[0]?.pago || mensualidad)}</div></div>
             <div className="rounded-2xl bg-white/5 border border-white/10 p-4"><div className="text-[11px] text-slate-400">Total pagos</div><div className="text-base font-black text-white mt-1">{money(totalPagos)}</div></div>
           </div>
