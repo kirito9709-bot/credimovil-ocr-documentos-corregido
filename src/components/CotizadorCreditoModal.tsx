@@ -114,10 +114,8 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
     'Seguro financiado: ' + (seguroModo === 'FINANCIADO' ? money(montoSeguroFinanciado) : 'No aplica'),
     'Comisión por apertura (3%): ' + money(comisionApertura),
     'Desembolso total: ' + money(desembolsoTotal),
-    'Tasa mensual IVA incluido: 2.3200%',
     'Plazo: ' + plazo + ' meses',
     'Mensualidad estimada: ' + money(monthlySchedule[0]?.pago || mensualidad),
-    'Interés por devengar IVA incluido: ' + money(totalInteresDevengar + totalIvaDevengar),
     'GPS total: ' + money(totalGps) + ' | SDD total: ' + money(totalSdd),
     'Total de pagos: ' + money(totalPagos),
     'Desglose mensual: Capital ' + money(capitalMensualBase) + ' + Interés ' + money(interesesMensualesBase) + ' + IVA interés ' + money(ivaMensualBase) + ' + GPS $260 + SDD $142',
@@ -201,8 +199,6 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
           '<tr><td>' + seguroResumenLabel + '</td><td>' + (seguroModo === 'NINGUNO' ? 'Sin seguro' : money(seguro)) + '</td></tr>' +
           '<tr><td>Monto aprobado</td><td>' + money(totalCapitalFinanciado) + '</td></tr>' +
           '<tr><td>Seguro financiado</td><td>' + (seguroModo === 'FINANCIADO' ? money(montoSeguroFinanciado) : 'No aplica') + '</td></tr>' +
-          '<tr><td>Interés mensual IVA incluido</td><td>2.3200%</td></tr>' +
-          '<tr><td>Interés por devengar IVA incluido</td><td>' + money(totalInteresDevengar + totalIvaDevengar) + '</td></tr>' +
           '<tr><td>Comisión por apertura (3%)</td><td>' + money(comisionApertura) + '</td></tr>' +
           '<tr><td>Desembolso total inicial</td><td>' + money(desembolsoTotal) + '</td></tr>' +
           '<tr><td>Plazo</td><td>' + plazo + ' meses</td></tr>' +
@@ -224,7 +220,7 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
           (seguroDeContado > 0 ? '<div class="disbursement-row"><span>Seguro de contado</span><span>' + money(seguroDeContado) + '</span></div>' : '') +
           '<div class="disbursement-row"><span>Desembolso total</span><span>' + money(desembolsoTotal) + '</span></div>' +
         '</div>' +
-        '<div class="note">Modelo de simulación alineado a la corrida GPI: tasa mensual IVA incluido 2.3200%, pago fijo, comisión 3% sobre el monto financiado, seguro financiado integrado al capital y GPS/SDD dentro de la mensualidad. La corrida real puede presentar diferencias de centavos por redondeos internos de la financiera.</div>' +
+        '<div class="note">Modelo de simulación alineado a la corrida de la financiera: pago fijo, comisión 3% sobre el monto financiado, seguro financiado integrado al capital y GPS/SDD dentro de la mensualidad. La corrida real puede presentar diferencias de centavos por redondeos internos de la financiera.</div>' +
         '<div class="disbursement-row" style="margin-top:7px;border:1px solid #CBD7E3;padding:6px 10px;background:#fff"><span>Total de pagos del crédito</span><span>' + money(totalPagos) + '</span></div>' +
         '<div class="cover-footer">CrediMóvil · Tu auto, más cerca de tus planes</div>' +
       '</section>' +
@@ -378,11 +374,10 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
               <div className="rounded-xl bg-black/20 border border-white/10 p-3"><div className="text-[10px] text-slate-400 uppercase">Interés mensual</div><div className="text-sm font-black text-white mt-1">{money(interesesMensualesBase)}</div></div>
               <div className="rounded-xl bg-black/20 border border-white/10 p-3"><div className="text-[10px] text-slate-400 uppercase">IVA interés</div><div className="text-sm font-black text-white mt-1">{money(ivaMensualBase)}</div></div>
-              <div className="rounded-xl bg-black/20 border border-white/10 p-3"><div className="text-[10px] text-slate-400 uppercase">Interés + IVA por devengar</div><div className="text-sm font-black text-white mt-1">{money(totalInteresDevengar + totalIvaDevengar)}</div></div>
               <div className="rounded-xl bg-black/20 border border-white/10 p-3"><div className="text-[10px] text-slate-400 uppercase">GPS total</div><div className="text-sm font-black text-white mt-1">{money(totalGps)}</div></div>
               <div className="rounded-xl bg-black/20 border border-white/10 p-3"><div className="text-[10px] text-slate-400 uppercase">SDD total</div><div className="text-sm font-black text-white mt-1">{money(totalSdd)}</div></div>
             </div>
-            <div className="text-[10px] text-slate-500 mt-3">Tasa mensual IVA incluido: <strong className="text-slate-300">2.3200%</strong> · Tipo de pago: <strong className="text-slate-300">Fijo</strong></div>
+            <div className="text-[10px] text-slate-500 mt-3">Tipo de pago: <strong className="text-slate-300">Fijo</strong></div>
           </div>
 
           <div className="rounded-2xl bg-black/20 border border-white/10 p-4 text-xs text-slate-400">
