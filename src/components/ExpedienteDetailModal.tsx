@@ -28,7 +28,7 @@ import {
   Calculator,
   Users,
 } from 'lucide-react';
-import { ExpedienteCredito, EstatusCredito } from '../types';
+import { ExpedienteCredito, EstatusCredito, LoteAuto } from '../types';
 import { api } from '../services/api';
 import { ExpedienteComentariosModal } from './ExpedienteComentariosModal';
 import { CotizadorCreditoModal } from './CotizadorCreditoModal';
@@ -69,6 +69,9 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
       : 20;
   });
   const [notas, setNotas] = useState(expediente?.notasAsesor || '');
+  const [lotesDisponibles, setLotesDisponibles] = useState<LoteAuto[]>([]);
+  const [nuevoLoteId, setNuevoLoteId] = useState(expediente?.loteId || '');
+  const [editLote, setEditLote] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -118,6 +121,18 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
         autoModelo: autoModelo.trim(),
         autoAno: String(autoAno).trim(),
         autoPrecio: Number(precio),
+        ...(nuevoLoteId && lotesDisponibles.find((lote) => lote.id === nuevoLoteId)
+          ? (() => {
+              const lote = lotesDisponibles.find((item) => item.id === nuevoLoteId)!;
+              return {
+                loteId: lote.id,
+                loteNombre: lote.nombre,
+                asesorLoteContacto: lote.contacto || '',
+                telefonoLote: lote.telefono || '',
+                correoLote: lote.correo || '',
+              };
+            })()
+          : {}),
         montoFinanciar: calcMontoFinanciar,
         mensualidadEstimada: calcMensualidad,
         notasAsesor: notas,
@@ -220,11 +235,26 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
       basePrecio > 0 ? Math.min(100, Math.max(20, Math.round((baseEnganche / basePrecio) * 10000) / 100)) : 20
     );
     setNotas(expediente.notasAsesor || '');
+    setNuevoLoteId(expediente.loteId || '');
+    setEditLote(false);
     setSaveSuccess(false);
     setReviewingDocId(null);
     setReviewComment('');
     setPreviewDocUrl(null);
     setPreviewDocTitle('');
+  }, [expediente?.id]);
+
+  useEffect(() => {
+    if (!expediente) return;
+    let cancelled = false;
+    api.getLotes()
+      .then((res) => {
+        if (!cancelled && res?.success && Array.isArray(res.lotes)) {
+          setLotesDisponibles(res.lotes);
+        }
+      })
+      .catch((err) => console.error('No se pudieron cargar los lotes para reasignar expediente:', err));
+    return () => { cancelled = true; };
   }, [expediente?.id]);
 
   if (!expediente) return null;
@@ -705,10 +735,47 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                   <h4 className="text-sm font-bold text-white border-b border-slate-800 pb-2">
                     Vehículo & Fondeo Lote
                   </h4>
-                  <p>
-                    <span className="text-slate-400">Lote:</span>{' '}
-                    <strong className="text-white font-semibold">{expediente.loteNombre}</strong>
-                  </p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p>
+                      <span className="text-slate-400">Lote:</span>{' '}
+                      <strong className="text-white font-semibold">{expediente.loteNombre || 'Sin lote'}</strong>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setEditLote((value) => !value)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 text-[11px] font-bold"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      {editLote ? 'Cancelar cambio' : 'Cambiar lote'}
+                    </button>
+                  </div>
+
+                  {editLote && (
+                    <div className="p-3 rounded-xl bg-slate-900/80 border border-amber-500/20">
+                      <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Nuevo lote</label>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <select
+                          value={nuevoLoteId}
+                          onChange={(e) => setNuevoLoteId(e.target.value)}
+                          className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs"
+                        >
+                          <option value="">Seleccionar lote...</option>
+                          {lotesDisponibles.map((lote) => (
+                            <option key={lote.id} value={lote.id}>{lote.nombre}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={handleSaveTerms}
+                          disabled={isSaving || !nuevoLoteId || nuevoLoteId === expediente.loteId}
+                          className="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 text-xs font-black disabled:opacity-50"
+                        >
+                          {isSaving ? 'Guardando...' : 'Guardar lote'}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-2">Al guardar, también se actualizarán los datos de contacto del lote en el expediente.</p>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between gap-3">
                     <p>
                       <span className="text-slate-400">Vehículo:</span>{' '}
