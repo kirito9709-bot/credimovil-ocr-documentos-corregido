@@ -106,6 +106,32 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
     ? Math.round((capitalMensual + interesMensual + ivaInteres + 260 + 142) * 100) / 100
     : 0;
 
+  const handleChangeLote = async () => {
+    if (!nuevoLoteId || nuevoLoteId === expediente.loteId) return;
+    const lote = lotesDisponibles.find((item) => item.id === nuevoLoteId);
+    if (!lote) return;
+
+    setIsSaving(true);
+    try {
+      const res = await api.updateExpediente(expediente.id, {
+        loteId: lote.id,
+        loteNombre: lote.nombre,
+        asesorLoteContacto: lote.contacto || '',
+        telefonoLote: lote.telefono || '',
+        correoLote: lote.correo || '',
+      });
+      if (!res.success || !res.expediente) throw new Error(res.message || 'No se pudo cambiar el lote.');
+      onUpdate(res.expediente);
+      setEditLote(false);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch (err: any) {
+      alert(err.message || 'No se pudo cambiar el lote.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleSaveTerms = async () => {
     setIsSaving(true);
     try {
@@ -766,7 +792,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                         </select>
                         <button
                           type="button"
-                          onClick={handleSaveTerms}
+                          onClick={handleChangeLote}
                           disabled={isSaving || !nuevoLoteId || nuevoLoteId === expediente.loteId}
                           className="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 text-xs font-black disabled:opacity-50"
                         >
