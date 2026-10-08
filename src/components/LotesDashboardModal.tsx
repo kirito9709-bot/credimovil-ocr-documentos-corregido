@@ -259,7 +259,7 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
           <section className='grid grid-cols-1 xl:grid-cols-12 gap-4'>
             <div className='xl:col-span-8 rounded-2xl bg-[#0D1B35] border border-slate-800 p-4'>
               <div className='flex flex-col lg:flex-row lg:items-center justify-between gap-3'>
-                <div><h2 className='text-sm font-black text-white'>Comparativo por sucursal</h2><p className='text-[10px] text-slate-500'>Créditos y actividad acumulada por lote.</p></div>
+                <div><h2 className='text-sm font-black text-white'>Comparativo por sucursal</h2><p className='text-[10px] text-slate-500'>Créditos, fondeos y usuarios con acceso por lote.</p></div>
                 <select value={selectedLoteId} onChange={(e) => setSelectedLoteId(e.target.value)} className='bg-slate-950 border border-slate-700 rounded-xl text-xs text-white px-3 py-2'>
                   {lotes.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                 </select>
@@ -273,6 +273,20 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
                     <div className='flex items-center justify-between'><span className='text-[11px] font-black text-white truncate'>{lote.nombre}</span><span className='text-[9px] text-slate-500'>{list.length} créditos</span></div>
                     <div className='mt-3 h-2 rounded-full bg-slate-950 overflow-hidden'><div className='h-full bg-red-500 rounded-full' style={{ width: Math.min(100, (list.length / Math.max(1, Math.max(...lotes.map((x) => expedientes.filter((e) => e.loteId === x.id).length)))) * 100) + '%' }} /></div>
                     <div className='mt-2 flex justify-between text-[9px]'><span className='text-slate-500'>Fondeados</span><span className='text-emerald-300 font-bold'>{fondeados}</span></div>
+                    <div className='mt-2 pt-2 border-t border-slate-800/70'>
+                      <div className='text-[8px] uppercase tracking-wider text-slate-500 mb-1'>Usuarios del lote</div>
+                      {lote.usuariosPortal?.filter((u: any) => u.activo !== false).length ? (
+                        <div className='flex flex-wrap gap-1'>
+                          {lote.usuariosPortal.filter((u: any) => u.activo !== false).map((u: any) => (
+                            <span key={u.id || u.username} className='inline-flex items-center gap-1 px-1.5 py-1 rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/15 text-[8px]'>
+                              <UserRoundCheck className='w-2.5 h-2.5' /> @{u.username}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className='text-[8px] text-slate-600'>Sin usuario portal activo</span>
+                      )}
+                    </div>
                   </button>;
                 })}
               </div>
