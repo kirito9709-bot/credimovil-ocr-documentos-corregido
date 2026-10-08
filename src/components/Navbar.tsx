@@ -178,14 +178,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   Cerrar Sesión
                 </button>
               </div>
-            ) : (
-              <button
-                onClick={onOpenAdminAuth}
-                className="text-xs px-3 py-1.5 text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-lg border border-slate-800 transition flex items-center gap-1"
-              >
-                <Lock className="w-3 h-3 text-red-400" />
-                <span>Acceso Asesor</span>
-              </button>
             )}
           </div>        </div>
       </div>
