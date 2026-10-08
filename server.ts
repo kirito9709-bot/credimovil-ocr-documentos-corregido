@@ -2590,6 +2590,7 @@ app.post('/api/expedientes', async (req, res) => {
       casaPropiaORentada: body.casaPropiaORentada || '',
       tiempoEnTrabajo: body.tiempoEnTrabajo || '',
       nombreUbicacionEmpleo: body.nombreUbicacionEmpleo || '',
+      direccionEmpleo: body.direccionEmpleo || '',
       giroActividadEmpresa: body.giroActividadEmpresa || '',
       dependientesEconomicos: Number(body.dependientesEconomicos) || 0,
       estadoCivil: body.estadoCivil || '',
