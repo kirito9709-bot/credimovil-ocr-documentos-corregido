@@ -153,13 +153,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>{authUser?.role === 'lote' ? 'Mi Portal' : 'Acceso Lote'}</span>
             </button>
             <div className="md:hidden mt-2 pt-2 border-t border-slate-800 grid grid-cols-2 gap-2">
-              <button
-                onClick={() => selectTab('lotes')}
-                className="px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-xs font-bold text-white"
-              >
-                <Building2 className="w-4 h-4 inline mr-1.5 text-[#F87171]" />
-                {activeLoteCount} Lotes
-              </button>
+              {authUser?.role !== 'lote' && (
+                <button
+                  onClick={() => selectTab('lotes')}
+                  className="px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-xs font-bold text-white"
+                >
+                  <Building2 className="w-4 h-4 inline mr-1.5 text-[#F87171]" />
+                  {activeLoteCount} Lotes
+                </button>
+              )}
 
               {isAdminAuth ? (
                 <button
