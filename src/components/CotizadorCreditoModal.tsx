@@ -7,9 +7,10 @@ interface CotizadorCreditoModalProps {
   onClose: () => void;
   customerMode?: boolean;
   showRate?: boolean;
+  isOpen?: boolean;
 }
 
-export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ expediente, onClose, customerMode = false, showRate = false }) => {
+export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ expediente, onClose, customerMode = false, showRate = false, isOpen = true }) => {
   const [precio, setPrecio] = useState<number>(Number(expediente.autoPrecio) || 0);
   const [modoEnganche, setModoEnganche] = useState<'PORCENTAJE' | 'MONTO'>(expediente.engancheModo || 'MONTO');
   const [engancheMonto, setEngancheMonto] = useState<number>(Number(expediente.enganche) || 0);
@@ -128,6 +129,8 @@ export const CotizadorCreditoModal: React.FC<CotizadorCreditoModalProps> = ({ ex
       window.prompt('Copia la cotización:', quoteText);
     }
   };
+
+  if (!isOpen) return null;
 
   const printQuote = () => {
     const popup = window.open('', '_blank', 'width=1200,height=900');
