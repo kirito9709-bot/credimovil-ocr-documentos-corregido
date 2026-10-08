@@ -56,6 +56,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [expedientes, setExpedientes] = useState<ExpedienteCredito[]>([]);
   const [allExpedientes, setAllExpedientes] = useState<ExpedienteCredito[]>([]);
   const [loading, setLoading] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEstatus, setSelectedEstatus] = useState<string>('TODOS');
   const [selectedLoteId, setSelectedLoteId] = useState<string>('TODOS');
@@ -92,7 +93,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [loteUserMessage, setLoteUserMessage] = useState<string | null>(null);
 
   const loadData = async () => {
+    if (!isAdminAuth) return;
     setLoading(true);
+    setDataError(null);
     try {
       const [expRes, allExpRes, statsRes] = await Promise.all([
         api.getExpedientes({
@@ -104,11 +107,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         api.getStats(),
       ]);
 
-      if (expRes.success) setExpedientes(expRes.expedientes);
-      if (allExpRes.success) setAllExpedientes(allExpRes.expedientes);
-      if (statsRes.success) setStats(statsRes.stats);
-    } catch (err) {
+      if (expRes.success) setExpedientes(Array.isArray(expRes.expedientes) ? expRes.expedientes : []);
+      if (allExpRes.success) setAllExpedientes(Array.isArray(allExpRes.expedientes) ? allExpRes.expedientes : []);
+      if (statsRes.success && statsRes.stats) {
+        setStats({
+          total: Number(statsRes.stats.total) || 0,
+          nuevos: Number(statsRes.stats.nuevos) || 0,
+          preAprobados: Number(statsRes.stats.preAprobados) || 0,
+          enEvaluacion: Number(statsRes.stats.enEvaluacion) || 0,
+          aprobados: Number(statsRes.stats.aprobados) || 0,
+          contratos: Number(statsRes.stats.contratos) || 0,
+          gps: Number(statsRes.stats.gps) || 0,
+          fondeo: Number(statsRes.stats.fondeo) || 0,
+          fondeoRevision: Number(statsRes.stats.fondeoRevision) || 0,
+          fondeados: Number(statsRes.stats.fondeados) || 0,
+          montoTotalFinanciado: Number(statsRes.stats.montoTotalFinanciado) || 0,
+        });
+      }
+    } catch (err: any) {
       console.error(err);
+      const message = err?.message || 'No se pudieron cargar los datos del panel.';
+      setDataError(message);
+      if (/sesión|iniciar sesión|401|403/i.test(message)) {
+        onLogout();
+      }
     } finally {
       setLoading(false);
     }
@@ -156,6 +178,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   return (
     <>
+      {dataError && (
+        <div className="w-full max-w-[1500px] mx-auto px-3 sm:px-5 lg:px-6 pt-3">
+          <div className="rounded-xl border border-rose-500/30 bg-rose-950/20 text-rose-200 text-xs p-3">
+            <strong>No se pudieron cargar los datos:</strong> {dataError}
+          </div>
+        </div>
+      )}
+
       <AdvisorDashboard
         expedientes={expedientes}
         allExpedientes={allExpedientes}
