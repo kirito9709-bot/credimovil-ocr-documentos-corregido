@@ -79,6 +79,13 @@ type SubloteInfo = {
   ciudad?: string | null;
   parent_lote_id?: string | null;
   activo?: boolean;
+  created_at?: string;
+  totalCreditos?: number;
+  totalActivos?: number;
+  totalFondeados?: number;
+  montoFinanciado?: number;
+  montoFondeado?: number;
+  usuariosPortal?: Array<{ id: string; nombre: string; username: string; activo?: boolean; created_at?: string }>;
 };
 
 const EMPTY_STATS: LotePortalStats = {
@@ -336,16 +343,50 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
 
         {sublotes.length > 0 && (
           <section className='rounded-2xl border border-slate-800 bg-[#0C1C38] p-4'>
-            <div className='flex items-center justify-between mb-3'>
-              <div><h2 className='text-sm font-black text-white'>Sublotes / Sucursales</h2><p className='text-[10px] text-slate-500'>Sucursales que dependen del lote principal.</p></div>
+            <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3'>
+              <div>
+                <h2 className='text-sm font-black text-white'>Sublotes / Sucursales</h2>
+                <p className='text-[10px] text-slate-500'>Información, usuarios y actividad de cada sublote del portal principal.</p>
+              </div>
               <span className='text-[9px] text-slate-500'>{sublotes.length} sublotes</span>
             </div>
-            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2'>
+            <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3'>
               {sublotes.map((sub) => (
-                <div key={sub.id} className='rounded-xl border border-slate-800 bg-slate-950/30 p-3'>
-                  <div className='flex items-center justify-between gap-2'><div className='text-[10px] font-black text-white truncate'>{sub.nombre}</div><Building2 className='w-3.5 h-3.5 text-red-400 shrink-0' /></div>
-                  <div className='mt-2 text-[8px] text-slate-500'>{sub.ciudad || 'Sin ciudad'}</div>
-                  <div className='mt-2 grid grid-cols-2 gap-2 text-[8px]'><div className='text-slate-500'>Teléfono<div className='text-slate-300 mt-1 truncate'>{sub.telefono || '—'}</div></div><div className='text-slate-500'>Correo<div className='text-slate-300 mt-1 truncate'>{sub.correo || '—'}</div></div></div>
+                <div key={sub.id} className='rounded-2xl border border-slate-800 bg-slate-950/30 overflow-hidden'>
+                  <div className='px-3 py-3 border-b border-slate-800 flex items-start justify-between gap-2'>
+                    <div className='min-w-0'>
+                      <div className='text-[11px] font-black text-white truncate'>{sub.nombre}</div>
+                      <div className='text-[8px] text-slate-500 mt-1 truncate'>{sub.ciudad || 'Sin ciudad'}{sub.direccion ? ' · ' + sub.direccion : ''}</div>
+                    </div>
+                    <Building2 className='w-4 h-4 text-red-400 shrink-0' />
+                  </div>
+                  <div className='grid grid-cols-3 gap-2 p-3 border-b border-slate-800'>
+                    <div className='rounded-xl bg-slate-900/70 border border-slate-800 p-2'><div className='text-[8px] text-slate-500'>Créditos</div><div className='text-sm font-black text-white mt-1'>{sub.totalCreditos || 0}</div></div>
+                    <div className='rounded-xl bg-slate-900/70 border border-slate-800 p-2'><div className='text-[8px] text-slate-500'>Fondeados</div><div className='text-sm font-black text-emerald-300 mt-1'>{sub.totalFondeados || 0}</div></div>
+                    <div className='rounded-xl bg-slate-900/70 border border-slate-800 p-2'><div className='text-[8px] text-slate-500'>Monto</div><div className='text-[11px] font-black text-emerald-300 mt-1'>{money(sub.montoFinanciado || 0)}</div></div>
+                  </div>
+                  <div className='p-3 space-y-2'>
+                    <div className='grid grid-cols-2 gap-2 text-[8px]'>
+                      <div><span className='text-slate-500'>Teléfono</span><div className='text-slate-300 mt-1 truncate'>{sub.telefono || 'No registrado'}</div></div>
+                      <div><span className='text-slate-500'>Correo</span><div className='text-slate-300 mt-1 truncate'>{sub.correo || 'No registrado'}</div></div>
+                    </div>
+                    <div>
+                      <div className='flex items-center justify-between'><span className='text-[8px] text-slate-500'>Usuarios del portal</span><span className='text-[8px] font-bold text-blue-300'>{sub.usuariosPortal?.length || 0}</span></div>
+                      {(sub.usuariosPortal || []).length > 0 ? (
+                        <div className='mt-2 space-y-1.5'>
+                          {sub.usuariosPortal!.slice(0, 3).map((user) => (
+                            <div key={user.id} className='flex items-center justify-between gap-2 rounded-lg bg-slate-900/60 border border-slate-800 px-2.5 py-1.5'>
+                              <div className='min-w-0'><div className='text-[9px] font-bold text-slate-200 truncate'>{user.nombre}</div><div className='text-[8px] text-slate-500 truncate'>@{user.username}</div></div>
+                              <span className={'w-2 h-2 rounded-full shrink-0 ' + (user.activo === false ? 'bg-rose-400' : 'bg-emerald-400')} />
+                            </div>
+                          ))}
+                          {(sub.usuariosPortal?.length || 0) > 3 && <div className='text-[8px] text-slate-500 text-center'>+ {(sub.usuariosPortal?.length || 0) - 3} usuarios</div>}
+                        </div>
+                      ) : (
+                        <div className='mt-2 rounded-lg border border-dashed border-slate-800 px-2 py-2 text-[8px] text-slate-600'>Sin usuario de portal asignado</div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
