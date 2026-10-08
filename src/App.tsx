@@ -21,7 +21,7 @@ import { ExpedienteCredito, LoteAuto } from './types';
 import { ShieldCheck, Phone, CheckCircle2, Car, Sparkles, Building2 } from 'lucide-react';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<'captura' | 'cotizar' | 'fondeo' | 'admin' | 'lotes' | 'loteportal'>('captura');
+  const [currentTab, setCurrentTab] = useState<'captura' | 'cotizar' | 'fondeo' | 'admin' | 'lotes' | 'lotesdashboard' | 'loteportal'>('captura');
   const [lotes, setLotes] = useState<LoteAuto[]>([]);
   const [isAdminAuth, setIsAdminAuth] = useState(false);
   const [authUser, setAuthUser] = useState<any>(null);
@@ -69,7 +69,7 @@ export default function App() {
     if (pinParam) {
       setUrlPin(pinParam);
     }
-    if (tabParam === 'fondeo' || tabParam === 'admin' || tabParam === 'captura' || tabParam === 'cotizar') {
+    if (tabParam === 'fondeo' || tabParam === 'admin' || tabParam === 'captura' || tabParam === 'cotizar' || tabParam === 'lotesdashboard') {
       setCurrentTab(tabParam as any);
     }
   }, []);
@@ -191,6 +191,18 @@ export default function App() {
           />
         )}
 
+        {currentTab === 'lotesdashboard' && (
+          <LotesDashboardModal
+            isOpen={true}
+            onClose={() => setCurrentTab('captura')}
+            lotes={lotes}
+            onLoteCreated={handleLoteCreated}
+            onLoteUpdated={handleLoteUpdated}
+            onLoteDeleted={handleLoteDeleted}
+            canManage={isAdminAuth}
+          />
+        )}
+
         {currentTab === 'loteportal' && authUser?.role === 'lote' && (
           <LotePortal authUser={authUser} />
         )}
@@ -262,7 +274,7 @@ export default function App() {
         onClose={() => setPrintExpediente(null)}
       />
 
-      <LotesDashboardModal
+      <LotesManagerModal
         isOpen={showLotesModal}
         onClose={() => setShowLotesModal(false)}
         lotes={lotes}
