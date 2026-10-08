@@ -125,8 +125,14 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
 
   const selectedSublote = lotes.find((l) => l.id === selectedSubloteId) || null;
   const selectedChildIds = sublotes.map((l) => l.id);
-  const selectedScopeIds = selectedSubloteId ? [selectedSubloteId] : (selectedMainLote ? (selectedChildIds.length ? selectedChildIds : [selectedMainLote.id]) : []);
+  const selectedScopeIds = selectedSubloteId
+    ? [selectedSubloteId]
+    : (selectedMainLote ? [selectedMainLote.id, ...selectedChildIds] : []);
   const selectedLote = selectedSublote || selectedMainLote || null;
+  const getLoteScopeIds = (loteId: string) => {
+    const childIds = lotes.filter((l) => l.parentLoteId === loteId).map((l) => l.id);
+    return [loteId, ...childIds];
+  };
 
   const visibleExpedientes = useMemo(() => {
     return expedientes.filter((exp) => {
@@ -258,18 +264,18 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className='fixed inset-0 z-50 bg-[#061226]/95 backdrop-blur-sm overflow-y-auto'>
+    <div className='min-h-[calc(100vh-64px)] bg-[#07142C]'>
       <div className='min-h-full'>
         <header className='sticky top-0 z-20 border-b border-red-500/20 bg-[#08152C]/95 backdrop-blur'>
           <div className='max-w-[1500px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3'>
             <div className='flex items-center gap-3'>
               <div className='w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/25 flex items-center justify-center'><Building2 className='w-5 h-5 text-red-400' /></div>
-              <div><h1 className='text-xl sm:text-2xl font-black text-white'>Panel de Lotes</h1><p className='text-[11px] text-slate-400'>Gestiona colocación, inventario operativo y créditos por lote.</p></div>
+              <div><h1 className='text-xl sm:text-2xl font-black text-white'>Panel de Lotes</h1><p className='text-[11px] text-slate-400'>Gestiona tus lotes, sublotes, usuarios, colocación y fondeos desde un solo panel.</p></div>
             </div>
             <div className='flex items-center gap-2'>
               {canManage && <button onClick={openCreate} className='px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-black inline-flex items-center gap-1.5'><Plus className='w-4 h-4' /> Nuevo lote</button>}
               <button onClick={loadDashboard} className='p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300' title='Actualizar'><RefreshCw className={loading ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} /></button>
-              <button onClick={onClose} className='p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white'><X className='w-4 h-4' /></button>
+              <button onClick={onClose} className='p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white' title='Cerrar panel'><X className='w-4 h-4' /></button>
             </div>
           </div>
         </header>
@@ -277,9 +283,45 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
         <main className='max-w-[1500px] mx-auto px-4 sm:px-6 py-4 space-y-4'>
           {loadError && <div className='rounded-xl border border-amber-500/25 bg-amber-500/10 text-amber-200 text-xs p-3'>{loadError}</div>}
 
+          <section className='rounded-2xl bg-[#0C1C38] border border-slate-800 p-4'>
+            <div className='flex items-center justify-between mb-3'>
+              <div>
+                <h2 className='text-sm font-black text-white'>Mis lotes</h2>
+                <p className='text-[10px] text-slate-500'>Selecciona una sucursal para consultar sus créditos, usuarios y fondeos.</p>
+              </div>
+              <span className='text-[10px] text-slate-500'>{mainLotes.length} lotes principales</span>
+            </div>
+            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2'>
+              {mainLotes.map((lote) => {
+                const scopeIds = getLoteScopeIds(lote.id);
+                const creditCount = expedientes.filter((e) => scopeIds.includes(e.loteId || '')).length;
+                const fundedCount = expedientes.filter((e) => scopeIds.includes(e.loteId || '') && e.estatus === 'FONDEADO').length;
+                const userCount = [...(lote.usuariosPortal || []), ...sublotes.filter((s) => s.parentLoteId === lote.id).flatMap((s) => s.usuariosPortal || [])].filter((u: any, idx, arr) => u.activo !== false && arr.findIndex((x: any) => x.id === u.id) === idx).length;
+                const active = selectedMainLote?.id === lote.id;
+                return (
+                  <button key={lote.id} onClick={() => { setSelectedLoteId(lote.id); setSelectedSubloteId(''); }} className={'text-left rounded-xl border p-3 transition ' + (active ? 'border-red-500/50 bg-red-500/10 shadow-lg shadow-red-950/20' : 'border-slate-800 bg-slate-950/30 hover:border-slate-700')}>
+                    <div className='flex items-center justify-between gap-2'>
+                      <div className='min-w-0'>
+                        <div className='text-[11px] font-black text-white truncate'>{lote.nombre}</div>
+                        <div className='text-[8px] text-slate-500 mt-0.5'>{lote.ciudad || 'Sin ciudad'}</div>
+                      </div>
+                      <Building2 className={'w-4 h-4 ' + (active ? 'text-red-400' : 'text-slate-500')} />
+                    </div>
+                    <div className='grid grid-cols-3 gap-2 mt-3'>
+                      <div><div className='text-[8px] text-slate-500'>Créditos</div><div className='text-sm font-black text-white'>{creditCount}</div></div>
+                      <div><div className='text-[8px] text-slate-500'>Fondeados</div><div className='text-sm font-black text-emerald-300'>{fundedCount}</div></div>
+                      <div><div className='text-[8px] text-slate-500'>Usuarios</div><div className='text-sm font-black text-blue-300'>{userCount}</div></div>
+                    </div>
+                    <div className='mt-2 text-[8px] text-slate-600'>{lotes.filter((x) => x.parentLoteId === lote.id).length} sublotes</div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
           <section className='grid grid-cols-1 md:grid-cols-4 gap-3'>
             <div className='rounded-2xl bg-[#0E2345] border border-blue-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Lotes principales</div><div className='text-2xl font-black text-white mt-1'>{mainLotes.length}</div><div className='text-[10px] text-emerald-300 mt-1'>Activos</div></div><Building2 className='w-7 h-7 text-blue-300' /></div></div>
-            <div className='rounded-2xl bg-[#0E2345] border border-emerald-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Créditos en el sublote</div><div className='text-2xl font-black text-emerald-300 mt-1'>{selectedBase.length}</div><div className='text-[10px] text-slate-500 mt-1'>{selectedSublote?.nombre || selectedMainLote?.nombre || 'Sin selección'}</div></div><CheckCircle2 className='w-7 h-7 text-emerald-300' /></div></div>
+            <div className='rounded-2xl bg-[#0E2345] border border-emerald-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Créditos del lote seleccionado</div><div className='text-2xl font-black text-emerald-300 mt-1'>{selectedBase.length}</div><div className='text-[10px] text-slate-500 mt-1'>{selectedSublote?.nombre || selectedMainLote?.nombre || 'Sin selección'}</div></div><CheckCircle2 className='w-7 h-7 text-emerald-300' /></div></div>
             <div className='rounded-2xl bg-[#0E2345] border border-amber-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Monto colocado</div><div className='text-xl font-black text-white mt-1'>{money(totalAmount)}</div><div className='text-[10px] text-emerald-300 mt-1'>Actividad del lote</div></div><CircleDollarSign className='w-7 h-7 text-amber-300' /></div></div>
             <div className='rounded-2xl bg-[#0E2345] border border-teal-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Fondeado</div><div className='text-xl font-black text-teal-300 mt-1'>{money(fundedAmount)}</div><div className='text-[10px] text-slate-500 mt-1'>{selectedFunded.length} créditos</div></div><TrendingUp className='w-7 h-7 text-teal-300' /></div></div>
           </section>
@@ -329,8 +371,7 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
               </div>
               <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-4'>
                 {mainLotes.map((lote) => {
-                  const childIds = lotes.filter((l) => l.parentLoteId === lote.id).map((l) => l.id);
-                  const scopeIds = childIds.length ? childIds : [lote.id];
+                  const scopeIds = getLoteScopeIds(lote.id);
                   const list = expedientes.filter((e) => scopeIds.includes(e.loteId || ''));
                   const fondeados = list.filter((e) => e.estatus === 'FONDEADO').length;
                   const selected = lote.id === selectedLote?.id;
@@ -376,7 +417,7 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
               <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2'>
                 
                 {lotes.map((lote) => {
-                  const count = expedientes.filter((e) => e.loteId === lote.id).length;
+                  const count = getLoteScopeIds(lote.id).reduce((sum, id) => sum + expedientes.filter((e) => e.loteId === id).length, 0);
                   return <div key={lote.id} className='rounded-xl bg-slate-950/60 border border-slate-800 p-3'><div className='w-full h-16 rounded-lg bg-gradient-to-br from-slate-800 to-slate-950 flex items-center justify-center'><Car className='w-7 h-7 text-slate-600' /></div><div className='mt-2 text-[10px] font-bold text-white truncate'>{lote.nombre}</div><div className='text-[9px] text-slate-500 mt-1'>{count} expedientes registrados</div></div>;
                 })}
               </div>
