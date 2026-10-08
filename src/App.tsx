@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { PublicIneCapture } from './components/PublicIneCapture';
+import { PublicCotizador } from './components/PublicCotizador';
 import { LoteFondeoPortal } from './components/LoteFondeoPortal';
 import { LotePortal } from './components/LotePortal';
 import { LoteLoginModal } from './components/LoteLoginModal';
@@ -19,7 +20,7 @@ import { ExpedienteCredito, LoteAuto } from './types';
 import { ShieldCheck, Phone, CheckCircle2, Car, Sparkles, Building2 } from 'lucide-react';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<'captura' | 'fondeo' | 'admin' | 'lotes' | 'loteportal'>('captura');
+  const [currentTab, setCurrentTab] = useState<'captura' | 'cotizar' | 'fondeo' | 'admin' | 'lotes' | 'loteportal'>('captura');
   const [lotes, setLotes] = useState<LoteAuto[]>([]);
   const [isAdminAuth, setIsAdminAuth] = useState(false);
   const [authUser, setAuthUser] = useState<any>(null);
@@ -67,7 +68,7 @@ export default function App() {
     if (pinParam) {
       setUrlPin(pinParam);
     }
-    if (tabParam === 'fondeo' || tabParam === 'admin' || tabParam === 'captura') {
+    if (tabParam === 'fondeo' || tabParam === 'admin' || tabParam === 'captura' || tabParam === 'cotizar') {
       setCurrentTab(tabParam as any);
     }
   }, []);
@@ -174,6 +175,8 @@ export default function App() {
             onGoToFondeo={handleGoToFondeo}
           />
         )}
+
+        {currentTab === 'cotizar' && <PublicCotizador />}
 
         {currentTab === 'fondeo' && (
           <LoteFondeoPortal
