@@ -166,7 +166,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Desktop actions */}
           <div className="hidden md:flex items-center gap-2">
-            {isAdminAuth ? (
+            {isAdminAuth && (
               <div className="flex items-center gap-2">
                 {authUser?.role === 'lote' && (
                   <span className="hidden xl:inline text-[11px] text-slate-400 max-w-40 truncate">{authUser.nombre}</span>
