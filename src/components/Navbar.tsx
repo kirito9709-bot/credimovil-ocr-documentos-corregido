@@ -12,8 +12,8 @@ import {
 } from 'lucide-react';
 
 interface NavbarProps {
-  currentTab: 'captura' | 'cotizar' | 'fondeo' | 'admin' | 'lotes' | 'loteportal';
-  onSelectTab: (tab: 'captura' | 'cotizar' | 'fondeo' | 'admin' | 'lotes' | 'loteportal') => void;
+  currentTab: 'captura' | 'cotizar' | 'fondeo' | 'admin' | 'lotes' | 'lotesdashboard' | 'loteportal';
+  onSelectTab: (tab: 'captura' | 'cotizar' | 'fondeo' | 'admin' | 'lotes' | 'lotesdashboard' | 'loteportal') => void;
   isAdminAuth: boolean;
   onOpenAdminAuth: () => void;
   onOpenLoteAuth: () => void;
@@ -34,7 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const selectTab = (tab: 'captura' | 'cotizar' | 'fondeo' | 'admin' | 'lotes' | 'loteportal') => {
+  const selectTab = (tab: 'captura' | 'cotizar' | 'fondeo' | 'admin' | 'lotes' | 'lotesdashboard' | 'loteportal') => {
     onSelectTab(tab);
     setMobileOpen(false);
   };
@@ -109,6 +109,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               <FolderSync className="w-4 h-4" />
               <span>Fondeo Lotes</span>
             </button>
+
+            {authUser?.role !== 'lote' && (
+              <button
+                onClick={() => selectTab('lotesdashboard')}
+                className={'px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ' +
+                  (currentTab === 'lotesdashboard'
+                    ? 'bg-[#C81E2B] text-white'
+                    : 'text-white/85 hover:text-white hover:bg-white/10')}
+              >
+                <Building2 className="w-4 h-4 text-red-400" />
+                <span>Panel de Lotes</span>
+              </button>
+            )}
 
             {authUser?.role !== 'lote' && (
               <button
