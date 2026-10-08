@@ -310,6 +310,7 @@ function mapSupabaseLote(row: any) {
   return {
     id: row.id,
     nombre: row.nombre,
+    parentLoteId: row.parent_lote_id || null,
     contacto: row.contacto || '',
     telefono: row.telefono || '',
     correo: row.correo || '',
@@ -2209,7 +2210,7 @@ app.get('/api/lotes', async (req, res) => {
 app.post('/api/lotes', async (req, res) => {
   if (!requireStaff(req, res)) return;
 
-  const { nombre, contacto, telefono, correo, direccion, ciudad, cuentaClabeDefault, bancoDefault } = req.body;
+  const { nombre, contacto, telefono, correo, direccion, ciudad, cuentaClabeDefault, bancoDefault, parentLoteId } = req.body;
   const nombreLote = String(nombre || '').trim();
 
   if (!nombreLote) {
@@ -2243,6 +2244,7 @@ app.post('/api/lotes', async (req, res) => {
         ciudad: String(ciudad || 'México'),
         cuenta_clabe_default: String(cuentaClabeDefault || ''),
         banco_default: String(bancoDefault || ''),
+        parent_lote_id: parentLoteId || null,
         activo: true,
       })
       .select('*')
@@ -2288,6 +2290,7 @@ app.put('/api/lotes/:id', async (req, res) => {
         ciudad: String(req.body?.ciudad ?? existing.ciudad ?? 'México'),
         cuenta_clabe_default: String(req.body?.cuentaClabeDefault ?? existing.cuenta_clabe_default ?? ''),
         banco_default: String(req.body?.bancoDefault ?? existing.banco_default ?? ''),
+        parent_lote_id: req.body?.parentLoteId !== undefined ? (req.body.parentLoteId || null) : (existing.parent_lote_id || null),
       })
       .eq('id', req.params.id)
       .select('*')
