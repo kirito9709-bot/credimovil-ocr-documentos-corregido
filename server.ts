@@ -2040,9 +2040,16 @@ app.get('/api/lote/expedientes', async (req, res) => {
       throw new Error('Supabase sublotes portal: ' + subError.message);
     }
 
+    const isPrincipal = !loteRow.parent_lote_id;
+    const managedLoteRows = isPrincipal ? [loteRow, ...(subRows || [])] : [loteRow];
+    const managedLoteIds = new Set(managedLoteRows.map((row: any) => row.id).filter(Boolean));
+    const managedLotesById = new Map<string, any>(
+      managedLoteRows.map((row: any) => [row.id, row])
+    );
+
     const subLoteIds = (subRows || []).map((row: any) => row.id).filter(Boolean);
     let subUsers: any[] = [];
-    if (subLoteIds.length > 0) {
+    if (isPrincipal && subLoteIds.length > 0) {
       const { data: userRows, error: userError } = await supabase
         .from('lote_usuarios')
         .select('id,nombre,username,activo,lote_id,created_at')
@@ -2070,11 +2077,13 @@ app.get('/api/lote/expedientes', async (req, res) => {
     }
 
     const expedientes = all
-      .filter((e: any) => e.loteId === session.loteId)
+      .filter((e: any) => managedLoteIds.has(e.loteId))
       .map((e: any) => {
         const docs = e.documentosFondeo || [];
         const requiredDocs = docs.filter((d: any) => d.requerido);
         const uploadedRequired = requiredDocs.filter((d: any) => d.estatus === 'SUBIDO' || d.estatus === 'APROBADO');
+        const origenLote = managedLotesById.get(e.loteId);
+
         return {
           id: e.id,
           folio: e.folio,
@@ -2090,6 +2099,8 @@ app.get('/api/lote/expedientes', async (req, res) => {
           fechaFondeo: e.fechaFondeo || '',
           docsSubidos: uploadedRequired.length,
           docsRequeridos: requiredDocs.length,
+          loteId: e.loteId || null,
+          loteNombre: origenLote?.nombre || e.loteNombre || 'Sin lote asignado',
         };
       });
 
@@ -2102,9 +2113,10 @@ app.get('/api/lote/expedientes', async (req, res) => {
       success: true,
       lote: {
         ...loteRow,
-        isPrincipal: true,
+        isPrincipal,
       },
-      sublotes: (subRows || []).map((sub: any) => {
+      // La división por sublote se conserva para el control individual del lotero.
+      sublotes: isPrincipal ? (subRows || []).map((sub: any) => {
         const subExpedientes = all.filter((e: any) => e.loteId === sub.id);
         const activos = subExpedientes.filter((e: any) => e.estatus !== 'RECHAZADO');
         const fondeadosSub = subExpedientes.filter((e: any) => e.estatus === 'FONDEADO');
@@ -2118,7 +2130,7 @@ app.get('/api/lote/expedientes', async (req, res) => {
           montoFondeado: fondeadosSub.reduce((sum: number, e: any) => sum + (Number(e.montoFinanciar) || 0), 0),
           usuariosPortal: usersBySubLote.get(sub.id) || [],
         };
-      }),
+      }) : [],
       estadisticas: {
         total: expedientes.length,
         enAnalisis: expedientes.filter((e: any) => e.estatus === 'NUEVO' || e.estatus === 'EN_EVALUACION').length,

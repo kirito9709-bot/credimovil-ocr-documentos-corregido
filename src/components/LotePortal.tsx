@@ -43,6 +43,8 @@ type LoteExpediente = {
   fechaFondeo?: string;
   docsSubidos: number;
   docsRequeridos: number;
+  loteId?: string | null;
+  loteNombre?: string | null;
 };
 
 type LotePortalStats = {
@@ -169,7 +171,7 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
     const q = search.trim().toLowerCase();
     return expedientes.filter((e) => {
       const matchesStatus = estatus === 'TODOS' || e.estatus === estatus;
-      const haystack = [e.folio, e.clienteNombre, e.autoMarca, e.autoModelo, String(e.autoAno || '')].join(' ').toLowerCase();
+      const haystack = [e.folio, e.clienteNombre, e.autoMarca, e.autoModelo, e.loteNombre || '', String(e.autoAno || '')].join(' ').toLowerCase();
       return matchesStatus && (!q || haystack.includes(q));
     });
   }, [expedientes, search, estatus]);
@@ -404,13 +406,19 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
             </div>
             <div className='overflow-x-auto'>
               <table className='w-full text-left text-[10px]'>
-                <thead className='bg-slate-950/50 text-slate-500 uppercase'><tr><th className='px-4 py-2.5'>Folio</th><th className='px-4 py-2.5'>Cliente</th><th className='px-4 py-2.5'>Vehículo</th><th className='px-4 py-2.5'>Monto</th><th className='px-4 py-2.5'>Estatus</th><th className='px-4 py-2.5'>Fecha</th><th className='px-4 py-2.5 text-right'>Acciones</th></tr></thead>
+                <thead className='bg-slate-950/50 text-slate-500 uppercase'><tr><th className='px-4 py-2.5'>Folio</th><th className='px-4 py-2.5'>Origen</th><th className='px-4 py-2.5'>Cliente</th><th className='px-4 py-2.5'>Vehículo</th><th className='px-4 py-2.5'>Monto</th><th className='px-4 py-2.5'>Estatus</th><th className='px-4 py-2.5'>Fecha</th><th className='px-4 py-2.5 text-right'>Acciones</th></tr></thead>
                 <tbody className='divide-y divide-slate-800/70'>
                   {filtered.length === 0 ? (
-                    <tr><td colSpan={7} className='px-4 py-12 text-center text-slate-500'>No hay créditos que coincidan.</td></tr>
+                    <tr><td colSpan={8} className='px-4 py-12 text-center text-slate-500'>No hay créditos que coincidan.</td></tr>
                   ) : filtered.map((e) => (
                     <tr key={e.id} className='hover:bg-white/[0.02]'>
                       <td className='px-4 py-3 font-mono text-red-300 font-bold'>{e.folio}</td>
+                      <td className='px-4 py-3'>
+                        <div className='font-bold text-slate-200'>{e.loteNombre || lote?.nombre || 'Sin lote'}</div>
+                        <div className='text-[8px] text-slate-500'>
+                          {e.loteId === authUser.loteId ? (lote?.parent_lote_id ? 'Sublote actual' : 'Lote principal') : 'Sublote'}
+                        </div>
+                      </td>
                       <td className='px-4 py-3'><div className='font-bold text-white'>{e.clienteNombre || 'Cliente'}</div><div className='text-[8px] text-slate-500'>{e.telefono || 'Sin teléfono'}</div></td>
                       <td className='px-4 py-3 text-slate-300'>{e.autoMarca} {e.autoModelo} {e.autoAno ? '(' + e.autoAno + ')' : ''}</td>
                       <td className='px-4 py-3 text-emerald-300 font-black'>{money(e.montoFinanciar)}</td>
