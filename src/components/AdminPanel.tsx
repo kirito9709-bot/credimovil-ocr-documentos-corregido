@@ -132,6 +132,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  if (!isAdminAuth) {
+    return (
+      <section className="w-full min-h-[calc(100vh-160px)] flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-[#0D1830] p-7 text-center shadow-2xl">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/25 flex items-center justify-center">
+            <ShieldCheck className="w-7 h-7 text-red-400" />
+          </div>
+          <h2 className="mt-4 text-2xl font-black text-white">Acceso al Panel del Asesor</h2>
+          <p className="mt-2 text-sm text-slate-400">Inicia sesión para consultar expedientes, documentos, estatus y métricas.</p>
+          <button
+            type="button"
+            onClick={onOpenAuth}
+            className="mt-6 w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-sm inline-flex items-center justify-center gap-2"
+          >
+            <Lock className="w-4 h-4" />
+            Iniciar sesión
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <>
       <AdvisorDashboard
