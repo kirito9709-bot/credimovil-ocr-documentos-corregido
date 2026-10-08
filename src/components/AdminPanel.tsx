@@ -129,7 +129,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     const timer = setTimeout(() => {
       loadData();
     }, 300);
-    return (
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  return (
     <>
       <AdvisorDashboard
         expedientes={expedientes}
