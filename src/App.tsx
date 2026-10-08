@@ -41,6 +41,9 @@ export default function App() {
   // Initial load
   useEffect(() => {
     // Restore the authenticated session from the HttpOnly cookie.
+    // IMPORTANT: load lotes only after we know whether the session exists.
+    // Otherwise the public response can race and overwrite the authenticated
+    // response (including usersPortal and lot metrics).
     api.getMe()
       .then((res) => {
         if (res?.success && res.user) {
@@ -50,19 +53,18 @@ export default function App() {
           setShowLoginModal(false);
           setShowLoteLoginModal(false);
           setPendingAuthTab(null);
-          // Los usuarios de lote solo utilizan el nuevo portal de lote.
           if (res.user.role === 'lote') {
             setCurrentTab('loteportal');
           }
+          loadLotes();
+        } else {
           loadLotes();
         }
       })
       .catch(() => {
         localStorage.removeItem('credimovil_auth_user');
+        loadLotes();
       });
-
-    // Load initial lotes
-    loadLotes();
 
     // Check URL parameters for direct link e.g. /?tab=fondeo&folio=EXP-2026-1042&pin=1234
     const params = new URLSearchParams(window.location.search);
