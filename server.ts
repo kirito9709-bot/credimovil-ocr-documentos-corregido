@@ -2191,12 +2191,54 @@ app.get('/api/lotes', async (req, res) => {
     }
 
     const expedientes = (await getSupabaseExpedientes()) || [];
+    const directStats = new Map<string, { expedientes: number; fondeados: number; monto: number; montoFondeado: number }>();
+    for (const exp of expedientes) {
+      const loteId = String(exp?.loteId || '');
+      if (!loteId) continue;
+      const current = directStats.get(loteId) || { expedientes: 0, fondeados: 0, monto: 0, montoFondeado: 0 };
+      const amount = Number(exp?.montoFinanciar) || 0;
+      current.expedientes += 1;
+      current.monto += amount;
+      if (exp?.estatus === 'FONDEADO') {
+        current.fondeados += 1;
+        current.montoFondeado += amount;
+      }
+      directStats.set(loteId, current);
+    }
+
+    const childrenByParent = new Map<string, string[]>();
+    for (const lote of lotes) {
+      if (lote.parentLoteId) {
+        const children = childrenByParent.get(lote.parentLoteId) || [];
+        children.push(lote.id);
+        childrenByParent.set(lote.parentLoteId, children);
+      }
+    }
+
+    const aggregateStats = (loteId: string) => {
+      const ids = [loteId, ...(childrenByParent.get(loteId) || [])];
+      return ids.reduce(
+        (acc, id) => {
+          const current = directStats.get(id);
+          if (!current) return acc;
+          acc.expedientes += current.expedientes;
+          acc.fondeados += current.fondeados;
+          acc.monto += current.monto;
+          acc.montoFondeado += current.montoFondeado;
+          return acc;
+        },
+        { expedientes: 0, fondeados: 0, monto: 0, montoFondeado: 0 }
+      );
+    };
+
     const lotesWithStats = lotes.map((l: any) => {
-      const exps = expedientes.filter((e: any) => e.loteId === l.id);
+      const stats = aggregateStats(l.id);
       return {
         ...l,
-        totalExpedientes: exps.length,
-        totalFondeados: exps.filter((e: any) => e.estatus === 'FONDEADO').length,
+        totalExpedientes: stats.expedientes,
+        totalFondeados: stats.fondeados,
+        totalMontoFinanciado: stats.monto,
+        totalMontoFondeado: stats.montoFondeado,
       };
     });
 
