@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   Scan,
   FolderSync,
+  Calculator,
   ShieldCheck,
   Lock,
   Building2,
@@ -11,8 +12,8 @@ import {
 } from 'lucide-react';
 
 interface NavbarProps {
-  currentTab: 'captura' | 'fondeo' | 'admin' | 'lotes' | 'loteportal';
-  onSelectTab: (tab: 'captura' | 'fondeo' | 'admin' | 'lotes' | 'loteportal') => void;
+  currentTab: 'captura' | 'cotizar' | 'fondeo' | 'admin' | 'lotes' | 'loteportal';
+  onSelectTab: (tab: 'captura' | 'cotizar' | 'fondeo' | 'admin' | 'lotes' | 'loteportal') => void;
   isAdminAuth: boolean;
   onOpenAdminAuth: () => void;
   onOpenLoteAuth: () => void;
@@ -33,7 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const selectTab = (tab: 'captura' | 'fondeo' | 'admin' | 'lotes' | 'loteportal') => {
+  const selectTab = (tab: 'captura' | 'cotizar' | 'fondeo' | 'admin' | 'lotes' | 'loteportal') => {
     onSelectTab(tab);
     setMobileOpen(false);
   };
@@ -83,6 +84,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Scan className="w-4 h-4" />
               <span>CrediMóvil OCR</span>
+            </button>
+
+            <button
+              onClick={() => selectTab('cotizar')}
+              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
+                currentTab === 'cotizar'
+                  ? 'bg-[#C81E2B] text-white shadow-md shadow-[#C81E2B]/25'
+                  : 'text-white/85 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <Calculator className="w-4 h-4" />
+              <span>Cotizar mi Crédito</span>
             </button>
 
             <button
