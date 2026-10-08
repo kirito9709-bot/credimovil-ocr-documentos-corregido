@@ -2032,12 +2032,41 @@ app.get('/api/lote/expedientes', async (req, res) => {
 
     const { data: subRows, error: subError } = await supabase
       .from('lotes')
-      .select('id,nombre,telefono,correo,direccion,ciudad,parent_lote_id,activo')
+      .select('id,nombre,telefono,correo,direccion,ciudad,parent_lote_id,activo,created_at')
       .eq('parent_lote_id', session.loteId)
       .order('nombre', { ascending: true });
 
     if (subError) {
       throw new Error('Supabase sublotes portal: ' + subError.message);
+    }
+
+    const subLoteIds = (subRows || []).map((row: any) => row.id).filter(Boolean);
+    let subUsers: any[] = [];
+    if (subLoteIds.length > 0) {
+      const { data: userRows, error: userError } = await supabase
+        .from('lote_usuarios')
+        .select('id,nombre,username,activo,lote_id,created_at')
+        .in('lote_id', subLoteIds)
+        .order('created_at', { ascending: true });
+
+      if (userError) {
+        console.warn('Supabase usuarios de sublotes portal no disponibles:', userError.message);
+      } else {
+        subUsers = userRows || [];
+      }
+    }
+
+    const usersBySubLote = new Map<string, any[]>();
+    for (const user of subUsers) {
+      const list = usersBySubLote.get(user.lote_id) || [];
+      list.push({
+        id: user.id,
+        nombre: user.nombre || user.username,
+        username: user.username,
+        activo: user.activo !== false,
+        created_at: user.created_at,
+      });
+      usersBySubLote.set(user.lote_id, list);
     }
 
     const expedientes = all
@@ -2071,8 +2100,25 @@ app.get('/api/lote/expedientes', async (req, res) => {
 
     res.json({
       success: true,
-      lote: loteRow,
-      sublotes: subRows || [],
+      lote: {
+        ...loteRow,
+        isPrincipal: true,
+      },
+      sublotes: (subRows || []).map((sub: any) => {
+        const subExpedientes = all.filter((e: any) => e.loteId === sub.id);
+        const activos = subExpedientes.filter((e: any) => e.estatus !== 'RECHAZADO');
+        const fondeadosSub = subExpedientes.filter((e: any) => e.estatus === 'FONDEADO');
+        return {
+          ...sub,
+          isPrincipal: false,
+          totalCreditos: subExpedientes.length,
+          totalActivos: activos.length,
+          totalFondeados: fondeadosSub.length,
+          montoFinanciado: activos.reduce((sum: number, e: any) => sum + (Number(e.montoFinanciar) || 0), 0),
+          montoFondeado: fondeadosSub.reduce((sum: number, e: any) => sum + (Number(e.montoFinanciar) || 0), 0),
+          usuariosPortal: usersBySubLote.get(sub.id) || [],
+        };
+      }),
       estadisticas: {
         total: expedientes.length,
         enAnalisis: expedientes.filter((e: any) => e.estatus === 'NUEVO' || e.estatus === 'EN_EVALUACION').length,
