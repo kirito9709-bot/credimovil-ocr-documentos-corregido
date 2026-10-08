@@ -36,6 +36,7 @@ export default function App() {
   const [selectedExpediente, setSelectedExpediente] = useState<ExpedienteCredito | null>(null);
   const [printExpediente, setPrintExpediente] = useState<ExpedienteCredito | null>(null);
   const [showLotesModal, setShowLotesModal] = useState(false);
+  const [pendingAuthTab, setPendingAuthTab] = useState<'admin' | 'lotesdashboard' | null>(null);
 
   // Initial load
   useEffect(() => {
@@ -88,10 +89,11 @@ export default function App() {
   const handleAdminLoginSuccess = (user: any) => {
     setIsAdminAuth(true);
     setAuthUser(user);
-    // Después del login, volver a consultar lotes ya autenticado para mostrar
-    // correctamente los accesos de portal de cada lote.
     loadLotes();
-    setCurrentTab(user?.role === 'lote' ? 'loteportal' : 'admin');
+    const destination = user?.role === 'lote' ? 'loteportal' : (pendingAuthTab || 'admin');
+    setPendingAuthTab(null);
+    setShowLoginModal(false);
+    setCurrentTab(destination as any);
   };
 
   const handleLoteLoginSuccess = (user: any) => {
@@ -157,8 +159,9 @@ export default function App() {
             setShowLotesModal(true);
             return;
           }
-          if (tab === 'admin' && !isAdminAuth) {
-            setCurrentTab('admin');
+          if ((tab === 'admin' || tab === 'lotesdashboard') && !isAdminAuth) {
+            setPendingAuthTab(tab === 'lotesdashboard' ? 'lotesdashboard' : 'admin');
+            setCurrentTab(tab);
             setShowLoginModal(true);
             return;
           }
