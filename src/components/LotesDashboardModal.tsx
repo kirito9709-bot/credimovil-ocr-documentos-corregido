@@ -71,6 +71,7 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
 }) => {
   const [expedientes, setExpedientes] = useState<ExpedienteCredito[]>([]);
   const [selectedLoteId, setSelectedLoteId] = useState('');
+  const [selectedSubloteId, setSelectedSubloteId] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('TODOS');
   const [loading, setLoading] = useState(false);
@@ -78,14 +79,26 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
   const [editingLote, setEditingLote] = useState<LoteAuto | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
-    nombre: '', contacto: '', telefono: '', correo: '', direccion: '', ciudad: '', cuentaClabeDefault: '', bancoDefault: ''
+    nombre: '', contacto: '', telefono: '', correo: '', direccion: '', ciudad: '', cuentaClabeDefault: '', bancoDefault: '', parentLoteId: ''
   });
   const [saving, setSaving] = useState(false);
 
+  const mainLotes = useMemo(() => lotes.filter((l) => !l.parentLoteId), [lotes]);
+  const sublotes = useMemo(
+    () => lotes.filter((l) => l.parentLoteId === selectedLoteId),
+    [lotes, selectedLoteId]
+  );
+  const selectedMainLote = mainLotes.find((l) => l.id === selectedLoteId) || mainLotes[0] || null;
+
   useEffect(() => {
     if (!isOpen) return;
-    if (!selectedLoteId && lotes[0]) setSelectedLoteId(lotes[0].id);
-  }, [isOpen, lotes, selectedLoteId]);
+    if (!selectedLoteId && selectedMainLote) setSelectedLoteId(selectedMainLote.id);
+  }, [isOpen, mainLotes, selectedLoteId, selectedMainLote]);
+
+  useEffect(() => {
+    if (!selectedSubloteId) return;
+    if (!sublotes.some((l) => l.id === selectedSubloteId)) setSelectedSubloteId('');
+  }, [sublotes, selectedSubloteId]);
 
   const loadDashboard = async () => {
     if (!isOpen) return;
@@ -110,10 +123,14 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
     if (isOpen) loadDashboard();
   }, [isOpen]);
 
-  const selectedLote = lotes.find((l) => l.id === selectedLoteId) || lotes[0] || null;
+  const selectedSublote = lotes.find((l) => l.id === selectedSubloteId) || null;
+  const selectedChildIds = sublotes.map((l) => l.id);
+  const selectedScopeIds = selectedSubloteId ? [selectedSubloteId] : (selectedMainLote ? (selectedChildIds.length ? selectedChildIds : [selectedMainLote.id]) : []);
+  const selectedLote = selectedSublote || selectedMainLote || null;
+
   const visibleExpedientes = useMemo(() => {
     return expedientes.filter((exp) => {
-      if (selectedLote?.id && exp.loteId !== selectedLote.id) return false;
+      if (selectedScopeIds.length && !selectedScopeIds.includes(exp.loteId || '')) return false;
       if (statusFilter !== 'TODOS' && exp.estatus !== statusFilter) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
@@ -128,9 +145,9 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
       }
       return true;
     });
-  }, [expedientes, selectedLote, statusFilter, search]);
+  }, [expedientes, selectedScopeIds, statusFilter, search]);
 
-  const selectedBase = expedientes.filter((exp) => !selectedLote?.id || exp.loteId === selectedLote.id);
+  const selectedBase = expedientes.filter((exp) => !selectedScopeIds.length || selectedScopeIds.includes(exp.loteId || ''));
   const selectedFunded = selectedBase.filter((exp) => exp.estatus === 'FONDEADO');
   const selectedApproved = selectedBase.filter((exp) => ['APROBADO', 'CONTRATO', 'GPS', 'FONDEO', 'FONDEO_PENDIENTE', 'FONDEO_REVISION', 'FONDEADO'].includes(exp.estatus));
   const totalAmount = selectedBase.reduce((sum, exp) => sum + (Number(exp.montoFinanciar) || 0), 0);
@@ -174,10 +191,20 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
   });
   const maxMonthly = Math.max(1, ...monthly.map((m) => Math.max(m.created, m.approved)));
 
-  const openCreate = () => {
+  const openCreateMain = () => {
     setEditingLote(null);
-    setForm({ nombre: '', contacto: '', telefono: '', correo: '', direccion: '', ciudad: '', cuentaClabeDefault: '', bancoDefault: '' });
+    setForm({ nombre: '', contacto: '', telefono: '', correo: '', direccion: '', ciudad: '', cuentaClabeDefault: '', bancoDefault: '', parentLoteId: '' });
     setShowForm(true);
+  };
+
+  const openCreateSublote = () => {
+    setEditingLote(null);
+    setForm({ nombre: '', contacto: '', telefono: '', correo: '', direccion: '', ciudad: '', cuentaClabeDefault: '', bancoDefault: '', parentLoteId: selectedMainLote?.id || '' });
+    setShowForm(true);
+  };
+
+  const openCreate = () => {
+    openCreateMain();
   };
 
   const openEdit = (lote: LoteAuto) => {
@@ -191,6 +218,7 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
       ciudad: lote.ciudad || '',
       cuentaClabeDefault: lote.cuentaClabeDefault || '',
       bancoDefault: lote.bancoDefault || '',
+      parentLoteId: lote.parentLoteId || '',
     });
     setShowForm(true);
   };
@@ -250,31 +278,69 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
           {loadError && <div className='rounded-xl border border-amber-500/25 bg-amber-500/10 text-amber-200 text-xs p-3'>{loadError}</div>}
 
           <section className='grid grid-cols-1 md:grid-cols-4 gap-3'>
-            <div className='rounded-2xl bg-[#0E2345] border border-blue-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Sucursales / Lotes</div><div className='text-2xl font-black text-white mt-1'>{lotes.length}</div><div className='text-[10px] text-emerald-300 mt-1'>Activos</div></div><Building2 className='w-7 h-7 text-blue-300' /></div></div>
-            <div className='rounded-2xl bg-[#0E2345] border border-emerald-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Créditos colocados</div><div className='text-2xl font-black text-emerald-300 mt-1'>{selectedBase.length}</div><div className='text-[10px] text-slate-500 mt-1'>{selectedLote?.nombre || 'Todos los lotes'}</div></div><CheckCircle2 className='w-7 h-7 text-emerald-300' /></div></div>
+            <div className='rounded-2xl bg-[#0E2345] border border-blue-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Lotes principales</div><div className='text-2xl font-black text-white mt-1'>{mainLotes.length}</div><div className='text-[10px] text-emerald-300 mt-1'>Activos</div></div><Building2 className='w-7 h-7 text-blue-300' /></div></div>
+            <div className='rounded-2xl bg-[#0E2345] border border-emerald-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Créditos en el sublote</div><div className='text-2xl font-black text-emerald-300 mt-1'>{selectedBase.length}</div><div className='text-[10px] text-slate-500 mt-1'>{selectedSublote?.nombre || selectedMainLote?.nombre || 'Sin selección'}</div></div><CheckCircle2 className='w-7 h-7 text-emerald-300' /></div></div>
             <div className='rounded-2xl bg-[#0E2345] border border-amber-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Monto colocado</div><div className='text-xl font-black text-white mt-1'>{money(totalAmount)}</div><div className='text-[10px] text-emerald-300 mt-1'>Actividad del lote</div></div><CircleDollarSign className='w-7 h-7 text-amber-300' /></div></div>
             <div className='rounded-2xl bg-[#0E2345] border border-teal-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Fondeado</div><div className='text-xl font-black text-teal-300 mt-1'>{money(fundedAmount)}</div><div className='text-[10px] text-slate-500 mt-1'>{selectedFunded.length} créditos</div></div><TrendingUp className='w-7 h-7 text-teal-300' /></div></div>
+          </section>
+
+          <section className='rounded-2xl bg-[#0D1B35] border border-slate-800 p-4'>
+            <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3'>
+              <div>
+                <h2 className='text-sm font-black text-white'>Sublotes / Sucursales</h2>
+                <p className='text-[10px] text-slate-500'>Los créditos siguen asociados al sublote. Los usuarios continúan ligados a su lote actual.</p>
+              </div>
+              {canManage && <button onClick={openCreateSublote} className='px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-[10px] font-black'><Plus className='w-3.5 h-3.5 inline mr-1' /> Agregar sublote</button>}
+            </div>
+            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mt-3'>
+              {sublotes.length === 0 ? (
+                <div className='col-span-full rounded-xl border border-dashed border-slate-700 p-5 text-center text-[10px] text-slate-500'>Este lote principal todavía no tiene sublotes. Agrega Cumbres, San Pedro, Miguel Alemán, etc.</div>
+              ) : sublotes.map((sub) => {
+                const count = expedientes.filter((e) => e.loteId === sub.id).length;
+                const funded = expedientes.filter((e) => e.loteId === sub.id && e.estatus === 'FONDEADO').length;
+                const users = sub.usuariosPortal?.filter((u: any) => u.activo !== false) || [];
+                return (
+                  <button key={sub.id} onClick={() => setSelectedSubloteId(sub.id)} className={'text-left rounded-xl border p-3 ' + (selectedSubloteId === sub.id ? 'border-red-500/40 bg-red-500/10' : 'border-slate-800 bg-slate-950/40')}>
+                    <div className='flex items-center justify-between'><span className='text-[11px] font-black text-white truncate'>{sub.nombre}</span><span className='text-[8px] text-slate-500'>{count} créditos</span></div>
+                    <div className='grid grid-cols-2 gap-2 mt-3'><div><div className='text-[8px] text-slate-500'>Fondeados</div><div className='text-sm font-black text-emerald-300'>{funded}</div></div><div><div className='text-[8px] text-slate-500'>Usuarios</div><div className='text-sm font-black text-blue-300'>{users.length}</div></div></div>
+                    <div className='mt-2 text-[8px] text-slate-500 truncate'>{sub.ciudad || 'Sin ciudad'} · {sub.telefono || 'Sin teléfono'}</div>
+                  </button>
+                );
+              })}
+            </div>
           </section>
 
           <section className='grid grid-cols-1 xl:grid-cols-12 gap-4'>
             <div className='xl:col-span-8 rounded-2xl bg-[#0D1B35] border border-slate-800 p-4'>
               <div className='flex flex-col lg:flex-row lg:items-center justify-between gap-3'>
                 <div><h2 className='text-sm font-black text-white'>Comparativo por sucursal</h2><p className='text-[10px] text-slate-500'>Créditos, fondeos y usuarios con acceso por lote.</p></div>
-                <select value={selectedLoteId} onChange={(e) => setSelectedLoteId(e.target.value)} className='bg-slate-950 border border-slate-700 rounded-xl text-xs text-white px-3 py-2'>
-                  {lotes.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
-                </select>
+                <div className='flex flex-wrap items-center gap-2'>
+                  <label className='text-[9px] uppercase text-slate-500'>Lote principal</label>
+                  <select value={selectedLoteId} onChange={(e) => { setSelectedLoteId(e.target.value); setSelectedSubloteId(''); }} className='bg-slate-950 border border-slate-700 rounded-xl text-xs text-white px-3 py-2'>
+                    {mainLotes.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+                  </select>
+                  <label className='text-[9px] uppercase text-slate-500'>Sublote</label>
+                  <select value={selectedSubloteId} onChange={(e) => setSelectedSubloteId(e.target.value)} className='bg-slate-950 border border-slate-700 rounded-xl text-xs text-white px-3 py-2'>
+                    <option value=''>Todos los sublotes</option>
+                    {sublotes.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+                  </select>
+                  {canManage && <button onClick={openCreateSublote} className='px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-[10px] font-black'><Plus className='w-3 h-3 inline mr-1' /> Nuevo sublote</button>}
+                </div>
               </div>
               <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-4'>
-                {lotes.map((lote) => {
-                  const list = expedientes.filter((e) => e.loteId === lote.id);
+                {mainLotes.map((lote) => {
+                  const childIds = lotes.filter((l) => l.parentLoteId === lote.id).map((l) => l.id);
+                  const scopeIds = childIds.length ? childIds : [lote.id];
+                  const list = expedientes.filter((e) => scopeIds.includes(e.loteId || ''));
                   const fondeados = list.filter((e) => e.estatus === 'FONDEADO').length;
                   const selected = lote.id === selectedLote?.id;
                   return <button key={lote.id} onClick={() => setSelectedLoteId(lote.id)} className={'text-left rounded-xl border p-3 transition ' + (selected ? 'border-red-500/40 bg-red-500/10' : 'border-slate-800 bg-slate-950/40 hover:border-slate-700')}>
                     <div className='flex items-center justify-between'><span className='text-[11px] font-black text-white truncate'>{lote.nombre}</span><span className='text-[9px] text-slate-500'>{list.length} créditos</span></div>
                     <div className='mt-3 h-2 rounded-full bg-slate-950 overflow-hidden'><div className='h-full bg-red-500 rounded-full' style={{ width: Math.min(100, (list.length / Math.max(1, Math.max(...lotes.map((x) => expedientes.filter((e) => e.loteId === x.id).length)))) * 100) + '%' }} /></div>
                     <div className='mt-2 flex justify-between text-[9px]'><span className='text-slate-500'>Fondeados</span><span className='text-emerald-300 font-bold'>{fondeados}</span></div>
+                    <div className='mt-2 flex items-center justify-between text-[9px]'><span className='text-slate-500'>Sublotes</span><span className='text-blue-300 font-bold'>{lotes.filter((l) => l.parentLoteId === lote.id).length}</span></div>
                     <div className='mt-2 pt-2 border-t border-slate-800/70'>
-                      <div className='text-[8px] uppercase tracking-wider text-slate-500 mb-1'>Usuarios del lote</div>
+                      <div className='text-[8px] uppercase tracking-wider text-slate-500 mb-1'>Usuarios del lote / sublotes</div>
                       {lote.usuariosPortal?.filter((u: any) => u.activo !== false).length ? (
                         <div className='flex flex-wrap gap-1'>
                           {lote.usuariosPortal.filter((u: any) => u.activo !== false).map((u: any) => (
@@ -308,6 +374,7 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
             <div className='xl:col-span-8 rounded-2xl bg-[#0D1B35] border border-slate-800 p-4'>
               <div className='flex items-center justify-between mb-4'><div><h2 className='text-sm font-black text-white'>Actividad por sucursal</h2><p className='text-[10px] text-slate-500'>Operaciones registradas; el inventario físico no está almacenado actualmente en el sistema.</p></div><Car className='w-4 h-4 text-red-400' /></div>
               <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2'>
+                
                 {lotes.map((lote) => {
                   const count = expedientes.filter((e) => e.loteId === lote.id).length;
                   return <div key={lote.id} className='rounded-xl bg-slate-950/60 border border-slate-800 p-3'><div className='w-full h-16 rounded-lg bg-gradient-to-br from-slate-800 to-slate-950 flex items-center justify-center'><Car className='w-7 h-7 text-slate-600' /></div><div className='mt-2 text-[10px] font-bold text-white truncate'>{lote.nombre}</div><div className='text-[9px] text-slate-500 mt-1'>{count} expedientes registrados</div></div>;
@@ -379,9 +446,13 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
       {showForm && (
         <div className='fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4'>
           <div className='w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#0B1730] border border-slate-700 shadow-2xl'>
-            <div className='px-5 py-4 border-b border-slate-800 flex items-center justify-between'><div><h3 className='text-base font-black text-white'>{editingLote ? 'Editar lote' : 'Registrar nuevo lote'}</h3><p className='text-[10px] text-slate-500'>La información se guarda en Supabase mediante el módulo actual.</p></div><button onClick={() => setShowForm(false)} className='p-2 rounded-xl bg-slate-900 text-slate-400 hover:text-white'><X className='w-4 h-4' /></button></div>
+            <div className='px-5 py-4 border-b border-slate-800 flex items-center justify-between'><div><h3 className='text-base font-black text-white'>{editingLote ? 'Editar lote / sublote' : form.parentLoteId ? 'Registrar sublote' : 'Registrar lote principal'}</h3><p className='text-[10px] text-slate-500'>La información se guarda en Supabase mediante el módulo actual.</p></div><button onClick={() => setShowForm(false)} className='p-2 rounded-xl bg-slate-900 text-slate-400 hover:text-white'><X className='w-4 h-4' /></button></div>
             <form onSubmit={saveLote} className='p-5 space-y-4'>
               <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                <select value={form.parentLoteId} onChange={(e) => setForm((v) => ({ ...v, parentLoteId: e.target.value }))} className='bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white'>
+                  <option value=''>Sin lote principal (crear como principal)</option>
+                  {mainLotes.filter((l) => l.id !== editingLote?.id).map((l) => <option key={l.id} value={l.id}>Sublote de {l.nombre}</option>)}
+                </select>
                 <input required value={form.nombre} onChange={(e) => setForm((v) => ({ ...v, nombre: e.target.value }))} placeholder='Nombre del lote *' className='bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white' />
                 <input value={form.contacto} onChange={(e) => setForm((v) => ({ ...v, contacto: e.target.value }))} placeholder='Contacto principal / gerente' className='bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white' />
                 <input value={form.telefono} onChange={(e) => setForm((v) => ({ ...v, telefono: e.target.value }))} placeholder='Teléfono' className='bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white' />
