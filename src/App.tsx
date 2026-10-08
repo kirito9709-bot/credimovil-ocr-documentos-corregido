@@ -15,6 +15,7 @@ import { AdminLoginModal } from './components/AdminLoginModal';
 import { ExpedienteDetailModal } from './components/ExpedienteDetailModal';
 import { PrintCaratulaModal } from './components/PrintCaratulaModal';
 import { LotesManagerModal } from './components/LotesManagerModal';
+import { LotesDashboardModal } from './components/LotesDashboardModal';
 import { api } from './services/api';
 import { ExpedienteCredito, LoteAuto } from './types';
 import { ShieldCheck, Phone, CheckCircle2, Car, Sparkles, Building2 } from 'lucide-react';
@@ -261,7 +262,7 @@ export default function App() {
         onClose={() => setPrintExpediente(null)}
       />
 
-      <LotesManagerModal
+      <LotesDashboardModal
         isOpen={showLotesModal}
         onClose={() => setShowLotesModal(false)}
         lotes={lotes}
