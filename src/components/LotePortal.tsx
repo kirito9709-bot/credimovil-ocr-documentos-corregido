@@ -4,11 +4,9 @@ import {
   BarChart3,
   Building2,
   Calculator,
-  Car,
   CheckCircle2,
   CircleDollarSign,
   Clock3,
-  Eye,
   FileText,
   Mail,
   MapPin,
@@ -20,7 +18,6 @@ import {
   Target,
   TrendingUp,
   Users,
-  XCircle,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { ChatLoteModal } from './ChatLoteModal';
