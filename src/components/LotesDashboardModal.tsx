@@ -70,6 +70,7 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
   canManage = false,
 }) => {
   const [expedientes, setExpedientes] = useState<ExpedienteCredito[]>([]);
+  const [dashboardLotes, setDashboardLotes] = useState<LoteAuto[]>([]);
   const [selectedLoteId, setSelectedLoteId] = useState('');
   const [selectedSubloteId, setSelectedSubloteId] = useState('');
   const [search, setSearch] = useState('');
@@ -83,12 +84,17 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
   });
   const [saving, setSaving] = useState(false);
 
-  const mainLotes = useMemo(() => lotes.filter((l) => !l.parentLoteId), [lotes]);
+  const allLotes = dashboardLotes.length ? dashboardLotes : lotes;
+  const mainLotes = useMemo(() => allLotes.filter((l) => !l.parentLoteId), [allLotes]);
   const sublotes = useMemo(
-    () => lotes.filter((l) => l.parentLoteId === selectedLoteId),
-    [lotes, selectedLoteId]
+    () => allLotes.filter((l) => l.parentLoteId === selectedLoteId),
+    [allLotes, selectedLoteId]
   );
   const selectedMainLote = mainLotes.find((l) => l.id === selectedLoteId) || mainLotes[0] || null;
+
+  useEffect(() => {
+    if (lotes.length > 0 && dashboardLotes.length === 0) setDashboardLotes(lotes);
+  }, [lotes, dashboardLotes.length]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -105,15 +111,28 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
     setLoading(true);
     setLoadError('');
     try {
-      const res = await api.getExpedientes();
-      if (res?.success) {
-        setExpedientes(Array.isArray(res.expedientes) ? res.expedientes : []);
+      const [lotesRes, expedientesRes] = await Promise.all([
+        api.getLotes(),
+        api.getExpedientes(),
+      ]);
+
+      if (lotesRes?.success && Array.isArray(lotesRes.lotes)) {
+        setDashboardLotes(lotesRes.lotes);
+      }
+
+      if (expedientesRes?.success) {
+        setExpedientes(Array.isArray(expedientesRes.expedientes) ? expedientesRes.expedientes : []);
       } else {
         setExpedientes([]);
       }
     } catch (error: any) {
-      setExpedientes([]);
-      setLoadError(error?.message || 'No se pudieron cargar los créditos. La vista de lotes seguirá disponible con la información de cada lote.');
+      // Even if the detailed expediente query fails, keep the server-side
+      // lot metrics so the dashboard does not show false zeros.
+      try {
+        const lotesRes = await api.getLotes();
+        if (lotesRes?.success && Array.isArray(lotesRes.lotes)) setDashboardLotes(lotesRes.lotes);
+      } catch {}
+      setLoadError(error?.message || 'No se pudieron cargar todos los datos del panel.');
     } finally {
       setLoading(false);
     }
@@ -123,14 +142,14 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
     if (isOpen) loadDashboard();
   }, [isOpen]);
 
-  const selectedSublote = lotes.find((l) => l.id === selectedSubloteId) || null;
-  const selectedChildIds = sublotes.map((l) => l.id);
+  const selectedSublote = allLotes.find((l) => l.id === selectedSubloteId) || null;
+  const selectedChildIds = suballLotes.map((l) => l.id);
   const selectedScopeIds = selectedSubloteId
     ? [selectedSubloteId]
     : (selectedMainLote ? [selectedMainLote.id, ...selectedChildIds] : []);
   const selectedLote = selectedSublote || selectedMainLote || null;
   const getLoteScopeIds = (loteId: string) => {
-    const childIds = lotes.filter((l) => l.parentLoteId === loteId).map((l) => l.id);
+    const childIds = allLotes.filter((l) => l.parentLoteId === loteId).map((l) => l.id);
     return [loteId, ...childIds];
   };
 
@@ -156,8 +175,10 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
   const selectedBase = expedientes.filter((exp) => !selectedScopeIds.length || selectedScopeIds.includes(exp.loteId || ''));
   const selectedFunded = selectedBase.filter((exp) => exp.estatus === 'FONDEADO');
   const selectedApproved = selectedBase.filter((exp) => ['APROBADO', 'CONTRATO', 'GPS', 'FONDEO', 'FONDEO_PENDIENTE', 'FONDEO_REVISION', 'FONDEADO'].includes(exp.estatus));
-  const totalAmount = selectedBase.reduce((sum, exp) => sum + (Number(exp.montoFinanciar) || 0), 0);
-  const fundedAmount = selectedFunded.reduce((sum, exp) => sum + (Number(exp.montoFinanciar) || 0), 0);
+  const selectedServerExpedientes = Number(selectedLote?.totalExpedientes) || selectedBase.length;
+  const selectedServerFondeados = Number(selectedLote?.totalFondeados) || selectedFunded.length;
+  const totalAmount = Number(selectedLote?.totalMontoFinanciado) || selectedBase.reduce((sum, exp) => sum + (Number(exp.montoFinanciar) || 0), 0);
+  const fundedAmount = Number(selectedLote?.totalMontoFondeado) || selectedFunded.reduce((sum, exp) => sum + (Number(exp.montoFinanciar) || 0), 0);
 
   const statusRows = [
     { label: 'En análisis', key: 'EN_EVALUACION', count: selectedBase.filter((e) => e.estatus === 'EN_EVALUACION').length, color: '#F59E0B' },
@@ -294,9 +315,10 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
             <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2'>
               {mainLotes.map((lote) => {
                 const scopeIds = getLoteScopeIds(lote.id);
-                const creditCount = expedientes.filter((e) => scopeIds.includes(e.loteId || '')).length;
-                const fundedCount = expedientes.filter((e) => scopeIds.includes(e.loteId || '') && e.estatus === 'FONDEADO').length;
-                const userCount = [...(lote.usuariosPortal || []), ...sublotes.filter((s) => s.parentLoteId === lote.id).flatMap((s) => s.usuariosPortal || [])].filter((u: any, idx, arr) => u.activo !== false && arr.findIndex((x: any) => x.id === u.id) === idx).length;
+                const directList = expedientes.filter((e) => scopeIds.includes(e.loteId || ''));
+                const creditCount = Number(lote.totalExpedientes) || directList.length;
+                const fundedCount = Number(lote.totalFondeados) || directList.filter((e) => e.estatus === 'FONDEADO').length;
+                const userCount = [...(lote.usuariosPortal || []), ...suballLotes.filter((s) => s.parentLoteId === lote.id).flatMap((s) => s.usuariosPortal || [])].filter((u: any, idx, arr) => u.activo !== false && arr.findIndex((x: any) => x.id === u.id) === idx).length;
                 const active = selectedMainLote?.id === lote.id;
                 return (
                   <button key={lote.id} onClick={() => { setSelectedLoteId(lote.id); setSelectedSubloteId(''); }} className={'text-left rounded-xl border p-3 transition ' + (active ? 'border-red-500/50 bg-red-500/10 shadow-lg shadow-red-950/20' : 'border-slate-800 bg-slate-950/30 hover:border-slate-700')}>
@@ -312,7 +334,7 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
                       <div><div className='text-[8px] text-slate-500'>Fondeados</div><div className='text-sm font-black text-emerald-300'>{fundedCount}</div></div>
                       <div><div className='text-[8px] text-slate-500'>Usuarios</div><div className='text-sm font-black text-blue-300'>{userCount}</div></div>
                     </div>
-                    <div className='mt-2 text-[8px] text-slate-600'>{lotes.filter((x) => x.parentLoteId === lote.id).length} sublotes</div>
+                    <div className='mt-2 text-[8px] text-slate-600'>{allLotes.filter((x) => x.parentLoteId === lote.id).length} sublotes</div>
                   </button>
                 );
               })}
@@ -321,9 +343,9 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
 
           <section className='grid grid-cols-1 md:grid-cols-4 gap-3'>
             <div className='rounded-2xl bg-[#0E2345] border border-blue-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Lotes principales</div><div className='text-2xl font-black text-white mt-1'>{mainLotes.length}</div><div className='text-[10px] text-emerald-300 mt-1'>Activos</div></div><Building2 className='w-7 h-7 text-blue-300' /></div></div>
-            <div className='rounded-2xl bg-[#0E2345] border border-emerald-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Créditos del lote seleccionado</div><div className='text-2xl font-black text-emerald-300 mt-1'>{selectedBase.length}</div><div className='text-[10px] text-slate-500 mt-1'>{selectedSublote?.nombre || selectedMainLote?.nombre || 'Sin selección'}</div></div><CheckCircle2 className='w-7 h-7 text-emerald-300' /></div></div>
+            <div className='rounded-2xl bg-[#0E2345] border border-emerald-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Créditos del lote seleccionado</div><div className='text-2xl font-black text-emerald-300 mt-1'>{selectedServerExpedientes}</div><div className='text-[10px] text-slate-500 mt-1'>{selectedSublote?.nombre || selectedMainLote?.nombre || 'Sin selección'}</div></div><CheckCircle2 className='w-7 h-7 text-emerald-300' /></div></div>
             <div className='rounded-2xl bg-[#0E2345] border border-amber-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Monto colocado</div><div className='text-xl font-black text-white mt-1'>{money(totalAmount)}</div><div className='text-[10px] text-emerald-300 mt-1'>Actividad del lote</div></div><CircleDollarSign className='w-7 h-7 text-amber-300' /></div></div>
-            <div className='rounded-2xl bg-[#0E2345] border border-teal-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Fondeado</div><div className='text-xl font-black text-teal-300 mt-1'>{money(fundedAmount)}</div><div className='text-[10px] text-slate-500 mt-1'>{selectedFunded.length} créditos</div></div><TrendingUp className='w-7 h-7 text-teal-300' /></div></div>
+            <div className='rounded-2xl bg-[#0E2345] border border-teal-500/20 p-4'><div className='flex justify-between'><div><div className='text-[10px] uppercase text-slate-400'>Fondeado</div><div className='text-xl font-black text-teal-300 mt-1'>{money(fundedAmount)}</div><div className='text-[10px] text-slate-500 mt-1'>{selectedServerFondeados} créditos</div></div><TrendingUp className='w-7 h-7 text-teal-300' /></div></div>
           </section>
 
           <section className='rounded-2xl bg-[#0D1B35] border border-slate-800 p-4'>
@@ -335,11 +357,12 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
               {canManage && <button onClick={openCreateSublote} className='px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-[10px] font-black'><Plus className='w-3.5 h-3.5 inline mr-1' /> Agregar sublote</button>}
             </div>
             <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mt-3'>
-              {sublotes.length === 0 ? (
+              {suballLotes.length === 0 ? (
                 <div className='col-span-full rounded-xl border border-dashed border-slate-700 p-5 text-center text-[10px] text-slate-500'>Este lote principal todavía no tiene sublotes. Agrega Cumbres, San Pedro, Miguel Alemán, etc.</div>
-              ) : sublotes.map((sub) => {
-                const count = expedientes.filter((e) => e.loteId === sub.id).length;
-                const funded = expedientes.filter((e) => e.loteId === sub.id && e.estatus === 'FONDEADO').length;
+              ) : suballLotes.map((sub) => {
+                const directList = expedientes.filter((e) => e.loteId === sub.id);
+                const count = Number(sub.totalExpedientes) || directList.length;
+                const funded = Number(sub.totalFondeados) || directList.filter((e) => e.estatus === 'FONDEADO').length;
                 const users = sub.usuariosPortal?.filter((u: any) => u.activo !== false) || [];
                 return (
                   <button key={sub.id} onClick={() => setSelectedSubloteId(sub.id)} className={'text-left rounded-xl border p-3 ' + (selectedSubloteId === sub.id ? 'border-red-500/40 bg-red-500/10' : 'border-slate-800 bg-slate-950/40')}>
@@ -364,7 +387,7 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
                   <label className='text-[9px] uppercase text-slate-500'>Sublote</label>
                   <select value={selectedSubloteId} onChange={(e) => setSelectedSubloteId(e.target.value)} className='bg-slate-950 border border-slate-700 rounded-xl text-xs text-white px-3 py-2'>
                     <option value=''>Todos los sublotes</option>
-                    {sublotes.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+                    {suballLotes.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                   </select>
                   {canManage && <button onClick={openCreateSublote} className='px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-[10px] font-black'><Plus className='w-3 h-3 inline mr-1' /> Nuevo sublote</button>}
                 </div>
@@ -373,13 +396,15 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
                 {mainLotes.map((lote) => {
                   const scopeIds = getLoteScopeIds(lote.id);
                   const list = expedientes.filter((e) => scopeIds.includes(e.loteId || ''));
-                  const fondeados = list.filter((e) => e.estatus === 'FONDEADO').length;
+                  const statsFromLote = lotes.find((x) => x.id === lote.id);
+                  const totalCredits = Number(lote.totalExpedientes) || list.length;
+                  const fondeados = Number(lote.totalFondeados) || list.filter((e) => e.estatus === 'FONDEADO').length;
                   const selected = lote.id === selectedLote?.id;
                   return <button key={lote.id} onClick={() => setSelectedLoteId(lote.id)} className={'text-left rounded-xl border p-3 transition ' + (selected ? 'border-red-500/40 bg-red-500/10' : 'border-slate-800 bg-slate-950/40 hover:border-slate-700')}>
-                    <div className='flex items-center justify-between'><span className='text-[11px] font-black text-white truncate'>{lote.nombre}</span><span className='text-[9px] text-slate-500'>{list.length} créditos</span></div>
-                    <div className='mt-3 h-2 rounded-full bg-slate-950 overflow-hidden'><div className='h-full bg-red-500 rounded-full' style={{ width: Math.min(100, (list.length / Math.max(1, Math.max(...lotes.map((x) => expedientes.filter((e) => e.loteId === x.id).length)))) * 100) + '%' }} /></div>
+                    <div className='flex items-center justify-between'><span className='text-[11px] font-black text-white truncate'>{lote.nombre}</span><span className='text-[9px] text-slate-500'>{totalCredits} créditos</span></div>
+                    <div className='mt-3 h-2 rounded-full bg-slate-950 overflow-hidden'><div className='h-full bg-red-500 rounded-full' style={{ width: Math.min(100, (list.length / Math.max(1, Math.max(...allLotes.map((x) => Number(x.totalExpedientes) || expedientes.filter((e) => e.loteId === x.id).length)))) * 100) + '%' }} /></div>
                     <div className='mt-2 flex justify-between text-[9px]'><span className='text-slate-500'>Fondeados</span><span className='text-emerald-300 font-bold'>{fondeados}</span></div>
-                    <div className='mt-2 flex items-center justify-between text-[9px]'><span className='text-slate-500'>Sublotes</span><span className='text-blue-300 font-bold'>{lotes.filter((l) => l.parentLoteId === lote.id).length}</span></div>
+                    <div className='mt-2 flex items-center justify-between text-[9px]'><span className='text-slate-500'>Sublotes</span><span className='text-blue-300 font-bold'>{allLotes.filter((l) => l.parentLoteId === lote.id).length}</span></div>
                     <div className='mt-2 pt-2 border-t border-slate-800/70'>
                       <div className='text-[8px] uppercase tracking-wider text-slate-500 mb-1'>Usuarios del lote / sublotes</div>
                       {lote.usuariosPortal?.filter((u: any) => u.activo !== false).length ? (
@@ -416,7 +441,7 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
               <div className='flex items-center justify-between mb-4'><div><h2 className='text-sm font-black text-white'>Actividad por sucursal</h2><p className='text-[10px] text-slate-500'>Operaciones registradas; el inventario físico no está almacenado actualmente en el sistema.</p></div><Car className='w-4 h-4 text-red-400' /></div>
               <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2'>
                 
-                {lotes.map((lote) => {
+                {allLotes.map((lote) => {
                   const count = getLoteScopeIds(lote.id).reduce((sum, id) => sum + expedientes.filter((e) => e.loteId === id).length, 0);
                   return <div key={lote.id} className='rounded-xl bg-slate-950/60 border border-slate-800 p-3'><div className='w-full h-16 rounded-lg bg-gradient-to-br from-slate-800 to-slate-950 flex items-center justify-center'><Car className='w-7 h-7 text-slate-600' /></div><div className='mt-2 text-[10px] font-bold text-white truncate'>{lote.nombre}</div><div className='text-[9px] text-slate-500 mt-1'>{count} expedientes registrados</div></div>;
                 })}
@@ -424,9 +449,9 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
             </div>
 
             <div className='xl:col-span-4 rounded-2xl bg-[#0D1B35] border border-slate-800 p-4'>
-              <div className='flex items-center justify-between mb-3'><div><h2 className='text-sm font-black text-white'>Estatus de créditos</h2><p className='text-[10px] text-slate-500'>{selectedBase.length} total</p></div><Activity className='w-4 h-4 text-red-400' /></div>
+              <div className='flex items-center justify-between mb-3'><div><h2 className='text-sm font-black text-white'>Estatus de créditos</h2><p className='text-[10px] text-slate-500'>{selectedServerExpedientes} total</p></div><Activity className='w-4 h-4 text-red-400' /></div>
               <div className='flex items-center gap-4'>
-                <div className='relative w-28 h-28 rounded-full shrink-0' style={{ background: donut ? 'conic-gradient(' + donut + ')' : '#1e293b' }}><div className='absolute inset-4 rounded-full bg-[#0D1B35] flex items-center justify-center'><span className='text-xl font-black text-white'>{selectedBase.length}</span></div></div>
+                <div className='relative w-28 h-28 rounded-full shrink-0' style={{ background: donut ? 'conic-gradient(' + donut + ')' : '#1e293b' }}><div className='absolute inset-4 rounded-full bg-[#0D1B35] flex items-center justify-center'><span className='text-xl font-black text-white'>{selectedServerExpedientes}</span></div></div>
                 <div className='flex-1 space-y-2'>{statusRows.map((row) => <div key={row.label} className='flex justify-between text-[10px]'><span className='text-slate-300 flex items-center gap-2'><span className='w-2 h-2 rounded-full' style={{ backgroundColor: row.color }} />{row.label}</span><span className='font-black text-white'>{row.count}</span></div>)}</div>
               </div>
             </div>
