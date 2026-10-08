@@ -153,16 +153,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>{authUser?.role === 'lote' ? 'Mi Portal' : 'Acceso Lote'}</span>
             </button>
             <div className="md:hidden mt-2 pt-2 border-t border-slate-800 grid grid-cols-2 gap-2">
-              {authUser?.role !== 'lote' && (
-                <button
-                  onClick={() => selectTab('lotes')}
-                  className="px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-xs font-bold text-white"
-                >
-                  <Building2 className="w-4 h-4 inline mr-1.5 text-[#F87171]" />
-                  {activeLoteCount} Lotes
-                </button>
-              )}
-
               {isAdminAuth ? (
                 <button
                   onClick={onLogoutAdmin}
@@ -170,31 +160,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   Cerrar sesión
                 </button>
-              ) : (
-                <button
-                  onClick={() => { onOpenAdminAuth(); setMobileOpen(false); }}
-                  className="px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-xs font-bold text-white"
-                >
-                  <Lock className="w-4 h-4 inline mr-1.5 text-red-400" />
-                  Acceso Asesor
-                </button>
-              )}
+)}
             </div>
           </nav>
 
           {/* Desktop actions */}
           <div className="hidden md:flex items-center gap-2">
-            {authUser?.role !== 'lote' && (
-              <button
-                onClick={() => selectTab('lotes')}
-                className="hidden lg:flex items-center gap-1.5 text-xs text-white/85 hover:text-white px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 transition"
-                title="Directorio de Lotes Asociados"
-              >
-              <Building2 className="w-3.5 h-3.5 text-red-400" />
-              <span>{activeLoteCount} Lotes</span>
-              </button>
-            )}
-
             {isAdminAuth ? (
               <div className="flex items-center gap-2">
                 {authUser?.role === 'lote' && (
