@@ -278,5 +278,7 @@ export interface LoteAuto {
   bancoDefault?: string;
   totalExpedientes?: number;
   totalFondeados?: number;
+  totalMontoFinanciado?: number;
+  totalMontoFondeado?: number;
   usuariosPortal?: LoteUsuarioPortal[];
 }
