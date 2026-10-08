@@ -154,6 +154,95 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  const loadAsesores = async () => {
+    if (authUser?.role !== 'admin') return;
+    try {
+      const res = await api.getAsesores();
+      if (res.success) setAsesores(res.asesores || []);
+    } catch (err: any) {
+      setAdvisorMessage(err.message || 'No se pudieron cargar los asesores.');
+    }
+  };
+
+  const loadLoteUsuarios = async () => {
+    if (authUser?.role !== 'admin') return;
+    try {
+      const res = await api.getLoteUsuarios();
+      if (res.success) setLoteUsuarios(res.usuarios || []);
+    } catch (err: any) {
+      setLoteUserMessage(err.message || 'No se pudieron cargar los usuarios de lotes.');
+    }
+  };
+
+  useEffect(() => {
+    if (authUser?.role === 'admin' && showLoteUsersModal) {
+      loadLoteUsuarios();
+    }
+  }, [authUser?.role, showLoteUsersModal]);
+
+  const handleCreateLoteUsuario = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoteUserMessage(null);
+    try {
+      const res = await api.createLoteUsuario({
+        loteId: newLoteUserLoteId,
+        nombre: newLoteUserName.trim(),
+        username: newLoteUsername.trim(),
+        password: newLotePassword,
+      });
+      if (res.success) {
+        setLoteUserMessage(`Usuario creado para ${res.loteNombre || 'el lote'}. Entrégale el usuario y contraseña de forma segura.`);
+        setNewLoteUserName('');
+        setNewLoteUsername('');
+        setNewLotePassword('');
+        loadLoteUsuarios();
+      }
+    } catch (err: any) {
+      setLoteUserMessage(err.message || 'No se pudo crear el usuario del lote.');
+    }
+  };
+
+  const handleDeleteLoteUsuario = async (id: string, nombre: string) => {
+    if (!confirm(`¿Eliminar el acceso de ${nombre}?`)) return;
+    try {
+      await api.deleteLoteUsuario(id);
+      loadLoteUsuarios();
+    } catch (err: any) {
+      alert(err.message || 'No se pudo eliminar el usuario del lote.');
+    }
+  };
+
+  const handleCreateAdvisor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdvisorMessage(null);
+    try {
+      const res = await api.createAsesor({
+        nombre: newAdvisorName.trim(),
+        username: newAdvisorUsername.trim(),
+        password: newAdvisorPassword,
+      });
+      if (res.success) {
+        setAdvisorMessage('Asesor creado correctamente.');
+        setNewAdvisorName('');
+        setNewAdvisorUsername('');
+        setNewAdvisorPassword('');
+        loadAsesores();
+      }
+    } catch (err: any) {
+      setAdvisorMessage(err.message || 'No se pudo crear el asesor.');
+    }
+  };
+
+  const handleDeleteAdvisor = async (id: string, nombre: string) => {
+    if (!confirm(`¿Eliminar el acceso de ${nombre}?`)) return;
+    try {
+      await api.deleteAsesor(id);
+      loadAsesores();
+    } catch (err: any) {
+      alert(err.message || 'No se pudo eliminar el usuario del asesor.');
+    }
+  };
+
   if (!isAdminAuth) {
     return (
       <section className="w-full min-h-[calc(100vh-160px)] flex items-center justify-center px-4 py-10">
