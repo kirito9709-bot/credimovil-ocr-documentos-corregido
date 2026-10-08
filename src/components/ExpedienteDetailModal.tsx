@@ -484,6 +484,79 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                     </button>
                   ))}
                 </div>
+
+              </section>
+
+              <section className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-[#0B1C38] border border-slate-800 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-orange-500/15 flex items-center justify-center"><Building2 className="w-4 h-4 text-orange-300" /></div>
+                    <div>
+                      <div className="text-[11px] font-black text-white">Información Laboral</div>
+                      <div className="text-[9px] text-slate-500">Perfil socioeconómico y fuente de ingresos</div>
+                    </div>
+                  </div>
+                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3 text-[10px]">
+                    <div>
+                      <span className="text-slate-500">Empresa / lugar de trabajo</span>
+                      <div className="text-slate-200 font-bold mt-1">{expediente.nombreUbicacionEmpleo || 'No capturado'}</div>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Ingreso mensual comprobable</span>
+                      <div className="text-emerald-300 font-black mt-1">
+                        {Number(expediente.ingresoMensualAprox || 0) > 0
+                          ? '$ ' + Number(expediente.ingresoMensualAprox).toLocaleString('es-MX') + ' MXN'
+                          : 'No capturado'}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Antigüedad en empleo</span>
+                      <div className="text-slate-200 mt-1">{expediente.tiempoEnTrabajo || 'No capturada'}</div>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Dirección del empleo</span>
+                      <div className="text-slate-300 mt-1 line-clamp-2">{expediente.direccionEmpleo || 'No capturada'}</div>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Giro / actividad</span>
+                      <div className="text-slate-200 mt-1">{expediente.giroActividadEmpresa || 'No capturado'}</div>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Dependientes económicos</span>
+                      <div className="text-slate-200 mt-1">{typeof expediente.dependientesEconomicos === 'number' ? expediente.dependientesEconomicos : 'No capturado'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl bg-[#0B1C38] border border-slate-800 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-violet-500/15 flex items-center justify-center"><Users className="w-4 h-4 text-violet-300" /></div>
+                    <div>
+                      <div className="text-[11px] font-black text-white">Referencias personales</div>
+                      <div className="text-[9px] text-slate-500">{expediente.referenciasPersonales?.length || 0} referencias capturadas</div>
+                    </div>
+                  </div>
+                  <div className="p-4 space-y-2">
+                    {(expediente.referenciasPersonales || []).length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/40 p-4 text-center text-[10px] text-slate-500">
+                        No hay referencias capturadas en el expediente.
+                      </div>
+                    ) : (
+                      (expediente.referenciasPersonales || []).map((ref, index) => (
+                        <div key={index} className="rounded-xl bg-slate-950/60 border border-slate-800 p-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5">
+                            <div>
+                              <div className="text-[10px] font-black text-white">{ref.nombre || 'Sin nombre'}</div>
+                              <div className="text-[9px] text-violet-300 mt-0.5">{ref.relacion || (ref.esFamiliar ? 'Familiar' : 'Conocido')}</div>
+                            </div>
+                            <div className="text-[10px] text-slate-200 font-mono">{ref.telefono || 'Sin teléfono'}</div>
+                          </div>
+                          {ref.ciudad && <div className="text-[9px] text-slate-500 mt-1">{ref.ciudad}</div>}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               </section>
             </section>
           )}
