@@ -23,6 +23,9 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
     setError(null);
     try {
       const res = await api.login(username.trim(), password);
+      if (res.user?.role === 'lote') {
+        throw new Error('Este acceso es para Asesores. Para entrar como lote utiliza "Acceso Lote".');
+      }
       localStorage.setItem('credimovil_auth_user', JSON.stringify(res.user));
       onSuccess(res.user);
       onClose();
