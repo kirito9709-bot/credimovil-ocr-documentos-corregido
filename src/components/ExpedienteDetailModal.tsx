@@ -340,181 +340,154 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
   };
 
 
+
+  const clienteNombre =
+    ine.nombreCompleto ||
+    [ine.nombre, ine.primerApellido, ine.segundoApellido].filter(Boolean).join(' ') ||
+    'Cliente sin nombre';
+
+  const statusLabel: Record<string, string> = {
+    NUEVO: 'Nuevo',
+    PRE_APROBADO: 'Pre-aprobado',
+    EN_EVALUACION: 'En análisis',
+    APROBADO: 'Aprobado',
+    CONTRATO: 'Contrato',
+    GPS: 'GPS',
+    FONDEO: 'Fondeo',
+    FONDEO_REVISION: 'Fondeo en revisión',
+    FONDEADO: 'Fondeado',
+    RECHAZADO: 'Rechazado',
+  };
+
+  const statusTone =
+    estatus === 'FONDEADO' ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25' :
+    estatus === 'APROBADO' ? 'bg-blue-500/15 text-blue-300 border-blue-500/25' :
+    estatus === 'PRE_APROBADO' ? 'bg-violet-500/15 text-violet-300 border-violet-500/25' :
+    ['FONDEO', 'FONDEO_REVISION', 'GPS'].includes(estatus) ? 'bg-amber-500/15 text-amber-300 border-amber-500/25' :
+    estatus === 'RECHAZADO' ? 'bg-rose-500/15 text-rose-300 border-rose-500/25' :
+    'bg-slate-800 text-slate-300 border-slate-700';
+
+  const compactDocuments = [
+    { key: 'ine', title: 'Identificación', subtitle: 'INE frente y reverso', file: expediente.fotoIneFrente || expediente.fotoIneReverso, tone: 'text-blue-300', action: 'Ver INE' },
+    { key: 'domicilio', title: 'Comprobante de domicilio', subtitle: expediente.comprobanteDomicilioActualNombre || 'Agua / Luz CFE', file: expediente.comprobanteDomicilioActualUrl, tone: 'text-amber-300', action: 'Ver comprobante' },
+    { key: 'ingresos', title: 'Comprobantes de ingreso', subtitle: expediente.nominas?.length ? String(expediente.nominas.length) + ' nómina(s)' : 'Nómina / ingresos', file: expediente.nominas?.[0]?.url, tone: 'text-emerald-300', action: 'Ver documento' },
+    { key: 'estados', title: 'Estados de cuenta', subtitle: expediente.estadosCuenta?.archivoConsolidadoNombre || '3 meses', file: expediente.estadosCuenta?.archivoConsolidadoUrl || expediente.estadosCuenta?.mes1Url, tone: 'text-cyan-300', action: 'Ver estados' },
+    { key: 'referencias', title: 'Referencias personales', subtitle: expediente.referenciasPersonales?.length ? String(expediente.referenciasPersonales.length) + ' referencias' : 'Referencias', file: undefined, tone: 'text-violet-300', action: expediente.referenciasPersonales?.length ? 'Capturadas' : 'Pendiente' },
+    { key: 'obligado', title: 'Obligado solidario', subtitle: expediente.obligadoSolidario?.nombre || 'Opcional', file: expediente.obligadoSolidario?.fotoIneFrente || expediente.obligadoSolidario?.comprobanteDomicilioUrl, tone: 'text-rose-300', action: expediente.obligadoSolidario?.requerido ? 'Ver documentación' : 'Agregar' },
+  ];
+
   return (
+
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-2 sm:p-4 backdrop-blur-md overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-2 sm:p-4 backdrop-blur-md overflow-y-auto"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div
-        className="relative w-full max-w-5xl bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col my-8 max-h-[92vh]">
-        {/* Top Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-slate-950 border-b border-slate-800 gap-3">
-          <div className="flex items-center gap-3">
-            <span className="text-xl font-mono font-black text-red-500">
-              {expediente.folio}
-            </span>
-            <span
-              className={`px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                estatus === 'FONDEADO' || estatus === 'FONDEO'
-                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                  : estatus === 'GPS'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                  : estatus === 'CONTRATO'
-                  ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
-                  : estatus === 'APROBADO'
-                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                  : estatus === 'PRE_APROBADO'
-                  ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
-                  : estatus === 'FONDEO_REVISION'
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                  : 'bg-slate-800 text-slate-300'
-              }`}
-            >
-              {estatus}
-            </span>
-            <span className="text-xs text-slate-400 hidden sm:inline">
-              PIN Lote: <strong className="text-amber-400 font-mono">{expediente.pinFondeo}</strong>
-            </span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => setShowQuote(true)}
-              className="py-1.5 px-3 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-red-900/25"
-              title="Cotizar crédito"
-            >
-              <Calculator className="w-3.5 h-3.5" />
-              <span>Cotizar</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowObligadoModal(true)}
-              className="py-1.5 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black transition flex items-center gap-1.5"
-              title={expediente.obligadoSolidario?.requerido ? 'Editar obligado solidario' : 'Agregar obligado solidario'}
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>{expediente.obligadoSolidario?.requerido ? 'Editar obligado' : 'Agregar obligado'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                api.downloadExpedienteDocuments(expediente.id, expediente.folio).catch((err: any) => alert(err.message || 'No se pudieron descargar los documentos.'));
-              }}
-              className="py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border border-slate-700"
-              title="Descargar todos los documentos del expediente"
-            >
-              <Download className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">Todos los documentos</span>
-            </button>
-
-            <button
-              onClick={() => onOpenPrint(expediente)}
-              className="py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-medium transition flex items-center gap-1.5 border border-slate-700"
-              title="Generar carátula imprimible"
-            >
-              <Printer className="w-3.5 h-3.5 text-red-400" />
-              <span className="hidden sm:inline">Carátula CrediMóvil</span>
-            </button>
-
-            <button
-              onClick={openEmailToLote}
-              className="py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border border-slate-700"
-              title={expediente.correoLote ? `Enviar correo a ${expediente.correoLote}` : 'El lote no tiene correo registrado'}
-            >
-              <Mail className="w-3.5 h-3.5 text-red-400" />
-              <span className="hidden sm:inline">Correo Lote</span>
-            </button>
-
-            <button
-              onClick={openWhatsAppToLote}
-              className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-md shadow-emerald-900/30"
-              title="Notificar estatus al lote"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">WhatsApp</span>
-            </button>
-
-            <button
-              onClick={() => {
-                if (confirm(`¿Estás seguro de eliminar el expediente ${expediente.folio}?`)) {
-                  onDelete(expediente.id);
-                  onClose();
-                }
-              }}
-              className="p-1.5 text-rose-400 hover:text-white hover:bg-rose-950/60 rounded-xl transition border border-rose-900/40"
-              title="Eliminar expediente"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition ml-1"
-            >
-              <X className="w-5 h-5" />
-            </button>
+      <div className="relative w-full max-w-[1500px] bg-[#07142C] border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col my-4 max-h-[96vh]">
+        <div className="px-4 sm:px-6 py-3 bg-[#0A1730] border-b border-red-500/20">
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="shrink-0">
+                <div className="text-xl sm:text-2xl font-mono font-black text-red-400 leading-none">{expediente.folio}</div>
+                <div className={"inline-flex mt-2 px-2 py-1 rounded-md border text-[10px] uppercase tracking-wide font-black " + statusTone}>
+                  {statusLabel[estatus] || estatus}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm sm:text-base font-black text-white truncate">{clienteNombre}</div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[10px] text-slate-400">
+                  <span>{expediente.autoMarca} {expediente.autoModelo} {expediente.autoAno || ''}</span>
+                  <span>• {expediente.telefono || 'Sin teléfono'}</span>
+                  <span>• {expediente.correo || 'Sin correo'}</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 mt-2 text-[10px]">
+                  <span className="text-slate-500">PIN Lote <strong className="text-amber-300 font-mono">{expediente.pinFondeo || '----'}</strong></span>
+                  <span className="text-slate-500">Lote <strong className="text-slate-200">{expediente.loteNombre || 'Sin lote'}</strong></span>
+                  <span className="text-slate-500">Financiera <strong className="text-slate-200">{financiera}</strong></span>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <button onClick={() => setShowQuote(true)} className="py-2 px-3 bg-red-600 hover:bg-red-500 text-white rounded-lg text-[10px] font-black inline-flex items-center gap-1.5"><Calculator className="w-3.5 h-3.5" /> Cotizar</button>
+              <button type="button" onClick={() => setShowObligadoModal(true)} className="py-2 px-3 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-lg text-[10px] font-black inline-flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> {expediente.obligadoSolidario?.requerido ? 'Editar obligado' : 'Agregar obligado'}</button>
+              <button type="button" onClick={() => api.downloadExpedienteDocuments(expediente.id, expediente.folio).catch((err: any) => alert(err.message || 'No se pudieron descargar los documentos.'))} className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg text-[10px] font-bold inline-flex items-center gap-1.5 border border-slate-700"><Download className="w-3.5 h-3.5 text-emerald-400" /> Todos</button>
+              <button onClick={() => onOpenPrint(expediente)} className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg text-[10px] font-bold inline-flex items-center gap-1.5 border border-slate-700"><Printer className="w-3.5 h-3.5 text-red-400" /> Carátula</button>
+              <button onClick={openEmailToLote} className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg text-[10px] font-bold inline-flex items-center gap-1.5 border border-slate-700"><Mail className="w-3.5 h-3.5 text-red-400" /> Correo</button>
+              <button onClick={openWhatsAppToLote} className="py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-black inline-flex items-center gap-1.5"><Share2 className="w-3.5 h-3.5" /> WhatsApp</button>
+              <button onClick={() => { if (confirm(`¿Estás seguro de eliminar el expediente ${expediente.folio}?`)) { onDelete(expediente.id); onClose(); } }} className="p-2 text-rose-400 hover:text-white hover:bg-rose-950/60 rounded-lg border border-rose-900/40"><Trash2 className="w-4 h-4" /></button>
+              <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"><X className="w-5 h-5" /></button>
+            </div>
           </div>
         </div>
-
         {/* Sub-navigation tabs */}
-        <div className="flex items-center gap-2 px-3 sm:px-6 py-2 bg-slate-900 border-b border-slate-800 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('detalle')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-              activeTab === 'detalle'
-                ? 'bg-red-600 text-white'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Ficha del Cliente & Crédito
-          </button>
-
-          <button
-            onClick={() => setActiveTab('fondeo')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
-              activeTab === 'fondeo'
-                ? 'bg-red-600 text-white'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <span>Documentos CrediMóvil</span>
-            <span className="px-1.5 py-0.2 rounded text-[10px] bg-black/40 text-white">
-              {expediente.documentosFondeo?.filter((d) => d.estatus === 'SUBIDO').length || 0} pendientes
-            </span>
-          </button>
-
-          <button
-            onClick={() => setShowComments(true)}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-slate-400 hover:text-white bg-slate-950/50 border border-slate-800"
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            Comentarios
-          </button>
-
-          <button
-            onClick={() => setActiveTab('estados')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
-              activeTab === 'estados' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Estados de Cuenta OCR
-          </button>
-
-          <button
-            onClick={() => setActiveTab('fotos')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-              activeTab === 'fotos'
-                ? 'bg-red-600 text-white'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Documentos para Análisis (INE, Domicilio, 3 Meses)
-          </button>
+        <div className="flex items-center gap-1 px-3 sm:px-4 py-2 bg-[#0B1A36] border-b border-slate-800 overflow-x-auto">
+          <button onClick={() => setActiveTab('detalle')} className={"px-3 py-2 rounded-lg text-[10px] sm:text-xs font-black whitespace-nowrap transition " + (activeTab === 'detalle' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5')}>Resumen</button>
+          <button onClick={() => setActiveTab('fondeo')} className={"px-3 py-2 rounded-lg text-[10px] sm:text-xs font-black whitespace-nowrap transition " + (activeTab === 'fondeo' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5')}>Documentos CrediMóvil <span className="ml-1.5 px-1.5 py-0.5 rounded bg-black/30">{expediente.documentosFondeo?.filter((d) => d.estatus === 'SUBIDO').length || 0}</span></button>
+          <button onClick={() => setActiveTab('estados')} className={"px-3 py-2 rounded-lg text-[10px] sm:text-xs font-black whitespace-nowrap transition " + (activeTab === 'estados' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5')}>Estados de Cuenta OCR</button>
+          <button onClick={() => setShowComments(true)} className="px-3 py-2 rounded-lg text-[10px] sm:text-xs font-black whitespace-nowrap text-slate-400 hover:text-white hover:bg-white/5">Comentarios</button>
+          <button onClick={() => setActiveTab('fotos')} className={"px-3 py-2 rounded-lg text-[10px] sm:text-xs font-black whitespace-nowrap transition " + (activeTab === 'fotos' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5')}>Documentos para Análisis</button>
         </div>
 
         {/* Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5 sm:space-y-6">
+        <div className="p-3 sm:p-4 overflow-y-auto flex-1 space-y-4">
+          {activeTab === 'detalle' && (
+            <section className="space-y-4">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
+                <div className="rounded-2xl bg-[#0B1C38] border border-slate-800 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-blue-500/15 flex items-center justify-center"><Users className="w-4 h-4 text-blue-300" /></div>
+                    <div><div className="text-[11px] font-black text-white">Información del Cliente</div><div className="text-[9px] text-slate-500">Cotejo oficial INE</div></div>
+                  </div>
+                  <div className="p-4 space-y-2 text-[10px]">
+                    <div><span className="text-slate-500">Nombre</span><div className="font-bold text-white mt-0.5">{clienteNombre}</div></div>
+                    <div className="grid grid-cols-2 gap-3"><div><span className="text-slate-500">CURP</span><div className="font-mono text-slate-200 mt-0.5">{ine.curp || 'N/A'}</div></div><div><span className="text-slate-500">RFC</span><div className="font-mono text-slate-200 mt-0.5">{ine.rfc || 'N/A'}</div></div></div>
+                    <div><span className="text-slate-500">Nacimiento</span><div className="text-slate-200 mt-0.5">{ine.fechaNacimiento || 'N/A'}</div></div>
+                    <div><span className="text-slate-500">Contacto</span><div className="text-slate-200 mt-0.5">{expediente.telefono || 'N/A'}{expediente.correo ? ' · ' + expediente.correo : ''}</div></div>
+                    <div><span className="text-slate-500">Domicilio</span><div className="text-slate-300 mt-0.5 line-clamp-2">{dom.domicilioCompleto || 'Sin domicilio registrado'}</div></div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl bg-[#0B1C38] border border-slate-800 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-red-500/15 flex items-center justify-center"><Car className="w-4 h-4 text-red-300" /></div>
+                    <div><div className="text-[11px] font-black text-white">Vehículo</div><div className="text-[9px] text-slate-500">{expediente.autoAno || ''}</div></div>
+                    <button type="button" onClick={() => setEditVehiculo((v) => !v)} className="ml-auto text-[9px] text-slate-400 px-2 py-1 rounded-md bg-slate-900 border border-slate-700">Editar</button>
+                  </div>
+                  <div className="p-4">
+                    <div className="flex items-center gap-3 mb-3"><div className="w-20 h-14 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center"><Car className="w-7 h-7 text-slate-600" /></div><div><div className="font-black text-white text-sm">{expediente.autoMarca} {expediente.autoModelo}</div><div className="text-[10px] text-slate-400">{expediente.autoAno} {expediente.autoVersion ? '· ' + expediente.autoVersion : ''}</div></div></div>
+                    <div className="grid grid-cols-2 gap-3 text-[10px]"><div><span className="text-slate-500">Precio</span><div className="text-slate-200 font-bold mt-0.5">$ {Number(expediente.autoPrecio || 0).toLocaleString('es-MX')}</div></div><div><span className="text-slate-500">Monto a financiar</span><div className="text-emerald-300 font-black mt-0.5">$ {Number(expediente.montoFinanciar || calcMontoFinanciar).toLocaleString('es-MX')}</div></div><div><span className="text-slate-500">Plazo</span><div className="text-slate-200 mt-0.5">{expediente.plazoMeses} meses</div></div><div><span className="text-slate-500">Enganche</span><div className="text-slate-200 mt-0.5">$ {Number(expediente.enganche || 0).toLocaleString('es-MX')}</div></div></div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl bg-[#0B1C38] border border-slate-800 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center"><DollarSign className="w-4 h-4 text-emerald-300" /></div>
+                    <div><div className="text-[11px] font-black text-white">Datos del Crédito</div><div className="text-[9px] text-slate-500">{financiera}</div></div>
+                    <button onClick={handleSaveTerms} disabled={isSaving} className="ml-auto text-[9px] text-white px-2 py-1 rounded-md bg-red-600 border border-red-500">{isSaving ? '...' : 'Guardar'}</button>
+                  </div>
+                  <div className="p-4 space-y-2.5 text-[10px]">
+                    <div className="flex justify-between"><span className="text-slate-500">Estatus</span><span className={"px-2 py-0.5 rounded-md border text-[9px] font-black " + statusTone}>{statusLabel[estatus] || estatus}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Monto a financiar</span><span className="text-emerald-300 font-black">$ {Number(expediente.montoFinanciar || calcMontoFinanciar).toLocaleString('es-MX')}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Plazo</span><span className="text-slate-200">{expediente.plazoMeses} meses</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Solicitud</span><span className="text-slate-200">{expediente.fechaCreacion ? new Date(expediente.fechaCreacion).toLocaleDateString('es-MX') : '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Actualización</span><span className="text-slate-200">{expediente.fechaActualizacion ? new Date(expediente.fechaActualizacion).toLocaleDateString('es-MX') : '—'}</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <section className="rounded-2xl bg-[#0B1C38] border border-slate-800 p-4">
+                <div className="flex items-center justify-between mb-3"><div><div className="text-[11px] font-black text-white">Documentos del Cliente</div><div className="text-[9px] text-slate-500">Vista rápida del expediente</div></div><span className="text-[9px] text-slate-500">{compactDocuments.filter((d) => d.file).length} con archivo</span></div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5">
+                  {compactDocuments.map((doc) => (
+                    <button key={doc.key} type="button" onClick={() => { if (doc.file) { setPreviewDocUrl(doc.file); setPreviewDocTitle(doc.title); } }} className="text-left rounded-xl bg-slate-950/60 border border-slate-800 hover:border-slate-600 overflow-hidden min-h-[118px]">
+                      <div className="h-14 bg-slate-900 flex items-center justify-center"><FileText className={"w-6 h-6 " + doc.tone} /></div>
+                      <div className="p-2"><div className="text-[9px] font-black text-slate-200 line-clamp-2">{doc.title}</div><div className="text-[8px] text-slate-500 mt-1 line-clamp-2">{doc.subtitle}</div><div className={"text-[8px] mt-2 font-bold " + (doc.file ? 'text-emerald-300' : 'text-slate-500')}>{doc.file ? doc.action : 'Sin archivo'}</div></div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </section>
+          )}
+
           {activeTab === 'detalle' && (
             <>
               {/* Dictamen panel */}
