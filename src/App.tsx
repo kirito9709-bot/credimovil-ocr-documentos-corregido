@@ -47,7 +47,13 @@ export default function App() {
           setIsAdminAuth(true);
           setAuthUser(res.user);
           localStorage.setItem('credimovil_auth_user', JSON.stringify(res.user));
-          // Recargar lotes autenticado para incluir usuarios del portal.
+          setShowLoginModal(false);
+          setShowLoteLoginModal(false);
+          setPendingAuthTab(null);
+          // Los usuarios de lote solo utilizan el nuevo portal de lote.
+          if (res.user.role === 'lote') {
+            setCurrentTab('loteportal');
+          }
           loadLotes();
         }
       })
@@ -75,6 +81,14 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    if (authUser?.role === 'lote') {
+      setShowLoginModal(false);
+      setPendingAuthTab(null);
+      if (currentTab !== 'loteportal') setCurrentTab('loteportal');
+    }
+  }, [authUser?.role, currentTab]);
+
   const loadLotes = async () => {
     try {
       const res = await api.getLotes();
@@ -87,20 +101,30 @@ export default function App() {
   };
 
   const handleAdminLoginSuccess = (user: any) => {
+    if (user?.role === 'lote') {
+      setShowLoginModal(false);
+      setPendingAuthTab(null);
+      setShowLoteLoginModal(true);
+      return;
+    }
     setIsAdminAuth(true);
     setAuthUser(user);
     loadLotes();
-    const destination = user?.role === 'lote' ? 'loteportal' : (pendingAuthTab || 'admin');
+    const destination = pendingAuthTab || 'admin';
     setPendingAuthTab(null);
     setShowLoginModal(false);
     setCurrentTab(destination as any);
   };
 
   const handleLoteLoginSuccess = (user: any) => {
+    if (user?.role !== 'lote') return;
     setIsAdminAuth(true);
     setAuthUser(user);
+    setShowLoginModal(false);
+    setPendingAuthTab(null);
     setShowLoteLoginModal(false);
     setCurrentTab('loteportal');
+    loadLotes();
   };
 
   const handleAdminLogout = async () => {
