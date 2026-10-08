@@ -154,9 +154,14 @@ export default function App() {
         onSelectTab={(tab) => {
           if (tab === 'lotes') {
             setShowLotesModal(true);
-          } else {
-            setCurrentTab(tab);
+            return;
           }
+          if (tab === 'admin' && !isAdminAuth) {
+            setCurrentTab('admin');
+            setShowLoginModal(true);
+            return;
+          }
+          setCurrentTab(tab);
         }}
         isAdminAuth={isAdminAuth}
         onOpenAdminAuth={() => setShowLoginModal(true)}
