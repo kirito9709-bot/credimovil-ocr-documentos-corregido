@@ -182,14 +182,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Desktop actions */}
           <div className="hidden md:flex items-center gap-2">
-            <button
-              onClick={() => selectTab('lotes')}
-              className="hidden lg:flex items-center gap-1.5 text-xs text-white/85 hover:text-white px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 transition"
-              title="Directorio de Lotes Asociados"
-            >
+            {authUser?.role !== 'lote' && (
+              <button
+                onClick={() => selectTab('lotes')}
+                className="hidden lg:flex items-center gap-1.5 text-xs text-white/85 hover:text-white px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 transition"
+                title="Directorio de Lotes Asociados"
+              >
               <Building2 className="w-3.5 h-3.5 text-red-400" />
               <span>{activeLoteCount} Lotes</span>
-            </button>
+              </button>
+            )}
 
             {isAdminAuth ? (
               <div className="flex items-center gap-2">
