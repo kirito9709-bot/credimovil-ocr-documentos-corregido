@@ -83,14 +83,6 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => {
-    if (authUser?.role === 'lote') {
-      setShowLoginModal(false);
-      setPendingAuthTab(null);
-      if (currentTab !== 'loteportal') setCurrentTab('loteportal');
-    }
-  }, [authUser?.role, currentTab]);
-
   const loadLotes = async () => {
     try {
       const res = await api.getLotes();
@@ -133,7 +125,10 @@ export default function App() {
     await api.logout();
     setIsAdminAuth(false);
     setAuthUser(null);
-    if (currentTab === 'admin') setCurrentTab('captura');
+    setShowLoginModal(false);
+    setShowLoteLoginModal(false);
+    setPendingAuthTab(null);
+    setCurrentTab('captura');
   };
 
   const handleExpedienteCreated = (newExp: ExpedienteCredito) => {
