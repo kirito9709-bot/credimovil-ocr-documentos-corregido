@@ -69,6 +69,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
       : 20;
   });
   const [notas, setNotas] = useState(expediente?.notasAsesor || '');
+  const [direccionEmpleo, setDireccionEmpleo] = useState(expediente?.direccionEmpleo || '');
   const [lotesDisponibles, setLotesDisponibles] = useState<LoteAuto[]>([]);
   const [nuevoLoteId, setNuevoLoteId] = useState(expediente?.loteId || '');
   const [editLote, setEditLote] = useState(false);
@@ -162,6 +163,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
         montoFinanciar: calcMontoFinanciar,
         mensualidadEstimada: calcMensualidad,
         notasAsesor: notas,
+        direccionEmpleo: direccionEmpleo.trim(),
       });
       if (res.success && res.expediente) {
         onUpdate(res.expediente);
@@ -261,6 +263,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
       basePrecio > 0 ? Math.min(100, Math.max(20, Math.round((baseEnganche / basePrecio) * 10000) / 100)) : 20
     );
     setNotas(expediente.notasAsesor || '');
+    setDireccionEmpleo(expediente.direccionEmpleo || '');
     setNuevoLoteId(expediente.loteId || '');
     setEditLote(false);
     setSaveSuccess(false);
@@ -515,7 +518,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                     </div>
                     <div>
                       <span className="text-slate-500">Dirección del empleo</span>
-                      <div className="text-slate-300 mt-1 line-clamp-2">{expediente.direccionEmpleo || 'No capturada'}</div>
+                      <div className="text-slate-300 mt-1 line-clamp-2">{direccionEmpleo || 'No capturada'}</div>
                     </div>
                     <div>
                       <span className="text-slate-500">Giro / actividad</span>
