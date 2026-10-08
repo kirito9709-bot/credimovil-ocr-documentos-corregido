@@ -268,6 +268,7 @@ export interface LoteUsuarioPortal {
 export interface LoteAuto {
   id: string;
   nombre: string;
+  parentLoteId?: string | null;
   contacto: string;
   telefono: string;
   correo: string;
