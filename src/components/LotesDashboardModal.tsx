@@ -143,7 +143,7 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
   }, [isOpen]);
 
   const selectedSublote = allLotes.find((l) => l.id === selectedSubloteId) || null;
-  const selectedChildIds = suballLotes.map((l) => l.id);
+  const selectedChildIds = sublotes.map((l) => l.id);
   const selectedScopeIds = selectedSubloteId
     ? [selectedSubloteId]
     : (selectedMainLote ? [selectedMainLote.id, ...selectedChildIds] : []);
@@ -318,7 +318,7 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
                 const directList = expedientes.filter((e) => scopeIds.includes(e.loteId || ''));
                 const creditCount = Number(lote.totalExpedientes) || directList.length;
                 const fundedCount = Number(lote.totalFondeados) || directList.filter((e) => e.estatus === 'FONDEADO').length;
-                const userCount = [...(lote.usuariosPortal || []), ...suballLotes.filter((s) => s.parentLoteId === lote.id).flatMap((s) => s.usuariosPortal || [])].filter((u: any, idx, arr) => u.activo !== false && arr.findIndex((x: any) => x.id === u.id) === idx).length;
+                const userCount = [...(lote.usuariosPortal || []), ...sublotes.filter((s) => s.parentLoteId === lote.id).flatMap((s) => s.usuariosPortal || [])].filter((u: any, idx, arr) => u.activo !== false && arr.findIndex((x: any) => x.id === u.id) === idx).length;
                 const active = selectedMainLote?.id === lote.id;
                 return (
                   <button key={lote.id} onClick={() => { setSelectedLoteId(lote.id); setSelectedSubloteId(''); }} className={'text-left rounded-xl border p-3 transition ' + (active ? 'border-red-500/50 bg-red-500/10 shadow-lg shadow-red-950/20' : 'border-slate-800 bg-slate-950/30 hover:border-slate-700')}>
@@ -357,9 +357,9 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
               {canManage && <button onClick={openCreateSublote} className='px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-[10px] font-black'><Plus className='w-3.5 h-3.5 inline mr-1' /> Agregar sublote</button>}
             </div>
             <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mt-3'>
-              {suballLotes.length === 0 ? (
+              {sublotes.length === 0 ? (
                 <div className='col-span-full rounded-xl border border-dashed border-slate-700 p-5 text-center text-[10px] text-slate-500'>Este lote principal todavía no tiene sublotes. Agrega Cumbres, San Pedro, Miguel Alemán, etc.</div>
-              ) : suballLotes.map((sub) => {
+              ) : sublotes.map((sub) => {
                 const directList = expedientes.filter((e) => e.loteId === sub.id);
                 const count = Number(sub.totalExpedientes) || directList.length;
                 const funded = Number(sub.totalFondeados) || directList.filter((e) => e.estatus === 'FONDEADO').length;
@@ -387,7 +387,7 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
                   <label className='text-[9px] uppercase text-slate-500'>Sublote</label>
                   <select value={selectedSubloteId} onChange={(e) => setSelectedSubloteId(e.target.value)} className='bg-slate-950 border border-slate-700 rounded-xl text-xs text-white px-3 py-2'>
                     <option value=''>Todos los sublotes</option>
-                    {suballLotes.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+                    {sublotes.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                   </select>
                   {canManage && <button onClick={openCreateSublote} className='px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-[10px] font-black'><Plus className='w-3 h-3 inline mr-1' /> Nuevo sublote</button>}
                 </div>
