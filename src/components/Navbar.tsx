@@ -153,14 +153,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>{authUser?.role === 'lote' ? 'Mi Portal' : 'Acceso Lote'}</span>
             </button>
             <div className="md:hidden mt-2 pt-2 border-t border-slate-800 grid grid-cols-2 gap-2">
-              {isAdminAuth ? (
+              {isAdminAuth && (
                 <button
                   onClick={onLogoutAdmin}
                   className="px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-xs font-bold text-white"
                 >
                   Cerrar sesión
                 </button>
-)}
+              )}
             </div>
           </nav>
 
