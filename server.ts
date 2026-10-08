@@ -2016,6 +2016,30 @@ app.get('/api/lote/expedientes', async (req, res) => {
 
   try {
     const all = (await getSupabaseExpedientes()) || [];
+
+    const { data: loteRow, error: loteError } = await supabase
+      .from('lotes')
+      .select('id,nombre,contacto,telefono,correo,direccion,ciudad,parent_lote_id,activo')
+      .eq('id', session.loteId)
+      .maybeSingle();
+
+    if (loteError) {
+      throw new Error('Supabase lote portal: ' + loteError.message);
+    }
+    if (!loteRow) {
+      return res.status(404).json({ success: false, message: 'El lote asociado al usuario no existe.' });
+    }
+
+    const { data: subRows, error: subError } = await supabase
+      .from('lotes')
+      .select('id,nombre,telefono,correo,direccion,ciudad,parent_lote_id,activo')
+      .eq('parent_lote_id', session.loteId)
+      .order('nombre', { ascending: true });
+
+    if (subError) {
+      throw new Error('Supabase sublotes portal: ' + subError.message);
+    }
+
     const expedientes = all
       .filter((e: any) => e.loteId === session.loteId)
       .map((e: any) => {
@@ -2040,7 +2064,30 @@ app.get('/api/lote/expedientes', async (req, res) => {
         };
       });
 
-    res.json({ success: true, expedientes });
+    const active = expedientes.filter((e: any) => e.estatus !== 'RECHAZADO');
+    const totalMonto = active.reduce((sum: number, e: any) => sum + (Number(e.montoFinanciar) || 0), 0);
+    const fondeados = expedientes.filter((e: any) => e.estatus === 'FONDEADO');
+    const montoFondeado = fondeados.reduce((sum: number, e: any) => sum + (Number(e.montoFinanciar) || 0), 0);
+
+    res.json({
+      success: true,
+      lote: loteRow,
+      sublotes: subRows || [],
+      estadisticas: {
+        total: expedientes.length,
+        enAnalisis: expedientes.filter((e: any) => e.estatus === 'NUEVO' || e.estatus === 'EN_EVALUACION').length,
+        preAprobados: expedientes.filter((e: any) => e.estatus === 'PRE_APROBADO').length,
+        aprobados: expedientes.filter((e: any) => e.estatus === 'APROBADO').length,
+        contratos: expedientes.filter((e: any) => e.estatus === 'CONTRATO').length,
+        gps: expedientes.filter((e: any) => e.estatus === 'GPS').length,
+        fondeo: expedientes.filter((e: any) => ['FONDEO','FONDEO_PENDIENTE','FONDEO_REVISION'].includes(e.estatus)).length,
+        fondeados: fondeados.length,
+        rechazados: expedientes.filter((e: any) => e.estatus === 'RECHAZADO').length,
+        montoActivo: totalMonto,
+        montoFondeado,
+      },
+      expedientes,
+    });
   } catch (error: any) {
     console.error('GET /api/lote/expedientes error:', error);
     res.status(500).json({ success: false, message: error?.message || 'No se pudieron cargar tus créditos.' });
