@@ -193,7 +193,7 @@ function getBearerToken(req: any) {
   return cookie ? decodeURIComponent(cookie.slice('credimovil_session='.length)) : '';
 }
 
-function getSession(req: any) {
+async function getSession(req: any) {
   const token = getBearerToken(req);
   if (!token) return null;
   const session = sessions.get(token);
@@ -228,7 +228,7 @@ function getSession(req: any) {
 }
 
 function requireAuth(req: any, res: any) {
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) {
     res.status(401).json({ success: false, message: 'Debes iniciar sesión para acceder a este recurso.' });
     return null;
@@ -2211,7 +2211,7 @@ app.get('/api/lote/expedientes', async (req, res) => {
 
 // Chat directo Lote <-> Equipo CrediMóvil.
 app.get('/api/lotes/:loteId/chat', async (req, res) => {
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) return res.status(401).json({ success: false, message: 'Debes iniciar sesión.' });
 
   const loteId = session.role === 'lote' ? session.loteId : String(req.params.loteId || '');
@@ -2245,7 +2245,7 @@ app.get('/api/lotes/:loteId/chat', async (req, res) => {
 });
 
 app.post('/api/lotes/:loteId/chat', async (req, res) => {
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) return res.status(401).json({ success: false, message: 'Debes iniciar sesión.' });
 
   const loteId = session.role === 'lote' ? session.loteId : String(req.params.loteId || '');
@@ -2345,7 +2345,7 @@ app.post('/api/expedientes/:id/comentarios', async (req, res) => {
 // 4. Lotes de Autos
 app.get('/api/lotes', async (req, res) => {
   try {
-    const session = getSession(req);
+    const session = await getSession(req);
     const lotes = (await getSupabaseLotes()) || [];
 
     if (!session) {
