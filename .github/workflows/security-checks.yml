@@ -36,5 +36,8 @@ jobs:
       - name: Build production frontend
         run: npm run build
 
+      - name: Verify XLSX export structure and formula safety
+        run: npm run test:xlsx-export
+
       - name: Audit installed dependencies
         run: npm audit --audit-level=high
