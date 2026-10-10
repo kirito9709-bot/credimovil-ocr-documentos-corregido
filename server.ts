@@ -2640,7 +2640,7 @@ app.post('/api/expedientes/by-folio', async (req, res) => {
     if (error) throw new Error(`Supabase expediente por folio: ${error.message}`);
     if (!row) return res.status(404).json({ success: false, message: 'No se encontró ningún expediente con ese folio.' });
 
-    if (!row.pin_fondeo || pin !== String(row.pin_fondeo).trim()) {
+    if (!row.pin_fondeo || !safeEqualText(pin, String(row.pin_fondeo).trim())) {
       return res.status(401).json({ success: false, message: 'Folio o PIN incorrectos.' });
     }
 
@@ -2649,9 +2649,7 @@ app.post('/api/expedientes/by-folio', async (req, res) => {
     if (!item) return res.status(404).json({ success: false, message: 'No se pudo reconstruir el expediente.' });
 
     const publicExpediente = {
-      id: row.id,
       folio: item.folio,
-      pinFondeo: undefined,
       estatus: item.estatus,
       loteNombre: item.loteNombre,
       clienteNombre: item.ine?.nombreCompleto || item.ine?.nombre || '',
@@ -2660,13 +2658,17 @@ app.post('/api/expedientes/by-folio', async (req, res) => {
       autoAno: item.autoAno,
       montoFinanciar: item.montoFinanciar,
       plazoMeses: item.plazoMeses,
-      tasaInteresAnual: item.tasaInteresAnual,
       mensualidadEstimada: item.mensualidadEstimada,
       financieraAsignada: item.financieraAsignada,
-      documentosFondeo: item.documentosFondeo || [],
-      cuentaClabeLote: item.cuentaClabeLote || '',
-      bancoLote: item.bancoLote || '',
-    };
+      // Expose checklist status only, never signed URLs, PINs or lot bank details.
+      documentosFondeo: (item.documentosFondeo || []).map((doc: any) => ({
+        id: doc.id,
+        nombre: doc.nombre,
+        descripcion: doc.descripcion,
+        requerido: Boolean(doc.requerido),
+        estatus: doc.estatus,
+      })),
+    };;
 
     res.setHeader('Cache-Control', 'no-store, private');
     res.json({ success: true, expediente: publicExpediente });
