@@ -19,6 +19,8 @@ import {
   Target,
   TrendingUp,
   UserRoundCheck,
+  UserRoundPlus,
+  Trash2,
   X,
   XCircle,
   CircleDollarSign,
@@ -83,6 +85,12 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
     nombre: '', contacto: '', telefono: '', correo: '', direccion: '', ciudad: '', cuentaClabeDefault: '', bancoDefault: '', parentLoteId: ''
   });
   const [saving, setSaving] = useState(false);
+  const [showUsersModal, setShowUsersModal] = useState(false);
+  const [loteUsers, setLoteUsers] = useState<any[]>([]);
+  const [userForm, setUserForm] = useState({ loteId: '', nombre: '', username: '', password: '' });
+  const [userSaving, setUserSaving] = useState(false);
+  const [userFeedback, setUserFeedback] = useState('');
+  const [usersError, setUsersError] = useState('');
 
   const allLotes = dashboardLotes.length ? dashboardLotes : lotes;
   const mainLotes = useMemo(() => allLotes.filter((l) => !l.parentLoteId), [allLotes]);
@@ -106,6 +114,70 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
     if (!sublotes.some((l) => l.id === selectedSubloteId)) setSelectedSubloteId('');
   }, [sublotes, selectedSubloteId]);
 
+  const loadLoteUsers = async () => {
+    if (!canManage) return;
+    setUsersError('');
+    try {
+      const response = await api.getLoteUsuarios();
+      if (response?.success && Array.isArray(response.usuarios)) {
+        setLoteUsers(response.usuarios);
+      } else {
+        setLoteUsers([]);
+      }
+    } catch (error: any) {
+      setUsersError(error?.message || 'No se pudieron cargar los usuarios de los lotes autorizados.');
+    }
+  };
+
+  const openUsersModal = () => {
+    const defaultLoteId = selectedSubloteId || selectedLoteId || allLotes[0]?.id || '';
+    setUserForm({ loteId: defaultLoteId, nombre: '', username: '', password: '' });
+    setUserFeedback('');
+    setUsersError('');
+    setShowUsersModal(true);
+    void loadLoteUsers();
+  };
+
+  const createLotPortalUser = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!userForm.loteId || !userForm.nombre.trim() || !userForm.username.trim() || userForm.password.length < 8) {
+      setUserFeedback('Selecciona un lote y completa los datos. La contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+    setUserSaving(true);
+    setUserFeedback('');
+    setUsersError('');
+    try {
+      const response = await api.createLoteUsuario({
+        loteId: userForm.loteId,
+        nombre: userForm.nombre.trim(),
+        username: userForm.username.trim().toLowerCase(),
+        password: userForm.password,
+      });
+      setUserFeedback(response?.message || 'Usuario del lote creado correctamente.');
+      setUserForm((current) => ({ ...current, nombre: '', username: '', password: '' }));
+      await loadLoteUsers();
+      await loadDashboard();
+    } catch (error: any) {
+      setUserFeedback(error?.message || 'No se pudo crear el usuario del lote.');
+    } finally {
+      setUserSaving(false);
+    }
+  };
+
+  const deleteLotPortalUser = async (user: any) => {
+    if (!confirm('¿Eliminar el acceso de ' + (user.nombre || user.username) + ' al portal del lote?')) return;
+    setUsersError('');
+    try {
+      await api.deleteLoteUsuario(user.id);
+      setUserFeedback('Acceso eliminado correctamente.');
+      await loadLoteUsers();
+      await loadDashboard();
+    } catch (error: any) {
+      setUsersError(error?.message || 'No se pudo eliminar el acceso.');
+    }
+  };
+
   const loadDashboard = async () => {
     if (!isOpen) return;
     setLoading(true);
@@ -124,6 +196,15 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
         setExpedientes(Array.isArray(expedientesRes.expedientes) ? expedientesRes.expedientes : []);
       } else {
         setExpedientes([]);
+      }
+
+      if (canManage) {
+        try {
+          const usersRes = await api.getLoteUsuarios();
+          if (usersRes?.success && Array.isArray(usersRes.usuarios)) setLoteUsers(usersRes.usuarios);
+        } catch (userError: any) {
+          setUsersError(userError?.message || 'No se pudieron cargar los usuarios de lotes.');
+        }
       }
     } catch (error: any) {
       // Even if the detailed expediente query fails, keep the server-side
@@ -294,6 +375,7 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
               <div><h1 className='text-xl sm:text-2xl font-black text-white'>Panel de Lotes</h1><p className='text-[11px] text-slate-400'>Gestiona tus lotes, sublotes, usuarios, colocación y fondeos desde un solo panel.</p></div>
             </div>
             <div className='flex items-center gap-2'>
+              {canManage && <button onClick={openUsersModal} className='px-3 py-2 rounded-xl bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/25 text-blue-200 text-xs font-black inline-flex items-center gap-1.5'><UserRoundPlus className='w-4 h-4' /> Usuarios de lotes</button>}
               {canManage && <button onClick={openCreate} className='px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-black inline-flex items-center gap-1.5'><Plus className='w-4 h-4' /> Nuevo lote</button>}
               <button onClick={loadDashboard} className='p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300' title='Actualizar'><RefreshCw className={loading ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} /></button>
               <button onClick={onClose} className='p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white' title='Cerrar panel'><X className='w-4 h-4' /></button>
@@ -318,7 +400,10 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
                 const directList = expedientes.filter((e) => scopeIds.includes(e.loteId || ''));
                 const creditCount = Number(lote.totalExpedientes) || directList.length;
                 const fundedCount = Number(lote.totalFondeados) || directList.filter((e) => e.estatus === 'FONDEADO').length;
-                const userCount = [...(lote.usuariosPortal || []), ...sublotes.filter((s) => s.parentLoteId === lote.id).flatMap((s) => s.usuariosPortal || [])].filter((u: any, idx, arr) => u.activo !== false && arr.findIndex((x: any) => x.id === u.id) === idx).length;
+                const sublotIds = allLotes.filter((s) => s.parentLoteId === lote.id).map((s) => s.id);
+                const apiUsers = loteUsers.filter((u: any) => u.activo !== false && (u.lote_id === lote.id || sublotIds.includes(u.lote_id)));
+                const embeddedUsers = [...(lote.usuariosPortal || []), ...sublotes.filter((s) => s.parentLoteId === lote.id).flatMap((s) => s.usuariosPortal || [])].filter((u: any, idx, arr) => u.activo !== false && arr.findIndex((x: any) => x.id === u.id) === idx);
+                const userCount = new Set([...apiUsers.map((u: any) => u.id), ...embeddedUsers.map((u: any) => u.id)]).size;
                 const active = selectedMainLote?.id === lote.id;
                 return (
                   <button key={lote.id} onClick={() => { setSelectedLoteId(lote.id); setSelectedSubloteId(''); }} className={'text-left rounded-xl border p-3 transition ' + (active ? 'border-red-500/50 bg-red-500/10 shadow-lg shadow-red-950/20' : 'border-slate-800 bg-slate-950/30 hover:border-slate-700')}>
@@ -508,6 +593,57 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
           <p className='text-[10px] text-slate-600 flex items-center gap-2'><CalendarDays className='w-3.5 h-3.5' /> Las gráficas utilizan los créditos almacenados. El inventario físico por vehículo no está registrado actualmente en el modelo de datos.</p>
         </main>
       </div>
+
+      {showUsersModal && canManage && (
+        <div className='fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4'>
+          <div className='w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-3xl bg-[#0B1730] border border-blue-500/25 shadow-2xl'>
+            <div className='px-5 py-4 border-b border-slate-800 flex items-center justify-between gap-3'>
+              <div className='flex items-center gap-3'>
+                <div className='w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center'><UserRoundPlus className='w-5 h-5 text-blue-300' /></div>
+                <div><h3 className='text-base font-black text-white'>Usuarios de acceso a lotes</h3><p className='text-[10px] text-slate-400'>Crea cuentas independientes para que cada lotero entre a su propio portal.</p></div>
+              </div>
+              <button type='button' onClick={() => setShowUsersModal(false)} className='p-2 rounded-xl bg-slate-900 text-slate-400 hover:text-white' title='Cerrar'><X className='w-4 h-4' /></button>
+            </div>
+
+            <div className='p-5 space-y-5'>
+              {usersError && <div className='rounded-xl border border-rose-500/25 bg-rose-500/10 text-rose-200 text-xs p-3'>{usersError}</div>}
+              {userFeedback && <div className='rounded-xl border border-emerald-500/25 bg-emerald-500/10 text-emerald-200 text-xs p-3'>{userFeedback}</div>}
+
+              <form onSubmit={createLotPortalUser} className='rounded-2xl border border-slate-800 bg-slate-950/35 p-4 space-y-3'>
+                <div><h4 className='text-sm font-black text-white'>Crear usuario</h4><p className='text-[10px] text-slate-500 mt-1'>El usuario podrá acceder únicamente al lote asignado y sus funciones autorizadas.</p></div>
+                <label className='block space-y-1'>
+                  <span className='text-[10px] text-slate-400 uppercase font-bold'>Lote asignado *</span>
+                  <select required value={userForm.loteId} onChange={(e) => setUserForm((v) => ({ ...v, loteId: e.target.value }))} className='w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white'>
+                    <option value=''>Selecciona lote o sublote</option>
+                    {allLotes.map((lote) => <option key={lote.id} value={lote.id}>{lote.parentLoteId ? '↳ ' : ''}{lote.nombre}{lote.parentLoteId ? ' · Sublote' : ' · Principal'}</option>)}
+                  </select>
+                </label>
+                <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
+                  <label className='block space-y-1'><span className='text-[10px] text-slate-400 uppercase font-bold'>Nombre del usuario *</span><input required maxLength={100} value={userForm.nombre} onChange={(e) => setUserForm((v) => ({ ...v, nombre: e.target.value }))} placeholder='Nombre del lotero' className='w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white' /></label>
+                  <label className='block space-y-1'><span className='text-[10px] text-slate-400 uppercase font-bold'>Usuario de acceso *</span><input required minLength={3} maxLength={30} pattern='[A-Za-z0-9._-]+' value={userForm.username} onChange={(e) => setUserForm((v) => ({ ...v, username: e.target.value.toLowerCase() }))} placeholder='ej. lote.cumbres' className='w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white' /></label>
+                  <label className='block space-y-1'><span className='text-[10px] text-slate-400 uppercase font-bold'>Contraseña *</span><input required minLength={8} maxLength={128} type='password' autoComplete='new-password' value={userForm.password} onChange={(e) => setUserForm((v) => ({ ...v, password: e.target.value }))} placeholder='Mínimo 8 caracteres' className='w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white' /></label>
+                </div>
+                <div className='flex justify-end'><button type='submit' disabled={userSaving || allLotes.length === 0} className='px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-black inline-flex items-center gap-2'><UserRoundPlus className='w-4 h-4' />{userSaving ? 'Creando...' : 'Crear acceso al lote'}</button></div>
+              </form>
+
+              <section className='space-y-2'>
+                <div className='flex items-center justify-between gap-3'><div><h4 className='text-sm font-black text-white'>Accesos existentes</h4><p className='text-[10px] text-slate-500'>Solo se muestran los usuarios de los lotes que puedes administrar.</p></div><button type='button' onClick={loadLoteUsers} className='px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 text-[10px] font-bold inline-flex items-center gap-1.5'><RefreshCw className='w-3 h-3' /> Actualizar</button></div>
+                {loteUsers.length === 0 ? <div className='rounded-xl border border-slate-800 bg-slate-950/30 p-5 text-center text-xs text-slate-500'>Aún no hay usuarios de portal en tus lotes.</div> : (
+                  <div className='rounded-xl border border-slate-800 overflow-hidden divide-y divide-slate-800'>
+                    {loteUsers.map((user: any) => {
+                      const loteNombre = user.loteNombre || allLotes.find((l) => l.id === user.lote_id)?.nombre || 'Lote asignado';
+                      return <div key={user.id} className='p-3 flex flex-wrap items-center gap-3 justify-between'>
+                        <div className='min-w-0'><div className='text-xs font-bold text-white'>{user.nombre} <span className='text-blue-300 font-mono'>@{user.username}</span></div><div className='text-[10px] text-slate-500'>{loteNombre} · {user.activo === false ? 'Inactivo' : 'Acceso activo'}</div></div>
+                        <button type='button' onClick={() => deleteLotPortalUser(user)} className='px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[10px] font-bold inline-flex items-center gap-1.5'><Trash2 className='w-3.5 h-3.5' /> Eliminar acceso</button>
+                      </div>;
+                    })}
+                  </div>
+                )}
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <div className='fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4'>
