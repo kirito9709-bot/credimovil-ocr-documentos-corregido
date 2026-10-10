@@ -2615,15 +2615,15 @@ app.post('/api/expedientes/by-folio', async (req, res) => {
     return res.status(429).json({ success: false, message: 'Demasiados intentos. Espera 15 minutos e inténtalo nuevamente.' });
   }
 
-  const { folio } = req.body;
+  const folio = req.body?.folio;
   const pin = String(req.body?.pinFondeo || '').trim();
 
   if (!folio) {
     return res.status(400).json({ success: false, message: 'Debe ingresar el folio del expediente.' });
   }
 
-  if (!/^\d{4}$/.test(pin)) {
-    return res.status(401).json({ success: false, message: 'Debes ingresar el PIN de 4 dígitos del expediente.' });
+  if (!/^\d{4,8}$/.test(pin)) {
+    return res.status(401).json({ success: false, message: 'Debes ingresar el PIN de 4 a 8 dígitos del expediente.' });
   }
 
   try {
@@ -2645,7 +2645,9 @@ app.post('/api/expedientes/by-folio', async (req, res) => {
     if (!item) return res.status(404).json({ success: false, message: 'No se pudo reconstruir el expediente.' });
 
     const publicExpediente = {
+      id: row.id,
       folio: item.folio,
+      pinFondeo: undefined,
       estatus: item.estatus,
       loteNombre: item.loteNombre,
       clienteNombre: item.ine?.nombreCompleto || item.ine?.nombre || '',
@@ -2656,15 +2658,10 @@ app.post('/api/expedientes/by-folio', async (req, res) => {
       plazoMeses: item.plazoMeses,
       mensualidadEstimada: item.mensualidadEstimada,
       financieraAsignada: item.financieraAsignada,
-      // Expose checklist status only, never signed URLs, PINs or lot bank details.
-      documentosFondeo: (item.documentosFondeo || []).map((doc: any) => ({
-        id: doc.id,
-        nombre: doc.nombre,
-        descripcion: doc.descripcion,
-        requerido: Boolean(doc.requerido),
-        estatus: doc.estatus,
-      })),
-    };
+      documentosFondeo: item.documentosFondeo || [],
+      cuentaClabeLote: item.cuentaClabeLote || '',
+      bancoLote: item.bancoLote || '',
+    };;
 
     res.setHeader('Cache-Control', 'no-store, private');
     res.json({ success: true, expediente: publicExpediente });
@@ -2682,23 +2679,41 @@ app.post('/api/expedientes', async (req, res) => {
 
   try {
     const body = req.body || {};
-    if (Buffer.byteLength(JSON.stringify(body), 'utf8') > 10 * 1024 * 1024) {
+    if (Buffer.byteLength(JSON.stringify(body), 'utf8') > 20 * 1024 * 1024) {
       return res.status(413).json({ success: false, message: 'El expediente supera el tamaño permitido.' });
     }
-    const folio = await generateNextExpedienteFolio();
 
-    const pinFondeo = randomBytes(4).readUInt32BE(0) % 9000 + 1000;
+    let selectedLote: any = null;
+    if (body.loteId) {
+      const requestedLoteId = String(body.loteId).trim();
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedLoteId)) {
+        return res.status(400).json({ success: false, message: 'El lote seleccionado no es válido.' });
+      }
+      const { data: loteRecord, error: loteError } = await supabase
+        .from('lotes')
+        .select('id,nombre,contacto,telefono,correo,cuenta_clabe_default,banco_default,activo')
+        .eq('id', requestedLoteId)
+        .maybeSingle();
+      if (loteError) throw new Error('No se pudo validar el lote seleccionado.');
+      if (!loteRecord || loteRecord.activo === false) {
+        return res.status(400).json({ success: false, message: 'El lote seleccionado no existe o está inactivo.' });
+      }
+      selectedLote = loteRecord;
+    }
+
+    const folio = await generateNextExpedienteFolio();
+    const pinFondeo = String(randomInt(10_000_000, 100_000_000));
     const now = new Date().toISOString();
     const esLegalizado = Boolean(body.esVehiculoLegalizado);
-    const docsFondeo = body.documentosFondeo || getCredimovilDefaultDocs(esLegalizado);
+    const docsFondeo = getCredimovilDefaultDocs(esLegalizado);
 
     const newExpediente = {
-      id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      id: randomUUID(),
       folio,
-      pinFondeo: String(pinFondeo),
+      pinFondeo,
       fechaCreacion: now,
       fechaActualizacion: now,
-      estatus: body.estatus || 'NUEVO',
+      estatus: 'NUEVO',
       ine: body.ine || {},
       fotoIneFrente: body.fotoIneFrente || '',
       fotoIneReverso: body.fotoIneReverso || '',
@@ -2727,11 +2742,11 @@ app.post('/api/expedientes', async (req, res) => {
       dependientesEconomicos: Number(body.dependientesEconomicos) || 0,
       estadoCivil: body.estadoCivil || '',
       referenciasPersonales: body.referenciasPersonales || [],
-      loteId: body.loteId || null,
-      loteNombre: body.loteNombre || 'Directo / Asesor',
-      asesorLoteContacto: body.asesorLoteContacto || '',
-      telefonoLote: body.telefonoLote || '',
-      correoLote: body.correoLote || '',
+      loteId: selectedLote?.id || null,
+      loteNombre: selectedLote?.nombre || 'Directo / Asesor',
+      asesorLoteContacto: selectedLote?.contacto || '',
+      telefonoLote: selectedLote?.telefono || '',
+      correoLote: selectedLote?.correo || '',
       autoMarca: body.autoMarca || '',
       autoModelo: body.autoModelo || '',
       autoAno: Number(body.autoAno) || new Date().getFullYear(),
@@ -2748,9 +2763,9 @@ app.post('/api/expedientes', async (req, res) => {
       mensualidadEstimada: calculateCredimovilMonthlyPayment(Number(body.montoFinanciar) || 0, Number(body.plazoMeses) || 48),
       financieraAsignada: body.financieraAsignada || 'CrediMóvil Auto',
       documentosFondeo: docsFondeo,
-      cuentaClabeLote: body.cuentaClabeLote || '',
-      bancoLote: body.bancoLote || '',
-      notasAsesor: body.notasAsesor || 'Expediente registrado en CrediMóvil para análisis.',
+      cuentaClabeLote: selectedLote?.cuenta_clabe_default || '',
+      bancoLote: selectedLote?.banco_default || '',
+      notasAsesor: 'Expediente registrado en CrediMóvil para análisis.',
     };
 
     await upsertExpedienteSupabase(newExpediente);
