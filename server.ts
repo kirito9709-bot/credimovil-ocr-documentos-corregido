@@ -50,6 +50,18 @@ function isRateLimited(key: string, limit = 8, windowMs = 15 * 60 * 1000) {
   return current.count > limit;
 }
 
+// Bound the in-memory limiter map so random attacker-supplied keys cannot grow it forever.
+app.use((req, _res, next) => {
+  if (loginAttempts.size > 10000) {
+    const now = Date.now();
+    for (const [key, value] of loginAttempts) {
+      if (value.resetAt <= now) loginAttempts.delete(key);
+      if (loginAttempts.size <= 8000) break;
+    }
+  }
+  next();
+});
+
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
