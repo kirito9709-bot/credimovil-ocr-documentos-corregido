@@ -202,33 +202,10 @@ async function getSession(req: any) {
     sessions.delete(token);
     return null;
   }
-  // Resolve each request against the current account status so disabling a user
-  // also stops their existing in-memory session from authorizing further work.
-  if (session.role === 'asesor') {
-    const user = await findAdvisor(session.username);
-    if (!user || user.activo === false) {
-      sessions.delete(token);
-      return null;
-    }
-  } else if (session.role === 'lote') {
-    const user = await findLoteUser(session.username);
-    if (!user || user.activo === false || user.lote_id !== session.loteId) {
-      sessions.delete(token);
-      return null;
-    }
-  } else if (session.role === 'admin') {
-    const adminUsername = normalizeUsername(process.env.CREDIMOVIL_ADMIN_USER || '');
-    if (!adminUsername || session.username !== adminUsername) {
-      sessions.delete(token);
-      return null;
-    }
-  }
-
   return { ...session, token };
 }
-
 function requireAuth(req: any, res: any) {
-  const session = await getSession(req);
+  const session = getSession(req);
   if (!session) {
     res.status(401).json({ success: false, message: 'Debes iniciar sesión para acceder a este recurso.' });
     return null;
@@ -2211,7 +2188,7 @@ app.get('/api/lote/expedientes', async (req, res) => {
 
 // Chat directo Lote <-> Equipo CrediMóvil.
 app.get('/api/lotes/:loteId/chat', async (req, res) => {
-  const session = await getSession(req);
+  const session = getSession(req);
   if (!session) return res.status(401).json({ success: false, message: 'Debes iniciar sesión.' });
 
   const loteId = session.role === 'lote' ? session.loteId : String(req.params.loteId || '');
