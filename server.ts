@@ -2432,6 +2432,28 @@ app.get('/api/lotes', async (req, res) => {
       };
     });
 
+    if (session.role === 'asesor') {
+      // Advisors need lot contact details to handle cases, but not bank-account defaults
+      // or the list of usernames for the lot portal.
+      const advisorLotes = lotesWithStats.map((l: any) => ({
+        id: l.id,
+        nombre: l.nombre,
+        parentLoteId: l.parentLoteId || null,
+        contacto: l.contacto || '',
+        telefono: l.telefono || '',
+        correo: l.correo || '',
+        direccion: l.direccion || '',
+        ciudad: l.ciudad || 'México',
+        activo: l.activo !== false,
+        created_at: l.created_at,
+        totalExpedientes: l.totalExpedientes,
+        totalFondeados: l.totalFondeados,
+        totalMontoFinanciado: l.totalMontoFinanciado,
+        totalMontoFondeado: l.totalMontoFondeado,
+      }));
+      return res.json({ success: true, lotes: advisorLotes });
+    }
+
     res.json({ success: true, lotes: lotesWithStats });
   } catch (error: any) {
     console.error('GET /api/lotes error:', error);
@@ -2702,7 +2724,7 @@ app.post('/api/expedientes', async (req, res) => {
 
   try {
     const body = req.body || {};
-    if (Buffer.byteLength(JSON.stringify(body), 'utf8') > 20 * 1024 * 1024) {
+    if (Buffer.byteLength(JSON.stringify(body), 'utf8') > 21 * 1024 * 1024) {
       return res.status(413).json({ success: false, message: 'El expediente supera el tamaño permitido.' });
     }
 
