@@ -2304,6 +2304,33 @@ app.get('/api/lotes', async (req, res) => {
       return res.json({ success: true, lotes: lotes.map(sanitizeLoteForPublic) });
     }
 
+    // Deny by default: this directory includes contact, bank and portal-user data.
+    // Only admin/authorized staff can receive the full operational lot directory.
+    if (session.role !== 'admin' && session.role !== 'asesor') {
+      if (session.role !== 'lote' || !session.loteId) {
+        return res.status(403).json({ success: false, message: 'No tienes acceso a este recurso.' });
+      }
+
+      const ownLote = lotes.find((l: any) => l.id === session.loteId);
+      if (!ownLote) return res.status(403).json({ success: false, message: 'No tienes acceso a este recurso.' });
+
+      const allowedIds = new Set<string>([ownLote.id]);
+      if (!ownLote.parentLoteId) {
+        for (const child of lotes) {
+          if (child.parentLoteId === ownLote.id) allowedIds.add(child.id);
+        }
+      }
+
+      // Lot users receive only sanitized identity/address for their authorized group;
+      // never expose bank-account defaults or portal usernames/metadata.
+      return res.json({
+        success: true,
+        lotes: lotes
+          .filter((l: any) => allowedIds.has(l.id))
+          .map((l: any) => ({ id: l.id, nombre: l.nombre, ciudad: l.ciudad, parentLoteId: l.parentLoteId || null })),
+      });
+    }
+
     const expedientes = (await getSupabaseExpedientes()) || [];
     const directStats = new Map<string, { expedientes: number; fondeados: number; monto: number; montoFondeado: number }>();
     for (const exp of expedientes) {
