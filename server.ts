@@ -2279,7 +2279,7 @@ app.post('/api/lotes/:loteId/chat', async (req, res) => {
 
 // Comentarios y solicitudes ligadas al folio.
 app.get('/api/expedientes/:id/comentarios', async (req, res) => {
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) return res.status(401).json({ success: false, message: 'Debes iniciar sesión.' });
 
   try {
@@ -2305,7 +2305,7 @@ app.get('/api/expedientes/:id/comentarios', async (req, res) => {
 });
 
 app.post('/api/expedientes/:id/comentarios', async (req, res) => {
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) return res.status(401).json({ success: false, message: 'Debes iniciar sesión.' });
 
   const comentario = String(req.body?.comentario || '').trim();
