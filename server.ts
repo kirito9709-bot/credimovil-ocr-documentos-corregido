@@ -3230,8 +3230,11 @@ No agregues texto fuera del JSON. No inventes datos.`;
 });
 
 function xmlEscape(value: unknown) {
-  return String(value ?? '')
-    .replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]/g, '')
+  const safeText = String(value ?? '').split('').filter((character) => {
+    const code = character.charCodeAt(0);
+    return code === 9 || code === 10 || code === 13 || code >= 32;
+  }).join('');
+  return safeText
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
