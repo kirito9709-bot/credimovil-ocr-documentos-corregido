@@ -572,7 +572,7 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
                             <Camera className="w-3.5 h-3.5" />
                             <input
                               type="file"
-                              accept="image/*"
+                              accept="image/png,image/jpeg,image/webp"
                               capture="environment"
                               className="hidden"
                               onChange={(e) => handleFileUpload(e, doc.id)}
