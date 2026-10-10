@@ -79,8 +79,8 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
       return;
     }
 
-    if (!/^\d{4}$/.test(p)) {
-      setError('Ingresa el PIN de 4 dígitos que te proporcionó CrediMóvil.');
+    if (!/^\d{4,8}$/.test(p)) {
+      setError('Ingresa el PIN de 4 a 8 dígitos que te proporcionó CrediMóvil.');
       return;
     }
 
@@ -244,7 +244,8 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
               <Lock className="w-4 h-4 text-slate-300 absolute left-3.5 top-3.5" />
               <input
                 type="password"
-                maxLength={4}
+                maxLength={8}
+                inputMode="numeric"
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
                 placeholder="••••"
@@ -256,7 +257,7 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
           <div className="sm:col-span-3">
             <button
               type="submit"
-              disabled={isLoading || !folioInput.trim() || !/^\d{4}$/.test(pinInput.trim())}
+              disabled={isLoading || !folioInput.trim() || !/^\d{4,8}$/.test(pinInput.trim())}
               className="w-full py-2.5 px-4 bg-[#E3262F] hover:bg-[#C81E2B] disabled:opacity-50 text-white font-bold rounded-xl text-sm transition shadow-lg shadow-red-900/25 flex items-center justify-center gap-2"
             >
               {isLoading ? (
