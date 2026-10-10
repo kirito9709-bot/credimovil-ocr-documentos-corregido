@@ -188,7 +188,6 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
 
   const loadAdvisors = async () => {
     if (!canAdministerAdvisors) return;
-    setAdvisorFeedback('');
     try {
       const response = await api.getAsesores();
       setAdvisors(response?.success && Array.isArray(response.asesores) ? response.asesores : []);
