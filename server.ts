@@ -2765,6 +2765,15 @@ app.delete('/api/lotes/:id', async (req, res) => {
       return res.status(409).json({ success: false, message: 'No puedes eliminar un lote que ya tiene expedientes asociados.' });
     }
 
+    const { count: portalUsersCount, error: portalUsersError } = await supabase
+      .from('lote_usuarios')
+      .select('id', { count: 'exact', head: true })
+      .eq('lote_id', req.params.id);
+    if (portalUsersError) throw new Error('No se pudieron validar los usuarios de portal asociados.');
+    if ((portalUsersCount || 0) > 0) {
+      return res.status(409).json({ success: false, message: 'Este lote tiene usuarios de portal asignados. Elimina primero sus accesos desde “Usuarios de lotes” y vuelve a intentarlo.' });
+    }
+
     const { error } = await supabase.from('lotes').delete().eq('id', req.params.id);
     if (error) throw new Error(`Supabase lote: ${error.message}`);
 
