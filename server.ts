@@ -3087,6 +3087,9 @@ app.get('/api/expedientes/:id/documentos/zip', async (req, res) => {
     const expedientes = (await getSupabaseExpedientes()) || [];
     const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
     if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    if (!(await canAccessExpediente(session, exp))) {
+      return res.status(403).json({ success: false, message: 'No tienes permiso para descargar los documentos de este expediente.' });
+    }
     const row = await getSupabaseExpedienteRowByFolio(exp.folio);
     if (!row?.id) return res.status(404).json({ success: false, message: 'No se encontró el expediente en Supabase.' });
     const { data: docs, error } = await supabase.from('documentos').select('id,tipo,nombre,storage_path,mime_type,tamano').eq('expediente_id', row.id).order('created_at', { ascending: true });
@@ -3283,6 +3286,9 @@ app.post('/api/expedientes/:id/estados-cuenta/ocr', async (req, res) => {
     const expedientes = (await getSupabaseExpedientes()) || [];
     const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
     if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    if (!(await canAccessExpediente(session, exp))) {
+      return res.status(403).json({ success: false, message: 'No tienes permiso para procesar los estados de cuenta de este expediente.' });
+    }
     const row = await getSupabaseExpedienteRowByFolio(exp.folio);
     if (!row?.id) return res.status(404).json({ success: false, message: 'No se encontró el expediente en Supabase.' });
     const requestedTypes = Array.isArray(req.body?.tipos) && req.body.tipos.length ? req.body.tipos.map((t: any) => String(t)) : ['ESTADO_CUENTA_MES1','ESTADO_CUENTA_MES2','ESTADO_CUENTA_MES3'];
@@ -3388,11 +3394,15 @@ No agregues texto fuera del JSON. No inventes datos.`;
 });
 
 app.get('/api/expedientes/:id/estados-cuenta/excel', async (req, res) => {
-  if (!requireStaff(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
   try {
     const expedientes = (await getSupabaseExpedientes()) || [];
     const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
     if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    if (!(await canAccessExpediente(session, exp))) {
+      return res.status(403).json({ success: false, message: 'No tienes permiso para descargar el análisis de este expediente.' });
+    }
 
     const analysis = exp.estadosCuentaAnalisis;
     if (!analysis?.movimientos?.length) {
@@ -3454,7 +3464,8 @@ app.get('/api/expedientes/:id/estados-cuenta/excel', async (req, res) => {
 });
 
 app.post('/api/expedientes/:id/documentos', async (req, res) => {
-  if (!requireStaff(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
 
   try {
     const { tipo, archivoData, archivoNombre, displayName } = req.body || {};
@@ -3486,6 +3497,9 @@ app.post('/api/expedientes/:id/documentos', async (req, res) => {
     const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
     if (!exp) {
       return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    }
+    if (!(await canAccessExpediente(session, exp))) {
+      return res.status(403).json({ success: false, message: 'No tienes permiso para cargar documentos a este expediente.' });
     }
 
     const row = await getSupabaseExpedienteRowByFolio(exp.folio);
@@ -3522,12 +3536,16 @@ app.post('/api/expedientes/:id/documentos', async (req, res) => {
 });
 
 app.post('/api/expedientes/:id/fondeo-doc', async (req, res) => {
-  if (!requireStaff(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
   try {
     const { docId, archivoUrl, archivoNombre, archivoTamano, subidoPor } = req.body;
     const expedientes = (await getSupabaseExpedientes()) || [];
     const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
     if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    if (!(await canAccessExpediente(session, exp))) {
+      return res.status(403).json({ success: false, message: 'No tienes permiso para cargar documentos de fondeo en este expediente.' });
+    }
 
     if (!exp.documentosFondeo) exp.documentosFondeo = getCredimovilDefaultDocs(Boolean(exp.esVehiculoLegalizado));
     const doc = exp.documentosFondeo.find((d: any) => d.id === docId);
@@ -3564,12 +3582,16 @@ app.post('/api/expedientes/:id/fondeo-doc', async (req, res) => {
 });
 
 app.put('/api/expedientes/:id/fondeo-doc-review', async (req, res) => {
-  if (!requireStaff(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
   try {
     const { docId, estatus, observaciones } = req.body;
     const expedientes = (await getSupabaseExpedientes()) || [];
     const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
     if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    if (!(await canAccessExpediente(session, exp))) {
+      return res.status(403).json({ success: false, message: 'No tienes permiso para revisar documentos de este expediente.' });
+    }
 
     const doc = exp.documentosFondeo?.find((d: any) => d.id === docId);
     if (!doc) return res.status(404).json({ success: false, message: 'Documento no encontrado.' });
