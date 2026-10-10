@@ -20,14 +20,21 @@ const PORT = Number(process.env.PORT) || 3000;
 
 // Parse JSON/form requests before any API route.
 // Keep the limit high enough for document uploads sent as data URIs.
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Keep global JSON parsing far below the prior 50 MB cap. File-upload/OCR routes
+// should enforce their own explicit limits and accepted MIME types.
+app.use(express.json({ limit: '12mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb', parameterLimit: 200 }));
 
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 
 function requestIp(req: any) {
-  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return forwarded || req.ip || req.socket?.remoteAddress || 'unknown';
+  // Do not blindly trust client-supplied X-Forwarded-For. If Render's proxy
+  // configuration is explicitly verified, set TRUST_PROXY=true below and use req.ip.
+  return String(req.ip || req.socket?.remoteAddress || 'unknown');
+}
+
+if (String(process.env.TRUST_PROXY || '').toLowerCase() === 'true') {
+  app.set('trust proxy', 1);
 }
 
 function isRateLimited(key: string, limit = 8, windowMs = 15 * 60 * 1000) {
@@ -48,8 +55,15 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Permissions-Policy', 'camera=(self), microphone=()');
+  // Browser-side defense-in-depth for a same-origin Vite bundle.
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+  );
+  // Render serves this app over HTTPS. Avoid preload/includeSubDomains until every hostname is confirmed HTTPS-only.
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000');
   if (req.path.startsWith('/api/')) {
-    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Cache-Control', 'no-store, private');
   }
   next();
 });
@@ -1459,16 +1473,9 @@ function sanitizeLoteForPublic(lote: any) {
 }
 
 // 1. Health
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    name: 'CrediMóvil OCR & Fondeo API',
-    geminiConfigured: Boolean(GEMINI_API_KEY),
-    geminiKeySource: process.env.GEMINI_API_KEY ? 'GEMINI_API_KEY' : (process.env.GOOGLE_API_KEY ? 'GOOGLE_API_KEY' : 'none'),
-    supabaseConfigured: Boolean(supabase),
-    supabaseUrl: SUPABASE_URL || null,
-  });
+app.get('/api/health', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store, private');
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // 2. Authentication and Advisor Management
@@ -1548,6 +1555,7 @@ app.post('/api/auth/logout', (req, res) => {
   const token = getBearerToken(req);
   if (token) sessions.delete(token);
   res.setHeader('Set-Cookie', 'credimovil_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
+  res.setHeader('Cache-Control', 'no-store, private');
   res.json({ success: true });
 });
 
@@ -2531,7 +2539,7 @@ app.get('/api/expedientes', async (req, res) => {
     res.json({ success: true, count: list.length, expedientes: list });
   } catch (error: any) {
     console.error('GET /api/expedientes error:', error);
-    res.status(500).json({ success: false, message: error?.message || 'No se pudieron cargar los expedientes.' });
+    res.status(500).json({ success: false, message: 'No se pudieron cargar los expedientes.' });
   }
 });
 
