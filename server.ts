@@ -391,15 +391,29 @@ async function canManageLote(session: any, loteId: string) {
   if (session.role === 'lote') return session.loteId === loteId;
   if (session.role !== 'asesor' || !supabase) return false;
 
+  const username = normalizeUsername(session.username);
   const { data, error } = await supabase
     .from('lotes')
-    .select('owner_username')
+    .select('id,parent_lote_id,owner_username')
     .eq('id', loteId)
     .maybeSingle();
 
   if (error) throw new Error(`No se pudo validar el propietario del lote: ${error.message}`);
-  return Boolean(data) &&
-    normalizeUsername(data.owner_username || '') === normalizeUsername(session.username);
+  if (!data) return false;
+  if (normalizeUsername(data.owner_username || '') === username) return true;
+
+  // Compatibility for older sublots created before owner_username existed:
+  // inherit access from their parent only when that parent is owned by this advisor.
+  if (data.parent_lote_id) {
+    const { data: parent, error: parentError } = await supabase
+      .from('lotes')
+      .select('owner_username')
+      .eq('id', data.parent_lote_id)
+      .maybeSingle();
+    if (parentError) throw new Error('No se pudo validar el propietario del lote principal.');
+    return Boolean(parent) && normalizeUsername(parent.owner_username || '') === username;
+  }
+  return false;
 }
 
 async function canAccessExpediente(session: any, expediente: any) {
