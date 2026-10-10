@@ -2141,6 +2141,7 @@ app.get('/api/lote/expedientes', async (req, res) => {
         fondeo: expedientes.filter((e: any) => ['FONDEO','FONDEO_PENDIENTE','FONDEO_REVISION'].includes(e.estatus)).length,
         fondeados: fondeados.length,
         rechazados: expedientes.filter((e: any) => e.estatus === 'RECHAZADO').length,
+        cancelados: expedientes.filter((e: any) => e.estatus === 'CANCELADO').length,
         montoActivo: totalMonto,
         montoFondeado,
       },
@@ -3266,6 +3267,7 @@ app.get('/api/stats', async (req, res) => {
       e.estatus === 'FONDEO' || e.estatus === 'FONDEO_PENDIENTE' || e.estatus === 'FONDEO_REVISION' || e.estatus === 'FONDEADO'
     ).length;
     const fondeados = expedientes.filter((e: any) => e.estatus === 'FONDEADO').length;
+    const cancelados = expedientes.filter((e: any) => e.estatus === 'CANCELADO').length;
     const montoTotalFinanciado = expedientes
       .filter((e: any) => e.estatus === 'FONDEADO' || e.estatus === 'APROBADO')
       .reduce((acc: number, curr: any) => acc + (Number(curr.montoFinanciar) || 0), 0);
@@ -3282,6 +3284,7 @@ app.get('/api/stats', async (req, res) => {
         gps,
         fondeo,
         fondeados,
+        cancelados,
         montoTotalFinanciado,
       },
     });

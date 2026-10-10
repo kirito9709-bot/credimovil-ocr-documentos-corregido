@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import {
   Activity,
+  Ban,
   BarChart3,
   Bell,
   CalendarDays,
@@ -32,6 +33,7 @@ interface DashboardStats {
   fondeo: number;
   fondeoRevision: number;
   fondeados: number;
+  cancelados: number;
   montoTotalFinanciado: number;
 }
 
@@ -59,6 +61,7 @@ const statusLabel = (estatus: string) => {
   if (estatus === 'FONDEO_PENDIENTE' || estatus === 'FONDEO_REVISION') return 'Fondeo';
   if (estatus === 'FONDEADO') return 'Fondeado';
   if (estatus === 'RECHAZADO') return 'Rechazado';
+  if (estatus === 'CANCELADO') return 'Cancelado';
   if (estatus === 'APROBADO') return 'Aprobado';
   return estatus;
 };
@@ -72,6 +75,7 @@ const statusClass = (estatus: string) => {
   if (estatus === 'FONDEO' || estatus === 'FONDEO_PENDIENTE' || estatus === 'FONDEO_REVISION') return 'bg-orange-500/15 text-orange-300 border-orange-500/25';
   if (estatus === 'FONDEADO') return 'bg-teal-500/15 text-teal-300 border-teal-500/25';
   if (estatus === 'RECHAZADO') return 'bg-rose-500/15 text-rose-300 border-rose-500/25';
+  if (estatus === 'CANCELADO') return 'bg-slate-500/15 text-slate-300 border-slate-500/25';
   return 'bg-slate-800 text-slate-300 border-slate-700';
 };
 
@@ -122,6 +126,7 @@ export const AdvisorDashboard: React.FC<Props> = ({
     { label: 'GPS', count: stats.gps, color: '#06B6D4' },
     { label: 'Fondeo', count: stats.fondeo, color: '#F59E0B' },
     { label: 'Rechazado', count: rejectedCount, color: '#F43F5E' },
+    { label: 'Cancelado', count: stats.cancelados, color: '#94A3B8' },
   ];
   const statusTotal = Math.max(1, statusRows.reduce((sum, row) => sum + row.count, 0));
 
@@ -177,6 +182,7 @@ export const AdvisorDashboard: React.FC<Props> = ({
     { label: 'Aprobados', value: stats.aprobados, caption: 'Listos para avanzar', icon: CheckCircle2, tone: 'emerald' },
     { label: 'En Fondeo', value: stats.fondeo, caption: 'Seguimiento de fondeo', icon: CircleDollarSign, tone: 'orange' },
     { label: 'Rechazados', value: rejectedCount, caption: 'Casos rechazados', icon: XCircle, tone: 'rose' },
+    { label: 'Cancelados', value: stats.cancelados, caption: 'Créditos cancelados', icon: Ban, tone: 'slate' },
   ];
 
   const toneMap: Record<string, { text: string; bg: string; border: string }> = {
@@ -185,6 +191,7 @@ export const AdvisorDashboard: React.FC<Props> = ({
     emerald: { text: 'text-emerald-300', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
     orange: { text: 'text-orange-300', bg: 'bg-orange-500/10', border: 'border-orange-500/20' },
     rose: { text: 'text-rose-300', bg: 'bg-rose-500/10', border: 'border-rose-500/20' },
+    slate: { text: 'text-slate-300', bg: 'bg-slate-500/10', border: 'border-slate-500/20' },
   };
 
   const donut = (() => {
@@ -214,7 +221,7 @@ export const AdvisorDashboard: React.FC<Props> = ({
           </div>
         </section>
 
-        <section className='grid grid-cols-2 xl:grid-cols-5 gap-2.5'>
+        <section className='grid grid-cols-2 xl:grid-cols-6 gap-2.5'>
           {kpis.map((card) => {
             const tone = toneMap[card.tone];
             const Icon = card.icon;
@@ -261,7 +268,7 @@ export const AdvisorDashboard: React.FC<Props> = ({
         </section>
 
         <section className='rounded-2xl border border-slate-800 bg-[#0D1830] overflow-hidden'>
-          <div className='px-4 py-3 border-b border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3'><div className='flex items-center gap-2'><Search className='w-4 h-4 text-slate-500' /><span className='text-sm font-black text-white'>Buscar y filtrar expedientes</span></div><div className='flex flex-wrap gap-2 w-full lg:w-auto'><div className='relative min-w-[240px] flex-1'><Search className='w-4 h-4 text-slate-500 absolute left-3 top-2.5' /><input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder='Cliente, CURP, folio, auto o lote...' className='w-full py-2.5 pl-9 pr-3 bg-slate-950 border border-slate-700 rounded-xl text-white text-[11px]' /></div><select value={selectedLoteId} onChange={(e) => setSelectedLoteId(e.target.value)} className='py-2.5 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white text-[11px]'><option value='TODOS'>Todos los lotes</option>{lotes.map((lote) => <option key={lote.id} value={lote.id}>{lote.nombre}</option>)}</select><select value={selectedEstatus} onChange={(e) => setSelectedEstatus(e.target.value)} className='py-2.5 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white text-[11px]'><option value='TODOS'>Todos los estatus</option><option value='NUEVO'>Nuevo</option><option value='PRE_APROBADO'>Pre-aprobado</option><option value='EN_EVALUACION'>En análisis</option><option value='APROBADO'>Aprobado</option><option value='CONTRATO'>Contrato</option><option value='GPS'>GPS</option><option value='FONDEO'>Fondeo</option><option value='RECHAZADO'>Rechazado</option></select></div></div>
+          <div className='px-4 py-3 border-b border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3'><div className='flex items-center gap-2'><Search className='w-4 h-4 text-slate-500' /><span className='text-sm font-black text-white'>Buscar y filtrar expedientes</span></div><div className='flex flex-wrap gap-2 w-full lg:w-auto'><div className='relative min-w-[240px] flex-1'><Search className='w-4 h-4 text-slate-500 absolute left-3 top-2.5' /><input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder='Cliente, CURP, folio, auto o lote...' className='w-full py-2.5 pl-9 pr-3 bg-slate-950 border border-slate-700 rounded-xl text-white text-[11px]' /></div><select value={selectedLoteId} onChange={(e) => setSelectedLoteId(e.target.value)} className='py-2.5 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white text-[11px]'><option value='TODOS'>Todos los lotes</option>{lotes.map((lote) => <option key={lote.id} value={lote.id}>{lote.nombre}</option>)}</select><select value={selectedEstatus} onChange={(e) => setSelectedEstatus(e.target.value)} className='py-2.5 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white text-[11px]'><option value='TODOS'>Todos los estatus</option><option value='NUEVO'>Nuevo</option><option value='PRE_APROBADO'>Pre-aprobado</option><option value='EN_EVALUACION'>En análisis</option><option value='APROBADO'>Aprobado</option><option value='CONTRATO'>Contrato</option><option value='GPS'>GPS</option><option value='FONDEO'>Fondeo</option><option value='RECHAZADO'>Rechazado</option><option value='CANCELADO'>Cancelado</option></select></div></div>
           <div className='hidden md:block overflow-x-auto'><table className='w-full text-left text-[11px]'><thead className='bg-slate-950/40 text-[9px] uppercase tracking-wider text-slate-500'><tr><th className='px-4 py-3'>Folio</th><th className='px-4 py-3'>Cliente</th><th className='px-4 py-3'>Vehículo</th><th className='px-4 py-3'>Monto</th><th className='px-4 py-3'>Estatus</th><th className='px-4 py-3'>Fecha</th><th className='px-4 py-3 text-right'>Acciones</th></tr></thead><tbody className='divide-y divide-slate-800/70'>{expedientes.map((exp) => <tr key={exp.id} className='hover:bg-white/[0.03] cursor-pointer' onClick={() => onOpenExpediente(exp)}><td className='px-4 py-3 font-mono text-red-300 font-bold'>{exp.folio}</td><td className='px-4 py-3'><div className='font-bold text-white truncate max-w-[180px]'>{exp.ine?.nombreCompleto || exp.ine?.nombre || 'Sin nombre'}</div><div className='text-[9px] text-slate-500'>{exp.loteNombre || 'Sin lote'}</div></td><td className='px-4 py-3'><div className='text-slate-200'>{exp.autoMarca} {exp.autoModelo}</div><div className='text-[9px] text-slate-500'>{exp.autoAno}</div></td><td className='px-4 py-3 font-black text-emerald-300'><span>$</span>{(exp.montoFinanciar || 0).toLocaleString('es-MX')}</td><td className='px-4 py-3'><span className={'inline-flex px-2 py-1 rounded-full text-[9px] font-bold border ' + statusClass(exp.estatus)}>{statusLabel(exp.estatus)}</span></td><td className='px-4 py-3 text-slate-400'>{dateLabel(exp.fechaCreacion)}</td><td className='px-4 py-3 text-right' onClick={(event) => event.stopPropagation()}><div className='flex justify-end gap-1'><button onClick={() => onOpenExpediente(exp)} className='p-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-300'><Eye className='w-3.5 h-3.5' /></button><button onClick={() => onOpenPrint(exp)} className='p-1.5 rounded-lg bg-slate-900 border border-slate-700 text-red-300'><Printer className='w-3.5 h-3.5' /></button><button className='p-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-400'><MoreVertical className='w-3.5 h-3.5' /></button></div></td></tr>)}</tbody></table></div>
           <div className='md:hidden divide-y divide-slate-800'>{expedientes.map((exp) => <button key={exp.id} onClick={() => onOpenExpediente(exp)} className='w-full p-4 text-left'><div className='flex items-center justify-between gap-3'><div><div className='font-mono text-red-300 font-black text-xs'>{exp.folio}</div><div className='text-sm font-bold text-white mt-1'>{exp.ine?.nombreCompleto || exp.ine?.nombre || 'Sin nombre'}</div></div><div className='text-right font-black text-emerald-300'><span>$</span>{(exp.montoFinanciar || 0).toLocaleString('es-MX')}</div></div><div className='text-[10px] text-slate-500 mt-1'>{exp.autoMarca} {exp.autoModelo} · {exp.autoAno} · {exp.loteNombre || 'Sin lote'}</div></button>)}</div>
         </section>

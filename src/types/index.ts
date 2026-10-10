@@ -41,7 +41,8 @@ export type EstatusCredito =
   | 'FONDEO_PENDIENTE'
   | 'FONDEO_REVISION'
   | 'FONDEADO'
-  | 'RECHAZADO';
+  | 'RECHAZADO'
+  | 'CANCELADO';
 
 export type EstatusDocumentoFondeo = 'PENDIENTE' | 'SUBIDO' | 'APROBADO' | 'RECHAZADO';
 

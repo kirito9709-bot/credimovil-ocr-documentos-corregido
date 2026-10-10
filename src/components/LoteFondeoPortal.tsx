@@ -299,6 +299,8 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                         : expediente.estatus === 'APROBADO' || expediente.estatus === 'FONDEO_REVISION'
                         ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        : expediente.estatus === 'CANCELADO'
+                        ? 'bg-slate-500/20 text-slate-300 border border-slate-500/30'
                         : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                     }`}
                   >
@@ -308,6 +310,7 @@ export const LoteFondeoPortal: React.FC<LoteFondeoPortalProps> = ({
                     {expediente.estatus === 'EN_EVALUACION' && 'En Análisis de Crédito'}
                     {expediente.estatus === 'NUEVO' && 'Solicitud Registrada'}
                     {expediente.estatus === 'RECHAZADO' && 'Crédito No Aprobado'}
+                    {expediente.estatus === 'CANCELADO' && 'Crédito Cancelado'}
                   </span>
                 </div>
 

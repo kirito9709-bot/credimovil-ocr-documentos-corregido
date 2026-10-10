@@ -360,6 +360,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
     FONDEO_REVISION: 'Fondeo en revisión',
     FONDEADO: 'Fondeado',
     RECHAZADO: 'Rechazado',
+    CANCELADO: 'Cancelado',
   };
 
   const statusTone =
@@ -368,6 +369,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
     estatus === 'PRE_APROBADO' ? 'bg-violet-500/15 text-violet-300 border-violet-500/25' :
     ['FONDEO', 'FONDEO_REVISION', 'GPS'].includes(estatus) ? 'bg-amber-500/15 text-amber-300 border-amber-500/25' :
     estatus === 'RECHAZADO' ? 'bg-rose-500/15 text-rose-300 border-rose-500/25' :
+    estatus === 'CANCELADO' ? 'bg-slate-500/15 text-slate-300 border-slate-500/25' :
     'bg-slate-800 text-slate-300 border-slate-700';
 
   const compactDocuments = [
@@ -609,6 +611,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                       <option value="FONDEO_REVISION">FONDEO EN REVISIÓN</option>
                       <option value="FONDEADO">FONDEADO / DISPERSADO</option>
                       <option value="RECHAZADO">RECHAZADO</option>
+                      <option value="CANCELADO">CANCELADO</option>
                     </select>
                   </div>
 
