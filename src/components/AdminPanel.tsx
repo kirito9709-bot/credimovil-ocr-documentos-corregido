@@ -73,6 +73,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     fondeo: 0,
     fondeoRevision: 0,
     fondeados: 0,
+    cancelados: 0,
     montoTotalFinanciado: 0,
   });
 
@@ -121,6 +122,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           fondeo: Number(statsRes.stats.fondeo) || 0,
           fondeoRevision: Number(statsRes.stats.fondeoRevision) || 0,
           fondeados: Number(statsRes.stats.fondeados) || 0,
+          cancelados: Number(statsRes.stats.cancelados) || 0,
           montoTotalFinanciado: Number(statsRes.stats.montoTotalFinanciado) || 0,
         });
       }
