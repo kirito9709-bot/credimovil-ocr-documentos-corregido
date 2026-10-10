@@ -57,6 +57,7 @@ type LotePortalStats = {
   fondeo: number;
   fondeados: number;
   rechazados: number;
+  cancelados: number;
   montoActivo: number;
   montoFondeado: number;
 };
@@ -100,6 +101,7 @@ const EMPTY_STATS: LotePortalStats = {
   fondeo: 0,
   fondeados: 0,
   rechazados: 0,
+  cancelados: 0,
   montoActivo: 0,
   montoFondeado: 0,
 };
@@ -116,6 +118,7 @@ const statusLabel: Record<string, string> = {
   FONDEO_REVISION: 'Fondeo en revisión',
   FONDEADO: 'Fondeado',
   RECHAZADO: 'Rechazado',
+  CANCELADO: 'Cancelado',
 };
 
 const money = (value: number) => '$' + Math.round(value || 0).toLocaleString('es-MX') + ' MXN';
@@ -123,6 +126,7 @@ const money = (value: number) => '$' + Math.round(value || 0).toLocaleString('es
 const statusClass = (value: string) => {
   if (value === 'FONDEADO') return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25';
   if (value === 'RECHAZADO') return 'bg-rose-500/15 text-rose-300 border-rose-500/25';
+  if (value === 'CANCELADO') return 'bg-slate-500/15 text-slate-300 border-slate-500/25';
   if (value === 'APROBADO') return 'bg-blue-500/15 text-blue-300 border-blue-500/25';
   if (value === 'PRE_APROBADO') return 'bg-violet-500/15 text-violet-300 border-violet-500/25';
   if (['FONDEO', 'FONDEO_PENDIENTE', 'FONDEO_REVISION'].includes(value)) return 'bg-orange-500/15 text-orange-300 border-orange-500/25';
@@ -218,6 +222,7 @@ export const LotePortal: React.FC<LotePortalProps> = ({ authUser }) => {
     { label: 'Contrato', count: serverStats.contratos, color: '#3B82F6' },
     { label: 'Fondeo', count: serverStats.fondeo + serverStats.gps, color: '#8B5CF6' },
     { label: 'Rechazados', count: serverStats.rechazados, color: '#F43F5E' },
+    { label: 'Cancelados', count: serverStats.cancelados, color: '#94A3B8' },
   ];
   const donutTotal = Math.max(1, statusRows.reduce((sum, item) => sum + item.count, 0));
   let donutCursor = 0;
