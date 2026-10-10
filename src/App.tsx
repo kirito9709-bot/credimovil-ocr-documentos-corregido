@@ -66,7 +66,8 @@ export default function App() {
         loadLotes();
       });
 
-    // Check URL parameters for direct link e.g. /?tab=fondeo&folio=EXP-2026-1042&pin=1234
+    // Support direct links, but immediately remove the PIN from the address bar/history
+    // so it is less likely to leak through screenshots, copied URLs or browser history.
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get('tab');
     const folioParam = params.get('folio');
@@ -77,6 +78,10 @@ export default function App() {
     }
     if (pinParam) {
       setUrlPin(pinParam);
+      params.delete('pin');
+      const remainingQuery = params.toString();
+      const safeUrl = window.location.pathname + (remainingQuery ? `?${remainingQuery}` : '') + window.location.hash;
+      window.history.replaceState({}, document.title, safeUrl);
     }
     if (tabParam === 'fondeo' || tabParam === 'admin' || tabParam === 'captura' || tabParam === 'cotizar' || tabParam === 'lotesdashboard') {
       setCurrentTab(tabParam as any);
