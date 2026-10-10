@@ -1,8 +1,10 @@
--- CrediMóvil: promoción segura del usuario DANY y aislamiento por propietario de lotes.
--- Ejecutar en Supabase SQL Editor ANTES de desplegar el código que depende de estas columnas.
--- Las filas antiguas de lotes quedan con owner_username NULL porque la versión anterior
--- no guardaba quién las creó. Así no se asignan por error datos de otro asesor a DANY.
--- Los lotes sin propietario solo serán administrables por cuentas admin hasta asignar propietario.
+-- CrediMóvil: migración para roles y aislamiento por propietario de lotes.
+-- Ejecutar en Supabase SQL Editor ANTES de desplegar el código que usa estas columnas.
+-- IMPORTANTE: el administrador principal puede estar configurado en Render mediante
+-- CREDIMOVIL_ADMIN_USER y CREDIMOVIL_ADMIN_PASSWORD. En ese caso NO necesita existir
+-- como fila en public.asesores. Esta migración no crea ni cambia contraseñas.
+-- Los lotes antiguos quedan con owner_username NULL porque antes no se guardaba
+-- quién los creó; así no se atribuyen datos históricos al asesor equivocado.
 
 begin;
 
@@ -27,7 +29,8 @@ alter table public.lotes
 create index if not exists lotes_owner_username_idx
   on public.lotes (lower(owner_username));
 
--- Ensure there is exactly one account whose login username is DANY/dany.
+-- Si Dany también existe como asesor de base de datos, promuévelo.
+-- Si no existe, se conserva el administrador configurado en Render.
 do $$
 declare
   dany_count integer;
@@ -36,31 +39,36 @@ begin
   from public.asesores
   where lower(username) = 'dany';
 
-  if dany_count = 0 then
-    raise exception 'No se encontró un usuario asesor con username DANY. Verifica el nombre de usuario antes de ejecutar esta migración.';
-  end if;
-
   if dany_count > 1 then
     raise exception 'Hay más de un usuario cuyo username coincide con DANY ignorando mayúsculas. Corrige el duplicado antes de ejecutar esta migración.';
+  elsif dany_count = 1 then
+    update public.asesores
+    set username = lower(username),
+        rol = 'admin'
+    where lower(username) = 'dany';
+  else
+    raise notice 'No existe DANY en public.asesores. Es correcto si el administrador principal está configurado en Render mediante CREDIMOVIL_ADMIN_USER y CREDIMOVIL_ADMIN_PASSWORD.';
   end if;
 end $$;
 
--- Normalize the login name so it matches the server's normalized usernames.
-update public.asesores
-set username = lower(username)
-where lower(username) = 'dany';
-
--- Promote DANY to admin. Existing password_hash remains unchanged.
-update public.asesores
-set rol = 'admin'
-where username = 'dany';
-
 commit;
 
--- Verify the result after execution:
-select id, username, nombre, rol, activo
-from public.asesores
-where lower(username) = 'dany';
+-- Verificación: devuelve un estado claro aunque Dany no tenga fila en public.asesores.
+select case
+  when exists (select 1 from public.asesores where lower(username) = 'dany')
+    then 'DANY tiene una fila en public.asesores y fue promovido a admin'
+  else 'DANY no tiene fila en public.asesores; el administrador debe autenticarse con las variables CREDIMOVIL_ADMIN_USER y CREDIMOVIL_ADMIN_PASSWORD de Render'
+end as estado_administrador;
+
+select
+  exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'asesores' and column_name = 'rol'
+  ) as columna_rol_creada,
+  exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'lotes' and column_name = 'owner_username'
+  ) as columna_owner_username_creada;
 
 select id, nombre, owner_username, parent_lote_id, created_at
 from public.lotes
