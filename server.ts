@@ -2816,10 +2816,10 @@ app.post('/api/expedientes', async (req, res) => {
       estadoCivil: body.estadoCivil || '',
       referenciasPersonales: body.referenciasPersonales || [],
       loteId: selectedLote?.id || null,
-      loteNombre: selectedLote?.nombre || 'Directo / Asesor',
-      asesorLoteContacto: selectedLote?.contacto || '',
-      telefonoLote: selectedLote?.telefono || '',
-      correoLote: selectedLote?.correo || '',
+      loteNombre: selectedLote?.nombre || String(body.loteNombre || '').trim().slice(0, 120) || 'Directo / Asesor',
+      asesorLoteContacto: selectedLote?.contacto || String(body.asesorLoteContacto || '').trim().slice(0, 120),
+      telefonoLote: selectedLote?.telefono || String(body.telefonoLote || '').trim().slice(0, 40),
+      correoLote: selectedLote?.correo || String(body.correoLote || '').trim().slice(0, 254),
       autoMarca: body.autoMarca || '',
       autoModelo: body.autoModelo || '',
       autoAno: Number(body.autoAno) || new Date().getFullYear(),
@@ -2838,7 +2838,7 @@ app.post('/api/expedientes', async (req, res) => {
       documentosFondeo: docsFondeo,
       cuentaClabeLote: selectedLote?.cuenta_clabe_default || '',
       bancoLote: selectedLote?.banco_default || '',
-      notasAsesor: 'Expediente registrado en CrediMóvil para análisis.',
+      notasAsesor: String(body.notasAsesor || 'Expediente registrado en CrediMóvil para análisis.').trim().slice(0, 2000),
     };
 
     await upsertExpedienteSupabase(newExpediente);
