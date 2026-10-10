@@ -334,13 +334,27 @@ async function supabaseLoteUserList() {
 
 async function findAdvisor(username: string) {
   if (!supabase) return null;
-  const { data, error } = await supabase
+
+  // Read the persisted role, falling back to "asesor" only while the role migration
+  // has not been applied. This keeps the app available during a staged migration.
+  let result = await supabase
     .from('asesores')
-    .select('id,nombre,username,password_hash,activo,created_at')
+    .select('id,nombre,username,password_hash,activo,rol,created_at')
     .eq('username', username)
     .maybeSingle();
-  if (error) throw new Error(`Supabase asesores: ${error.message}`);
-  return data || null;
+
+  if (result.error && /column .*rol.* does not exist|rol.*does not exist/i.test(result.error.message)) {
+    result = await supabase
+      .from('asesores')
+      .select('id,nombre,username,password_hash,activo,created_at')
+      .eq('username', username)
+      .maybeSingle();
+    if (result.error) throw new Error(`Supabase asesores: ${result.error.message}`);
+    return result.data ? { ...result.data, rol: 'asesor' } : null;
+  }
+
+  if (result.error) throw new Error(`Supabase asesores: ${result.error.message}`);
+  return result.data || null;
 }
 
 async function supabaseAdvisorList() {
@@ -365,9 +379,33 @@ function mapSupabaseLote(row: any) {
     ciudad: row.ciudad || 'México',
     cuentaClabeDefault: row.cuenta_clabe_default || '',
     bancoDefault: row.banco_default || '',
+    ownerUsername: normalizeUsername(row.owner_username || ''),
     activo: row.activo !== false,
     created_at: row.created_at,
   };
+}
+
+async function canManageLote(session: any, loteId: string) {
+  if (!session || !loteId) return false;
+  if (session.role === 'admin') return true;
+  if (session.role === 'lote') return session.loteId === loteId;
+  if (session.role !== 'asesor' || !supabase) return false;
+
+  const { data, error } = await supabase
+    .from('lotes')
+    .select('owner_username')
+    .eq('id', loteId)
+    .maybeSingle();
+
+  if (error) throw new Error(`No se pudo validar el propietario del lote: ${error.message}`);
+  return Boolean(data) &&
+    normalizeUsername(data.owner_username || '') === normalizeUsername(session.username);
+}
+
+async function canAccessExpediente(session: any, expediente: any) {
+  if (session?.role === 'admin') return true;
+  const loteId = String(expediente?.loteId || expediente?.lote_id || '').trim();
+  return loteId ? canManageLote(session, loteId) : false;
 }
 
 function extractMimeAndBase64(dataUriOrRaw: string): { mimeType: string; base64: string } {
@@ -1560,7 +1598,10 @@ app.post('/api/auth/login', async (req, res) => {
   } else {
     const user = await findAdvisor(username);
     if (user && user.activo !== false && verifyPassword(password, user.password_hash)) {
-      account = { role: 'asesor', nombre: user.nombre || username };
+      account = {
+        role: user.rol === 'admin' ? 'admin' : 'asesor',
+        nombre: user.nombre || username,
+      };
     } else if (supabase) {
       const loteUser = await findLoteUser(username);
       if (loteUser && loteUser.activo !== false && verifyPassword(password, loteUser.password_hash)) {
