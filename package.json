@@ -10,7 +10,8 @@
     "preview": "vite build && tsx server.ts",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "postinstall": "vite build"
+    "postinstall": "vite build",
+    "test:xlsx-export": "tsx scripts/test-xlsx-export.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
