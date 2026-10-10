@@ -2668,7 +2668,7 @@ app.post('/api/expedientes/by-folio', async (req, res) => {
         requerido: Boolean(doc.requerido),
         estatus: doc.estatus,
       })),
-    };;
+    };
 
     res.setHeader('Cache-Control', 'no-store, private');
     res.json({ success: true, expediente: publicExpediente });
