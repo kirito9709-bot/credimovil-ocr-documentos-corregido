@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
+import { randomBytes, randomInt, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { ZipArchive } from 'archiver';
 import * as XLSX from 'xlsx';
@@ -22,25 +22,34 @@ const PORT = Number(process.env.PORT) || 3000;
 // Keep the limit high enough for document uploads sent as data URIs.
 // Keep global JSON parsing far below the prior 50 MB cap. File-upload/OCR routes
 // should enforce their own explicit limits and accepted MIME types.
-app.use(express.json({ limit: '12mb' }));
+app.use(express.json({ limit: '22mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb', parameterLimit: 200 }));
 
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 
-function requestIp(req: any) {
-  // Do not blindly trust client-supplied X-Forwarded-For. If Render's proxy
-  // configuration is explicitly verified, set TRUST_PROXY=true below and use req.ip.
-  return String(req.ip || req.socket?.remoteAddress || 'unknown');
-}
+// Render's edge proxy terminates HTTPS before forwarding to this service.
+app.set('trust proxy', 1);
 
-if (String(process.env.TRUST_PROXY || '').toLowerCase() === 'true') {
-  app.set('trust proxy', 1);
+function requestIp(req: any) {
+  return String(req.ip || req.socket?.remoteAddress || 'unknown');
 }
 
 function isRateLimited(key: string, limit = 8, windowMs = 15 * 60 * 1000) {
   const now = Date.now();
-  const current = loginAttempts.get(key);
 
+  // Bound memory usage if attackers submit many unique folio/user identifiers.
+  if (loginAttempts.size >= 10000 && !loginAttempts.has(key)) {
+    for (const [candidate, state] of loginAttempts) {
+      if (state.resetAt <= now) loginAttempts.delete(candidate);
+      if (loginAttempts.size < 9000) break;
+    }
+    if (loginAttempts.size >= 10000) {
+      const oldestKey = loginAttempts.keys().next().value;
+      if (oldestKey) loginAttempts.delete(oldestKey);
+    }
+  }
+
+  const current = loginAttempts.get(key);
   if (!current || current.resetAt <= now) {
     loginAttempts.set(key, { count: 1, resetAt: now + windowMs });
     return false;
@@ -50,18 +59,6 @@ function isRateLimited(key: string, limit = 8, windowMs = 15 * 60 * 1000) {
   return current.count > limit;
 }
 
-// Bound the in-memory limiter map so random attacker-supplied keys cannot grow it forever.
-app.use((req, _res, next) => {
-  if (loginAttempts.size > 10000) {
-    const now = Date.now();
-    for (const [key, value] of loginAttempts) {
-      if (value.resetAt <= now) loginAttempts.delete(key);
-      if (loginAttempts.size <= 8000) break;
-    }
-  }
-  next();
-});
-
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -70,7 +67,7 @@ app.use((req, res, next) => {
   // Browser-side defense-in-depth for a same-origin Vite bundle.
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'self' https://*.supabase.co blob:; media-src 'self' https://*.supabase.co blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
   );
   // Render serves this app over HTTPS. Avoid preload/includeSubDomains until every hostname is confirmed HTTPS-only.
   res.setHeader('Strict-Transport-Security', 'max-age=31536000');
