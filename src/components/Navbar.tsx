@@ -51,9 +51,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-[132px] sm:w-[150px] flex items-center justify-center">
                 <img
-                  src="https://credimovil.mx/wp-content/uploads/2024/05/logo-white-170px.png"
-                  alt="CrediMóvil"
+                  src="/credimovil-logo.svg"
+                  alt="CrediMóvil · Crédito y Fondeo Automotriz"
+                  width={720}
+                  height={160}
                   className="w-full h-auto object-contain"
+                  onError={(event) => {
+                    // Fallback local text mark if the logo asset cannot be loaded.
+                    event.currentTarget.style.display = 'none';
+                  }}
                 />
               </div>
               <div className="hidden sm:block">
