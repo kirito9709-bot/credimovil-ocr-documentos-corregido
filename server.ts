@@ -178,6 +178,15 @@ function normalizeUsername(value: string = '') {
   return String(value).trim().toLowerCase();
 }
 
+function revokeSessionsForUser(username: string, role: 'admin' | 'asesor' | 'lote') {
+  const target = normalizeUsername(username);
+  for (const [token, session] of sessions) {
+    if (normalizeUsername(session.username) === target && session.role === role) {
+      sessions.delete(token);
+    }
+  }
+}
+
 function hashPassword(password: string, salt = randomBytes(16).toString('hex')) {
   return `${salt}:${scryptSync(password, salt, 64).toString('hex')}`;
 }
@@ -205,7 +214,7 @@ function getBearerToken(req: any) {
   return cookie ? decodeURIComponent(cookie.slice('credimovil_session='.length)) : '';
 }
 
-async function getSession(req: any) {
+function getSession(req: any) {
   const token = getBearerToken(req);
   if (!token) return null;
   const session = sessions.get(token);
@@ -1674,8 +1683,17 @@ app.delete('/api/asesores/:id', async (req, res) => {
   if (!requireAdmin(req, res)) return;
 
   try {
+    const { data: user, error: lookupError } = await supabase
+      .from('asesores')
+      .select('id,username')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (lookupError) throw new Error('No se pudo validar el usuario de asesor.');
+    if (!user) return res.status(404).json({ success: false, message: 'Usuario de asesor no encontrado.' });
+
     const { error } = await supabase.from('asesores').delete().eq('id', req.params.id);
-    if (error) throw new Error(`Supabase asesor: ${error.message}`);
+    if (error) throw new Error('No se pudo eliminar el usuario de asesor.');
+    revokeSessionsForUser(user.username, 'asesor');
     res.json({ success: true, message: 'Usuario de asesor eliminado.' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error?.message || 'No se pudo eliminar el asesor.' });
@@ -1755,8 +1773,17 @@ app.delete('/api/lote-usuarios/:id', async (req, res) => {
   if (!supabase) return res.status(503).json({ success: false, message: 'Supabase no está configurado en el servidor.' });
 
   try {
+    const { data: user, error: lookupError } = await supabase
+      .from('lote_usuarios')
+      .select('id,username')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (lookupError) throw new Error('No se pudo validar el usuario del lote.');
+    if (!user) return res.status(404).json({ success: false, message: 'Usuario del lote no encontrado.' });
+
     const { error } = await supabase.from('lote_usuarios').delete().eq('id', req.params.id);
-    if (error) throw new Error(`Supabase usuario de lote: ${error.message}`);
+    if (error) throw new Error('No se pudo eliminar el usuario del lote.');
+    revokeSessionsForUser(user.username, 'lote');
     res.json({ success: true, message: 'Usuario de lote eliminado correctamente.' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error?.message || 'No se pudo eliminar el usuario del lote.' });
