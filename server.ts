@@ -18,13 +18,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-// Parse JSON/form requests before any API route.
-// Keep the limit high enough for document uploads sent as data URIs.
-// Keep global JSON parsing far below the prior 50 MB cap. File-upload/OCR routes
-// should enforce their own explicit limits and accepted MIME types.
-app.use(express.json({ limit: '22mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb', parameterLimit: 200 }));
-
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 
 // Render's edge proxy terminates HTTPS before forwarding to this service.
@@ -76,6 +69,28 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Apply per-IP throttling before parsing large JSON payloads, to reduce CPU/memory abuse.
+app.use((req, res, next) => {
+  if (req.method !== 'POST') return next();
+
+  const rules: Record<string, { key: string; limit: number }> = {
+    '/api/auth/login': { key: 'login', limit: 8 },
+    '/api/ocr-ine': { key: 'ocr-ine', limit: 10 },
+    '/api/ocr-comprobante-domicilio': { key: 'ocr-address', limit: 10 },
+    '/api/expedientes': { key: 'create-expediente', limit: 12 },
+    '/api/expedientes/by-folio': { key: 'folio-ip', limit: 12 },
+  };
+  const rule = rules[req.path];
+  if (rule && isRateLimited(`${rule.key}:${requestIp(req)}`, rule.limit, 15 * 60 * 1000)) {
+    return res.status(429).json({ success: false, message: 'Demasiadas solicitudes. Espera 15 minutos e inténtalo nuevamente.' });
+  }
+  next();
+});
+
+// Apply bounded parsers only after throttling public endpoints.
+app.use(express.json({ limit: '22mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb', parameterLimit: 200 }));
 
 function normalizeSupabaseUrl(raw: string) {
   const value = String(raw || '').trim();
@@ -1511,11 +1526,6 @@ app.get('/api/health', (_req, res) => {
 
 // 2. Authentication and Advisor Management
 app.post('/api/auth/login', async (req, res) => {
-  const ipKey = `login:${requestIp(req)}`;
-  if (isRateLimited(ipKey)) {
-    return res.status(429).json({ success: false, message: 'Demasiados intentos de acceso. Espera 15 minutos e inténtalo nuevamente.' });
-  }
-
   const username = normalizeUsername(req.body?.username);
   const password = String(req.body?.password || '');
 
@@ -1833,9 +1843,6 @@ async function callGeminiWithResilience(
 
 // 3. OCR de Credencial INE CrediMóvil con Gemini Multimodal
 app.post('/api/ocr-ine', async (req, res) => {
-  if (isRateLimited(`ocr-ine:${requestIp(req)}`, 10, 15 * 60 * 1000)) {
-    return res.status(429).json({ success: false, message: 'Demasiadas solicitudes de OCR. Inténtalo más tarde.' });
-  }
   try {
     const { imageBase64, imageBackBase64 } = req.body || {};
     if (typeof imageBase64 !== 'string' || imageBase64.length > 8 * 1024 * 1024 ||
@@ -1966,9 +1973,6 @@ Reglas:
 
 // 3.1 OCR de Comprobante de Domicilio (Recibo CFE / Luz o Agua)
 app.post('/api/ocr-comprobante-domicilio', async (req, res) => {
-  if (isRateLimited(`ocr-address:${requestIp(req)}`, 10, 15 * 60 * 1000)) {
-    return res.status(429).json({ success: false, message: 'Demasiadas solicitudes de OCR. Inténtalo más tarde.' });
-  }
   try {
     const { imageBase64 } = req.body || {};
     if (typeof imageBase64 !== 'string' || imageBase64.length > 8 * 1024 * 1024) {
@@ -2632,10 +2636,9 @@ app.get('/api/expedientes/:id', async (req, res) => {
 
 app.post('/api/expedientes/by-folio', async (req, res) => {
   // Slow down automated PIN guessing. Rate limit both source IP and normalized folio.
-  const sourceKey = `folio-ip:${requestIp(req)}`;
   const folioKey = `folio-target:${String(req.body?.folio || '').trim().toUpperCase()}`;
-  if (isRateLimited(sourceKey, 12, 15 * 60 * 1000) || isRateLimited(folioKey, 6, 15 * 60 * 1000)) {
-    return res.status(429).json({ success: false, message: 'Demasiados intentos. Espera 15 minutos e inténtalo nuevamente.' });
+  if (isRateLimited(folioKey, 6, 15 * 60 * 1000)) {
+    return res.status(429).json({ success: false, message: 'Demasiados intentos para este folio. Espera 15 minutos e inténtalo nuevamente.' });
   }
 
   const folio = req.body?.folio;
@@ -2695,9 +2698,6 @@ app.post('/api/expedientes/by-folio', async (req, res) => {
 });
 
 app.post('/api/expedientes', async (req, res) => {
-  if (isRateLimited(`create-expediente:${requestIp(req)}`, 12, 15 * 60 * 1000)) {
-    return res.status(429).json({ success: false, message: 'Demasiadas solicitudes de alta. Inténtalo más tarde.' });
-  }
   if (!supabase) return res.status(503).json({ success: false, message: 'Supabase no está configurado.' });
 
   try {
