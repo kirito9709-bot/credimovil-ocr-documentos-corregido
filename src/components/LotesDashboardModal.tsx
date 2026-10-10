@@ -20,6 +20,7 @@ import {
   TrendingUp,
   UserRoundCheck,
   UserRoundPlus,
+  Users,
   Trash2,
   X,
   XCircle,
@@ -36,6 +37,7 @@ interface LotesDashboardModalProps {
   onLoteUpdated: (lote: LoteAuto) => void;
   onLoteDeleted: (id: string) => void;
   canManage?: boolean;
+  canAdministerAdvisors?: boolean;
 }
 
 const money = (value: number) =>
@@ -70,6 +72,7 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
   onLoteUpdated,
   onLoteDeleted,
   canManage = false,
+  canAdministerAdvisors = false,
 }) => {
   const [expedientes, setExpedientes] = useState<ExpedienteCredito[]>([]);
   const [dashboardLotes, setDashboardLotes] = useState<LoteAuto[]>([]);
@@ -91,6 +94,11 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
   const [userSaving, setUserSaving] = useState(false);
   const [userFeedback, setUserFeedback] = useState('');
   const [usersError, setUsersError] = useState('');
+  const [showAdvisorModal, setShowAdvisorModal] = useState(false);
+  const [advisors, setAdvisors] = useState<any[]>([]);
+  const [advisorForm, setAdvisorForm] = useState({ nombre: '', username: '', password: '' });
+  const [advisorSaving, setAdvisorSaving] = useState(false);
+  const [advisorFeedback, setAdvisorFeedback] = useState('');
 
   const allLotes = dashboardLotes.length ? dashboardLotes : lotes;
   const mainLotes = useMemo(() => allLotes.filter((l) => !l.parentLoteId), [allLotes]);
@@ -175,6 +183,58 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
       await loadDashboard();
     } catch (error: any) {
       setUsersError(error?.message || 'No se pudo eliminar el acceso.');
+    }
+  };
+
+  const loadAdvisors = async () => {
+    if (!canAdministerAdvisors) return;
+    setAdvisorFeedback('');
+    try {
+      const response = await api.getAsesores();
+      setAdvisors(response?.success && Array.isArray(response.asesores) ? response.asesores : []);
+    } catch (error: any) {
+      setAdvisorFeedback(error?.message || 'No se pudieron cargar los asesores.');
+    }
+  };
+
+  const openAdvisorModal = () => {
+    setAdvisorForm({ nombre: '', username: '', password: '' });
+    setAdvisorFeedback('');
+    setShowAdvisorModal(true);
+    void loadAdvisors();
+  };
+
+  const createAdvisor = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const nombre = advisorForm.nombre.trim();
+    const username = advisorForm.username.trim().toLowerCase();
+    if (nombre.length < 2 || !/^[a-z0-9._-]{3,30}$/.test(username) || advisorForm.password.length < 8) {
+      setAdvisorFeedback('Verifica los datos: nombre de 2 o más caracteres, usuario de 3 a 30 caracteres (letras, números, punto, guion o guion bajo) y contraseña de mínimo 8 caracteres.');
+      return;
+    }
+    setAdvisorSaving(true);
+    setAdvisorFeedback('');
+    try {
+      const response = await api.createAsesor({ nombre, username, password: advisorForm.password });
+      if (!response?.success) throw new Error(response?.message || 'No se pudo crear el asesor.');
+      setAdvisorFeedback('Asesor creado correctamente.');
+      setAdvisorForm({ nombre: '', username: '', password: '' });
+      await loadAdvisors();
+    } catch (error: any) {
+      setAdvisorFeedback(error?.message || 'No se pudo crear el asesor.');
+    } finally {
+      setAdvisorSaving(false);
+    }
+  };
+
+  const deleteAdvisor = async (advisor: any) => {
+    if (!confirm('¿Eliminar el acceso del asesor ' + (advisor.nombre || advisor.username) + '?')) return;
+    try {
+      await api.deleteAsesor(advisor.id);
+      setAdvisorFeedback('Acceso del asesor eliminado correctamente.');
+      await loadAdvisors();
+    } catch (error: any) {
+      setAdvisorFeedback(error?.message || 'No se pudo eliminar el asesor.');
     }
   };
 
@@ -353,11 +413,14 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
   };
 
   const deleteLote = async (lote: LoteAuto) => {
-    if (!confirm('¿Eliminar el lote "' + lote.nombre + '"?')) return;
+    if (!confirm('¿Eliminar el lote "' + lote.nombre + '"? Solo se permite si no tiene sublotes ni expedientes asociados.')) return;
     try {
       await api.deleteLote(lote.id);
       onLoteDeleted(lote.id);
+      setDashboardLotes((current) => current.filter((item) => item.id !== lote.id));
       if (selectedLoteId === lote.id) setSelectedLoteId('');
+      if (selectedSubloteId === lote.id) setSelectedSubloteId('');
+      await loadDashboard();
     } catch (error: any) {
       alert(error?.message || 'No se pudo eliminar el lote.');
     }
@@ -374,8 +437,9 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
               <div className='w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/25 flex items-center justify-center'><Building2 className='w-5 h-5 text-red-400' /></div>
               <div><h1 className='text-xl sm:text-2xl font-black text-white'>Panel de Lotes</h1><p className='text-[11px] text-slate-400'>Gestiona tus lotes, sublotes, usuarios, colocación y fondeos desde un solo panel.</p></div>
             </div>
-            <div className='flex items-center gap-2'>
+            <div className='flex flex-wrap items-center gap-2'>
               {canManage && <button onClick={openUsersModal} className='px-3 py-2 rounded-xl bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/25 text-blue-200 text-xs font-black inline-flex items-center gap-1.5'><UserRoundPlus className='w-4 h-4' /> Usuarios de lotes</button>}
+              {canAdministerAdvisors && <button onClick={openAdvisorModal} className='px-3 py-2 rounded-xl bg-violet-600/15 hover:bg-violet-600/25 border border-violet-500/25 text-violet-200 text-xs font-black inline-flex items-center gap-1.5'><Users className='w-4 h-4' /> Alta de asesores</button>}
               {canManage && <button onClick={openCreate} className='px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-black inline-flex items-center gap-1.5'><Plus className='w-4 h-4' /> Nuevo lote</button>}
               <button onClick={loadDashboard} className='p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300' title='Actualizar'><RefreshCw className={loading ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} /></button>
               <button onClick={onClose} className='p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white' title='Cerrar panel'><X className='w-4 h-4' /></button>
@@ -517,7 +581,10 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
                 <div className='rounded-xl bg-slate-950/60 border border-slate-800 p-3'><div className='text-[9px] text-slate-500'>Fondeados</div><div className='text-lg font-black text-teal-300 mt-1'>{selectedFunded.length}</div></div>
                 <div className='rounded-xl bg-slate-950/60 border border-slate-800 p-3'><div className='text-[9px] text-slate-500'>Monto fondeado</div><div className='text-sm font-black text-white mt-1'>{money(fundedAmount)}</div></div>
               </div>
-              {canManage && selectedLote && <button onClick={() => openEdit(selectedLote)} className='w-full mt-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-[11px] font-bold inline-flex items-center justify-center gap-2'><Edit3 className='w-3.5 h-3.5' /> Editar información del lote</button>}
+              {canManage && selectedLote && <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3'>
+                <button onClick={() => openEdit(selectedLote)} className='py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-[11px] font-bold inline-flex items-center justify-center gap-2'><Edit3 className='w-3.5 h-3.5' /> Editar información</button>
+                <button onClick={() => void deleteLote(selectedLote)} className='py-2 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-300 hover:bg-rose-950/70 text-[11px] font-bold inline-flex items-center justify-center gap-2'><Trash2 className='w-3.5 h-3.5' /> Eliminar lote</button>
+              </div>}
             </div>
           </section>
 
@@ -639,6 +706,38 @@ export const LotesDashboardModal: React.FC<LotesDashboardModalProps> = ({
                     })}
                   </div>
                 )}
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAdvisorModal && canAdministerAdvisors && (
+        <div className='fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4'>
+          <div className='w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-3xl bg-[#0B1730] border border-violet-500/25 shadow-2xl'>
+            <div className='px-5 py-4 border-b border-slate-800 flex items-center justify-between gap-3'>
+              <div>
+                <h3 className='text-base font-black text-white'>Alta y administración de asesores</h3>
+                <p className='text-[10px] text-slate-400'>Crea un usuario individual para cada asesor. Cada uno iniciará sesión con su propio usuario y contraseña.</p>
+              </div>
+              <button type='button' onClick={() => setShowAdvisorModal(false)} className='p-2 rounded-xl bg-slate-900 text-slate-400 hover:text-white'><X className='w-4 h-4' /></button>
+            </div>
+            <div className='p-5 space-y-5'>
+              <form onSubmit={createAdvisor} className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
+                <label className='space-y-1 block'><span className='text-[10px] text-slate-400 uppercase font-bold'>Nombre completo *</span><input required minLength={2} maxLength={100} value={advisorForm.nombre} onChange={(e) => setAdvisorForm((v) => ({ ...v, nombre: e.target.value }))} placeholder='Nombre del asesor' className='w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white' /></label>
+                <label className='space-y-1 block'><span className='text-[10px] text-slate-400 uppercase font-bold'>Usuario *</span><input required minLength={3} maxLength={30} pattern='[A-Za-z0-9._-]+' autoComplete='off' value={advisorForm.username} onChange={(e) => setAdvisorForm((v) => ({ ...v, username: e.target.value.toLowerCase() }))} placeholder='ej. asesor.mario' className='w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white' /></label>
+                <label className='space-y-1 block'><span className='text-[10px] text-slate-400 uppercase font-bold'>Contraseña *</span><input required minLength={8} maxLength={128} type='password' autoComplete='new-password' value={advisorForm.password} onChange={(e) => setAdvisorForm((v) => ({ ...v, password: e.target.value }))} placeholder='Mínimo 8 caracteres' className='w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white' /></label>
+                <div className='sm:col-span-3 flex justify-end'><button type='submit' disabled={advisorSaving} className='px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-xs font-black inline-flex items-center gap-2'><UserRoundPlus className='w-4 h-4' />{advisorSaving ? 'Creando...' : 'Crear usuario de asesor'}</button></div>
+              </form>
+              {advisorFeedback && <div className='p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300'>{advisorFeedback}</div>}
+              <section className='space-y-2'>
+                <div className='flex items-center justify-between gap-3'><div><h4 className='text-sm font-black text-white'>Asesores registrados</h4><p className='text-[10px] text-slate-500'>Los accesos se pueden revocar desde aquí.</p></div><button type='button' onClick={() => void loadAdvisors()} className='px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 text-[10px] font-bold inline-flex items-center gap-1.5'><RefreshCw className='w-3 h-3' /> Actualizar</button></div>
+                {advisors.length === 0 ? <div className='rounded-xl border border-slate-800 bg-slate-950/30 p-5 text-center text-xs text-slate-500'>No hay asesores adicionales registrados todavía.</div> : <div className='rounded-xl border border-slate-800 overflow-hidden divide-y divide-slate-800'>
+                  {advisors.map((advisor: any) => <div key={advisor.id} className='p-3 flex flex-wrap items-center justify-between gap-3'>
+                    <div><div className='text-xs font-bold text-white'>{advisor.nombre} <span className='text-violet-300 font-mono'>@{advisor.username}</span></div><div className='text-[10px] text-slate-500'>{advisor.active === false ? 'Inactivo' : 'Activo'}</div></div>
+                    <button type='button' onClick={() => void deleteAdvisor(advisor)} className='px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[10px] font-bold inline-flex items-center gap-1.5'><Trash2 className='w-3.5 h-3.5' /> Eliminar acceso</button>
+                  </div>)}
+                </div>}
               </section>
             </div>
           </div>
