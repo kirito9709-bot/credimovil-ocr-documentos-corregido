@@ -1802,7 +1802,15 @@ async function callGeminiWithResilience(
 
 // 3. OCR de Credencial INE CrediMóvil con Gemini Multimodal
 app.post('/api/ocr-ine', async (req, res) => {
+  if (isRateLimited(`ocr-ine:${requestIp(req)}`, 10, 15 * 60 * 1000)) {
+    return res.status(429).json({ success: false, message: 'Demasiadas solicitudes de OCR. Inténtalo más tarde.' });
+  }
   try {
+    const { imageBase64, imageBackBase64 } = req.body || {};
+    if (typeof imageBase64 !== 'string' || imageBase64.length > 8 * 1024 * 1024 ||
+        (imageBackBase64 !== undefined && (typeof imageBackBase64 !== 'string' || imageBackBase64.length > 8 * 1024 * 1024))) {
+      return res.status(413).json({ success: false, message: 'La imagen supera el límite permitido.' });
+    }
     const { imageBase64, imageBackBase64 } = req.body;
 
     if (!imageBase64) {
@@ -1927,8 +1935,14 @@ Reglas:
 
 // 3.1 OCR de Comprobante de Domicilio (Recibo CFE / Luz o Agua)
 app.post('/api/ocr-comprobante-domicilio', async (req, res) => {
+  if (isRateLimited(`ocr-address:${requestIp(req)}`, 10, 15 * 60 * 1000)) {
+    return res.status(429).json({ success: false, message: 'Demasiadas solicitudes de OCR. Inténtalo más tarde.' });
+  }
   try {
-    const { imageBase64 } = req.body;
+    const { imageBase64 } = req.body || {};
+    if (typeof imageBase64 !== 'string' || imageBase64.length > 8 * 1024 * 1024) {
+      return res.status(413).json({ success: false, message: 'El documento supera el límite permitido.' });
+    }
     if (!imageBase64) {
       return res.status(400).json({
         success: false,
@@ -2586,8 +2600,15 @@ app.get('/api/expedientes/:id', async (req, res) => {
 });
 
 app.post('/api/expedientes/by-folio', async (req, res) => {
-  const { folio, pinFondeo } = req.body;
-  const pin = String(pinFondeo || '').trim();
+  // Slow down automated PIN guessing. Rate limit both source IP and normalized folio.
+  const sourceKey = `folio-ip:${requestIp(req)}`;
+  const folioKey = `folio-target:${String(req.body?.folio || '').trim().toUpperCase()}`;
+  if (isRateLimited(sourceKey, 12, 15 * 60 * 1000) || isRateLimited(folioKey, 6, 15 * 60 * 1000)) {
+    return res.status(429).json({ success: false, message: 'Demasiados intentos. Espera 15 minutos e inténtalo nuevamente.' });
+  }
+
+  const { folio } = req.body;
+  const pin = String(req.body?.pinFondeo || '').trim();
 
   if (!folio) {
     return res.status(400).json({ success: false, message: 'Debe ingresar el folio del expediente.' });
@@ -2635,6 +2656,7 @@ app.post('/api/expedientes/by-folio', async (req, res) => {
       bancoLote: item.bancoLote || '',
     };
 
+    res.setHeader('Cache-Control', 'no-store, private');
     res.json({ success: true, expediente: publicExpediente });
   } catch (error: any) {
     console.error('POST /api/expedientes/by-folio error:', error);
@@ -2643,13 +2665,19 @@ app.post('/api/expedientes/by-folio', async (req, res) => {
 });
 
 app.post('/api/expedientes', async (req, res) => {
+  if (isRateLimited(`create-expediente:${requestIp(req)}`, 12, 15 * 60 * 1000)) {
+    return res.status(429).json({ success: false, message: 'Demasiadas solicitudes de alta. Inténtalo más tarde.' });
+  }
   if (!supabase) return res.status(503).json({ success: false, message: 'Supabase no está configurado.' });
 
   try {
+    const body = req.body || {};
+    if (Buffer.byteLength(JSON.stringify(body), 'utf8') > 10 * 1024 * 1024) {
+      return res.status(413).json({ success: false, message: 'El expediente supera el tamaño permitido.' });
+    }
     const folio = await generateNextExpedienteFolio();
 
-    const pinFondeo = Math.floor(1000 + Math.random() * 9000).toString();
-    const body = req.body || {};
+    const pinFondeo = randomBytes(4).readUInt32BE(0) % 9000 + 1000;
     const now = new Date().toISOString();
     const esLegalizado = Boolean(body.esVehiculoLegalizado);
     const docsFondeo = body.documentosFondeo || getCredimovilDefaultDocs(esLegalizado);
@@ -2657,7 +2685,7 @@ app.post('/api/expedientes', async (req, res) => {
     const newExpediente = {
       id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       folio,
-      pinFondeo,
+      pinFondeo: String(pinFondeo),
       fechaCreacion: now,
       fechaActualizacion: now,
       estatus: body.estatus || 'NUEVO',
