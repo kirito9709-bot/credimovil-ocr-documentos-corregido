@@ -33,6 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeLoteCount,
 }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
 
   const selectTab = (tab: 'captura' | 'cotizar' | 'fondeo' | 'admin' | 'lotes' | 'lotesdashboard' | 'loteportal') => {
     onSelectTab(tab);
@@ -50,17 +51,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-[132px] sm:w-[150px] flex items-center justify-center">
-                <img
-                  src="/credimovil-logo.svg"
-                  alt="CrediMóvil · Crédito y Fondeo Automotriz"
-                  width={720}
-                  height={160}
-                  className="w-full h-auto object-contain"
-                  onError={(event) => {
-                    // Fallback local text mark if the logo asset cannot be loaded.
-                    event.currentTarget.style.display = 'none';
-                  }}
-                />
+                {logoFailed ? (
+                  <div className="leading-none text-left" role="img" aria-label="CrediMóvil">
+                    <div className="text-lg font-black tracking-tight text-white">CREDI<span className="text-red-500">MÓVIL</span></div>
+                    <div className="mt-1 text-[8px] font-semibold tracking-wide text-slate-300">CRÉDITO AUTOMOTRIZ</div>
+                  </div>
+                ) : (
+                  <img
+                    src="/credimovil-logo.svg"
+                    alt="CrediMóvil · Crédito y Fondeo Automotriz"
+                    width={720}
+                    height={160}
+                    className="w-full h-auto object-contain"
+                    onError={() => setLogoFailed(true)}
+                  />
+                )}
               </div>
               <div className="hidden sm:block">
                 <p className="text-[11px] text-white/80">Tu auto, más cerca de tus planes</p>
