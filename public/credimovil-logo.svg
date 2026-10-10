@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="160" viewBox="0 0 720 160" role="img" aria-labelledby="title desc">
+  <title id="title">CrediMóvil</title>
+  <desc id="desc">CrediMóvil, crédito y fondeo automotriz</desc>
+  <defs>
+    <linearGradient id="red" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ef4444"/>
+      <stop offset="1" stop-color="#b91c1c"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#172b4d"/>
+      <stop offset="1" stop-color="#07142c"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="152" height="152" rx="32" fill="url(#blue)" stroke="#ef4444" stroke-opacity=".55" stroke-width="3"/>
+  <path d="M28 91 L38 68 Q41 60 51 60 H111 Q120 60 125 69 L136 91 V111 Q136 117 130 117 H123 Q117 117 117 110 V106 H45 V110 Q45 117 39 117 H33 Q28 117 28 111 Z" fill="url(#red)"/>
+  <path d="M48 70 Q50 67 55 67 H107 Q112 67 115 72 L122 88 H40 Z" fill="#dbeafe" opacity=".96"/>
+  <path d="M32 94 H132" stroke="#f8fafc" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="48" cy="108" r="10" fill="#07142c" stroke="#f8fafc" stroke-width="3"/>
+  <circle cx="113" cy="108" r="10" fill="#07142c" stroke="#f8fafc" stroke-width="3"/>
+  <path d="M58 43 H102" stroke="#ef4444" stroke-width="5" stroke-linecap="round"/>
+  <path d="M66 32 H94" stroke="#ef4444" stroke-width="5" stroke-linecap="round"/>
+  <text x="184" y="86" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="67" letter-spacing="1.5">CREDI</text>
+  <text x="377" y="86" fill="#ef4444" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="67" letter-spacing="1.5">MÓVIL</text>
+  <text x="188" y="122" fill="#d1d5db" font-family="Arial, Helvetica, sans-serif" font-weight="600" font-size="21" letter-spacing="2.1">CRÉDITO &amp; FONDEO AUTOMOTRIZ</text>
+</svg>
