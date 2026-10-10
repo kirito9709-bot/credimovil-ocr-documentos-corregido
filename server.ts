@@ -1876,7 +1876,7 @@ app.post('/api/ocr-ine', async (req, res) => {
         (imageBackBase64 !== undefined && (typeof imageBackBase64 !== 'string' || imageBackBase64.length > 8 * 1024 * 1024))) {
       return res.status(413).json({ success: false, message: 'La imagen supera el límite permitido.' });
     }
-    const { imageBase64, imageBackBase64 } = req.body;
+
 
     if (!imageBase64) {
       return res.status(400).json({
@@ -2731,12 +2731,13 @@ app.post('/api/expedientes/by-folio', async (req, res) => {
       autoAno: item.autoAno,
       montoFinanciar: item.montoFinanciar,
       plazoMeses: item.plazoMeses,
+      tasaInteresAnual: item.tasaInteresAnual,
       mensualidadEstimada: item.mensualidadEstimada,
       financieraAsignada: item.financieraAsignada,
       documentosFondeo: item.documentosFondeo || [],
       cuentaClabeLote: item.cuentaClabeLote || '',
       bancoLote: item.bancoLote || '',
-    };;
+    };
 
     res.setHeader('Cache-Control', 'no-store, private');
     res.json({ success: true, expediente: publicExpediente });
