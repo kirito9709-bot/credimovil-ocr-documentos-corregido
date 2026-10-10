@@ -1170,7 +1170,7 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
                       <input
                         id={`upload-doc-${tipo}`}
                         type="file"
-                        accept="image/*,.pdf"
+                        accept="image/png,image/jpeg,image/webp,application/pdf"
                         className="hidden"
                         onChange={(e) => handleUploadAnalysisDocument(e, tipo, label)}
                       />

@@ -5,10 +5,11 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
+import { randomBytes, randomInt, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { ZipArchive } from 'archiver';
-import * as XLSX from 'xlsx';
+import { createXlsxBuffer } from './server/xlsx-export.ts';
+
 
 dotenv.config();
 
@@ -18,22 +19,31 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-// Parse JSON/form requests before any API route.
-// Keep the limit high enough for document uploads sent as data URIs.
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 
+// Render's edge proxy terminates HTTPS before forwarding to this service.
+app.set('trust proxy', 1);
+
 function requestIp(req: any) {
-  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return forwarded || req.ip || req.socket?.remoteAddress || 'unknown';
+  return String(req.ip || req.socket?.remoteAddress || 'unknown');
 }
 
 function isRateLimited(key: string, limit = 8, windowMs = 15 * 60 * 1000) {
   const now = Date.now();
-  const current = loginAttempts.get(key);
 
+  // Bound memory usage if attackers submit many unique folio/user identifiers.
+  if (loginAttempts.size >= 10000 && !loginAttempts.has(key)) {
+    for (const [candidate, state] of loginAttempts) {
+      if (state.resetAt <= now) loginAttempts.delete(candidate);
+      if (loginAttempts.size < 9000) break;
+    }
+    if (loginAttempts.size >= 10000) {
+      const oldestKey = loginAttempts.keys().next().value;
+      if (oldestKey) loginAttempts.delete(oldestKey);
+    }
+  }
+
+  const current = loginAttempts.get(key);
   if (!current || current.resetAt <= now) {
     loginAttempts.set(key, { count: 1, resetAt: now + windowMs });
     return false;
@@ -48,11 +58,40 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Permissions-Policy', 'camera=(self), microphone=()');
+  // Browser-side defense-in-depth for a same-origin Vite bundle.
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'self' https://*.supabase.co blob:; media-src 'self' https://*.supabase.co blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+  );
+  // Render serves this app over HTTPS. Avoid preload/includeSubDomains until every hostname is confirmed HTTPS-only.
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000');
   if (req.path.startsWith('/api/')) {
-    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Cache-Control', 'no-store, private');
   }
   next();
 });
+
+// Apply per-IP throttling before parsing large JSON payloads, to reduce CPU/memory abuse.
+app.use((req, res, next) => {
+  if (req.method !== 'POST') return next();
+
+  const rules: Record<string, { key: string; limit: number }> = {
+    '/api/auth/login': { key: 'login', limit: 8 },
+    '/api/ocr-ine': { key: 'ocr-ine', limit: 10 },
+    '/api/ocr-comprobante-domicilio': { key: 'ocr-address', limit: 10 },
+    '/api/expedientes': { key: 'create-expediente', limit: 12 },
+    '/api/expedientes/by-folio': { key: 'folio-ip', limit: 12 },
+  };
+  const rule = rules[req.path];
+  if (rule && isRateLimited(`${rule.key}:${requestIp(req)}`, rule.limit, 15 * 60 * 1000)) {
+    return res.status(429).json({ success: false, message: 'Demasiadas solicitudes. Espera 15 minutos e inténtalo nuevamente.' });
+  }
+  next();
+});
+
+// Apply bounded parsers only after throttling public endpoints.
+app.use(express.json({ limit: '22mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb', parameterLimit: 200 }));
 
 function normalizeSupabaseUrl(raw: string) {
   const value = String(raw || '').trim();
@@ -140,6 +179,15 @@ function normalizeUsername(value: string = '') {
   return String(value).trim().toLowerCase();
 }
 
+function revokeSessionsForUser(username: string, role: 'admin' | 'asesor' | 'lote') {
+  const target = normalizeUsername(username);
+  for (const [token, session] of sessions) {
+    if (normalizeUsername(session.username) === target && session.role === role) {
+      sessions.delete(token);
+    }
+  }
+}
+
 function hashPassword(password: string, salt = randomBytes(16).toString('hex')) {
   return `${salt}:${scryptSync(password, salt, 64).toString('hex')}`;
 }
@@ -178,7 +226,6 @@ function getSession(req: any) {
   }
   return { ...session, token };
 }
-
 function requireAuth(req: any, res: any) {
   const session = getSession(req);
   if (!session) {
@@ -575,14 +622,37 @@ async function uploadDataUriToSupabase(
   if (!supabase) throw new Error('Supabase no está configurado.');
   if (!isDataUri(dataUri)) return null;
 
-  const { mimeType, base64 } = extractMimeAndBase64(dataUri);
-  if (!base64) throw new Error(`Documento vacío para ${tipo}`);
+  const { mimeType: extractedMimeType, base64 } = extractMimeAndBase64(dataUri);
+  const mimeType = extractedMimeType === 'image/jpg' ? 'image/jpeg' : extractedMimeType;
+  const allowedMimeTypes = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp']);
+
+  if (!allowedMimeTypes.has(mimeType)) {
+    throw new Error('Tipo de archivo no permitido. Usa PDF, JPG, PNG o WEBP.');
+  }
+  if (!base64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64) || base64.length % 4 === 1) {
+    throw new Error('El documento no contiene datos Base64 válidos.');
+  }
+
+  const bytes = Buffer.from(base64, 'base64');
+  const maxDocumentBytes = 15 * 1024 * 1024;
+  if (!bytes.length || bytes.length > maxDocumentBytes) {
+    throw new Error('El documento debe pesar como máximo 15 MB.');
+  }
+
+  // Check file signatures as well as the declared MIME type; client-provided MIME can be forged.
+  const signatureValid =
+    (mimeType === 'application/pdf' && bytes.subarray(0, 5).toString('ascii') === '%PDF-') ||
+    (mimeType === 'image/jpeg' && bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) ||
+    (mimeType === 'image/png' && bytes.subarray(0, 8).toString('hex') === '89504e470d0a1a0a') ||
+    (mimeType === 'image/webp' && bytes.subarray(0, 4).toString('ascii') === 'RIFF' && bytes.subarray(8, 12).toString('ascii') === 'WEBP');
+  if (!signatureValid) {
+    throw new Error('El contenido del archivo no coincide con PDF, JPG, PNG o WEBP.');
+  }
 
   const safeTipo = sanitizeFileName(tipo);
   const ext = fileExtensionFromMime(mimeType, originalName);
   const safeOriginal = sanitizeFileName(originalName || `${safeTipo}.${ext}`);
   const storagePath = `expedientes/${dbExpedienteId}/${safeTipo}-${Date.now()}-${safeOriginal}`;
-  const bytes = Buffer.from(base64, 'base64');
 
   const { data: previous, error: previousError } = await supabase
     .from('documentos')
@@ -1459,25 +1529,13 @@ function sanitizeLoteForPublic(lote: any) {
 }
 
 // 1. Health
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    name: 'CrediMóvil OCR & Fondeo API',
-    geminiConfigured: Boolean(GEMINI_API_KEY),
-    geminiKeySource: process.env.GEMINI_API_KEY ? 'GEMINI_API_KEY' : (process.env.GOOGLE_API_KEY ? 'GOOGLE_API_KEY' : 'none'),
-    supabaseConfigured: Boolean(supabase),
-    supabaseUrl: SUPABASE_URL || null,
-  });
+app.get('/api/health', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store, private');
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // 2. Authentication and Advisor Management
 app.post('/api/auth/login', async (req, res) => {
-  const ipKey = `login:${requestIp(req)}`;
-  if (isRateLimited(ipKey)) {
-    return res.status(429).json({ success: false, message: 'Demasiados intentos de acceso. Espera 15 minutos e inténtalo nuevamente.' });
-  }
-
   const username = normalizeUsername(req.body?.username);
   const password = String(req.body?.password || '');
 
@@ -1548,6 +1606,7 @@ app.post('/api/auth/logout', (req, res) => {
   const token = getBearerToken(req);
   if (token) sessions.delete(token);
   res.setHeader('Set-Cookie', 'credimovil_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
+  res.setHeader('Cache-Control', 'no-store, private');
   res.json({ success: true });
 });
 
@@ -1625,8 +1684,17 @@ app.delete('/api/asesores/:id', async (req, res) => {
   if (!requireAdmin(req, res)) return;
 
   try {
+    const { data: user, error: lookupError } = await supabase
+      .from('asesores')
+      .select('id,username')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (lookupError) throw new Error('No se pudo validar el usuario de asesor.');
+    if (!user) return res.status(404).json({ success: false, message: 'Usuario de asesor no encontrado.' });
+
     const { error } = await supabase.from('asesores').delete().eq('id', req.params.id);
-    if (error) throw new Error(`Supabase asesor: ${error.message}`);
+    if (error) throw new Error('No se pudo eliminar el usuario de asesor.');
+    revokeSessionsForUser(user.username, 'asesor');
     res.json({ success: true, message: 'Usuario de asesor eliminado.' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error?.message || 'No se pudo eliminar el asesor.' });
@@ -1706,8 +1774,17 @@ app.delete('/api/lote-usuarios/:id', async (req, res) => {
   if (!supabase) return res.status(503).json({ success: false, message: 'Supabase no está configurado en el servidor.' });
 
   try {
+    const { data: user, error: lookupError } = await supabase
+      .from('lote_usuarios')
+      .select('id,username')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (lookupError) throw new Error('No se pudo validar el usuario del lote.');
+    if (!user) return res.status(404).json({ success: false, message: 'Usuario del lote no encontrado.' });
+
     const { error } = await supabase.from('lote_usuarios').delete().eq('id', req.params.id);
-    if (error) throw new Error(`Supabase usuario de lote: ${error.message}`);
+    if (error) throw new Error('No se pudo eliminar el usuario del lote.');
+    revokeSessionsForUser(user.username, 'lote');
     res.json({ success: true, message: 'Usuario de lote eliminado correctamente.' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error?.message || 'No se pudo eliminar el usuario del lote.' });
@@ -1795,7 +1872,12 @@ async function callGeminiWithResilience(
 // 3. OCR de Credencial INE CrediMóvil con Gemini Multimodal
 app.post('/api/ocr-ine', async (req, res) => {
   try {
-    const { imageBase64, imageBackBase64 } = req.body;
+    const { imageBase64, imageBackBase64 } = req.body || {};
+    if (typeof imageBase64 !== 'string' || imageBase64.length > 8 * 1024 * 1024 ||
+        (imageBackBase64 !== undefined && (typeof imageBackBase64 !== 'string' || imageBackBase64.length > 8 * 1024 * 1024))) {
+      return res.status(413).json({ success: false, message: 'La imagen supera el límite permitido.' });
+    }
+
 
     if (!imageBase64) {
       return res.status(400).json({
@@ -1920,7 +2002,10 @@ Reglas:
 // 3.1 OCR de Comprobante de Domicilio (Recibo CFE / Luz o Agua)
 app.post('/api/ocr-comprobante-domicilio', async (req, res) => {
   try {
-    const { imageBase64 } = req.body;
+    const { imageBase64 } = req.body || {};
+    if (typeof imageBase64 !== 'string' || imageBase64.length > 8 * 1024 * 1024) {
+      return res.status(413).json({ success: false, message: 'El documento supera el límite permitido.' });
+    }
     if (!imageBase64) {
       return res.status(400).json({
         success: false,
@@ -2189,7 +2274,7 @@ app.get('/api/lotes/:loteId/chat', async (req, res) => {
 });
 
 app.post('/api/lotes/:loteId/chat', async (req, res) => {
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) return res.status(401).json({ success: false, message: 'Debes iniciar sesión.' });
 
   const loteId = session.role === 'lote' ? session.loteId : String(req.params.loteId || '');
@@ -2223,7 +2308,7 @@ app.post('/api/lotes/:loteId/chat', async (req, res) => {
 
 // Comentarios y solicitudes ligadas al folio.
 app.get('/api/expedientes/:id/comentarios', async (req, res) => {
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) return res.status(401).json({ success: false, message: 'Debes iniciar sesión.' });
 
   try {
@@ -2249,7 +2334,7 @@ app.get('/api/expedientes/:id/comentarios', async (req, res) => {
 });
 
 app.post('/api/expedientes/:id/comentarios', async (req, res) => {
-  const session = getSession(req);
+  const session = await getSession(req);
   if (!session) return res.status(401).json({ success: false, message: 'Debes iniciar sesión.' });
 
   const comentario = String(req.body?.comentario || '').trim();
@@ -2289,11 +2374,38 @@ app.post('/api/expedientes/:id/comentarios', async (req, res) => {
 // 4. Lotes de Autos
 app.get('/api/lotes', async (req, res) => {
   try {
-    const session = getSession(req);
+    const session = await getSession(req);
     const lotes = (await getSupabaseLotes()) || [];
 
     if (!session) {
       return res.json({ success: true, lotes: lotes.map(sanitizeLoteForPublic) });
+    }
+
+    // Deny by default: this directory includes contact, bank and portal-user data.
+    // Only admin/authorized staff can receive the full operational lot directory.
+    if (session.role !== 'admin' && session.role !== 'asesor') {
+      if (session.role !== 'lote' || !session.loteId) {
+        return res.status(403).json({ success: false, message: 'No tienes acceso a este recurso.' });
+      }
+
+      const ownLote = lotes.find((l: any) => l.id === session.loteId);
+      if (!ownLote) return res.status(403).json({ success: false, message: 'No tienes acceso a este recurso.' });
+
+      const allowedIds = new Set<string>([ownLote.id]);
+      if (!ownLote.parentLoteId) {
+        for (const child of lotes) {
+          if (child.parentLoteId === ownLote.id) allowedIds.add(child.id);
+        }
+      }
+
+      // Lot users receive only sanitized identity/address for their authorized group;
+      // never expose bank-account defaults or portal usernames/metadata.
+      return res.json({
+        success: true,
+        lotes: lotes
+          .filter((l: any) => allowedIds.has(l.id))
+          .map((l: any) => ({ id: l.id, nombre: l.nombre, ciudad: l.ciudad, parentLoteId: l.parentLoteId || null })),
+      });
     }
 
     const expedientes = (await getSupabaseExpedientes()) || [];
@@ -2347,6 +2459,28 @@ app.get('/api/lotes', async (req, res) => {
         totalMontoFondeado: stats.montoFondeado,
       };
     });
+
+    if (session.role === 'asesor') {
+      // Advisors need lot contact details to handle cases, but not bank-account defaults
+      // or the list of usernames for the lot portal.
+      const advisorLotes = lotesWithStats.map((l: any) => ({
+        id: l.id,
+        nombre: l.nombre,
+        parentLoteId: l.parentLoteId || null,
+        contacto: l.contacto || '',
+        telefono: l.telefono || '',
+        correo: l.correo || '',
+        direccion: l.direccion || '',
+        ciudad: l.ciudad || 'México',
+        activo: l.activo !== false,
+        created_at: l.created_at,
+        totalExpedientes: l.totalExpedientes,
+        totalFondeados: l.totalFondeados,
+        totalMontoFinanciado: l.totalMontoFinanciado,
+        totalMontoFondeado: l.totalMontoFondeado,
+      }));
+      return res.json({ success: true, lotes: advisorLotes });
+    }
 
     res.json({ success: true, lotes: lotesWithStats });
   } catch (error: any) {
@@ -2531,7 +2665,7 @@ app.get('/api/expedientes', async (req, res) => {
     res.json({ success: true, count: list.length, expedientes: list });
   } catch (error: any) {
     console.error('GET /api/expedientes error:', error);
-    res.status(500).json({ success: false, message: error?.message || 'No se pudieron cargar los expedientes.' });
+    res.status(500).json({ success: false, message: 'No se pudieron cargar los expedientes.' });
   }
 });
 
@@ -2551,15 +2685,21 @@ app.get('/api/expedientes/:id', async (req, res) => {
 });
 
 app.post('/api/expedientes/by-folio', async (req, res) => {
-  const { folio, pinFondeo } = req.body;
-  const pin = String(pinFondeo || '').trim();
+  // Slow down automated PIN guessing. Rate limit both source IP and normalized folio.
+  const folioKey = `folio-target:${String(req.body?.folio || '').trim().toUpperCase()}`;
+  if (isRateLimited(folioKey, 6, 15 * 60 * 1000)) {
+    return res.status(429).json({ success: false, message: 'Demasiados intentos para este folio. Espera 15 minutos e inténtalo nuevamente.' });
+  }
+
+  const folio = req.body?.folio;
+  const pin = String(req.body?.pinFondeo || '').trim();
 
   if (!folio) {
     return res.status(400).json({ success: false, message: 'Debe ingresar el folio del expediente.' });
   }
 
-  if (!/^\d{4}$/.test(pin)) {
-    return res.status(401).json({ success: false, message: 'Debes ingresar el PIN de 4 dígitos del expediente.' });
+  if (!/^\d{4,8}$/.test(pin)) {
+    return res.status(401).json({ success: false, message: 'Debes ingresar el PIN de 4 a 8 dígitos del expediente.' });
   }
 
   try {
@@ -2572,7 +2712,7 @@ app.post('/api/expedientes/by-folio', async (req, res) => {
     if (error) throw new Error(`Supabase expediente por folio: ${error.message}`);
     if (!row) return res.status(404).json({ success: false, message: 'No se encontró ningún expediente con ese folio.' });
 
-    if (!row.pin_fondeo || pin !== String(row.pin_fondeo).trim()) {
+    if (!row.pin_fondeo || !safeEqualText(pin, String(row.pin_fondeo).trim())) {
       return res.status(401).json({ success: false, message: 'Folio o PIN incorrectos.' });
     }
 
@@ -2600,6 +2740,7 @@ app.post('/api/expedientes/by-folio', async (req, res) => {
       bancoLote: item.bancoLote || '',
     };
 
+    res.setHeader('Cache-Control', 'no-store, private');
     res.json({ success: true, expediente: publicExpediente });
   } catch (error: any) {
     console.error('POST /api/expedientes/by-folio error:', error);
@@ -2611,21 +2752,42 @@ app.post('/api/expedientes', async (req, res) => {
   if (!supabase) return res.status(503).json({ success: false, message: 'Supabase no está configurado.' });
 
   try {
-    const folio = await generateNextExpedienteFolio();
-
-    const pinFondeo = Math.floor(1000 + Math.random() * 9000).toString();
     const body = req.body || {};
+    if (Buffer.byteLength(JSON.stringify(body), 'utf8') > 21 * 1024 * 1024) {
+      return res.status(413).json({ success: false, message: 'El expediente supera el tamaño permitido.' });
+    }
+
+    let selectedLote: any = null;
+    if (body.loteId) {
+      const requestedLoteId = String(body.loteId).trim();
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedLoteId)) {
+        return res.status(400).json({ success: false, message: 'El lote seleccionado no es válido.' });
+      }
+      const { data: loteRecord, error: loteError } = await supabase
+        .from('lotes')
+        .select('id,nombre,contacto,telefono,correo,cuenta_clabe_default,banco_default,activo')
+        .eq('id', requestedLoteId)
+        .maybeSingle();
+      if (loteError) throw new Error('No se pudo validar el lote seleccionado.');
+      if (!loteRecord || loteRecord.activo === false) {
+        return res.status(400).json({ success: false, message: 'El lote seleccionado no existe o está inactivo.' });
+      }
+      selectedLote = loteRecord;
+    }
+
+    const folio = await generateNextExpedienteFolio();
+    const pinFondeo = String(randomInt(10_000_000, 100_000_000));
     const now = new Date().toISOString();
     const esLegalizado = Boolean(body.esVehiculoLegalizado);
-    const docsFondeo = body.documentosFondeo || getCredimovilDefaultDocs(esLegalizado);
+    const docsFondeo = getCredimovilDefaultDocs(esLegalizado);
 
     const newExpediente = {
-      id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      id: randomUUID(),
       folio,
       pinFondeo,
       fechaCreacion: now,
       fechaActualizacion: now,
-      estatus: body.estatus || 'NUEVO',
+      estatus: 'NUEVO',
       ine: body.ine || {},
       fotoIneFrente: body.fotoIneFrente || '',
       fotoIneReverso: body.fotoIneReverso || '',
@@ -2654,11 +2816,11 @@ app.post('/api/expedientes', async (req, res) => {
       dependientesEconomicos: Number(body.dependientesEconomicos) || 0,
       estadoCivil: body.estadoCivil || '',
       referenciasPersonales: body.referenciasPersonales || [],
-      loteId: body.loteId || null,
-      loteNombre: body.loteNombre || 'Directo / Asesor',
-      asesorLoteContacto: body.asesorLoteContacto || '',
-      telefonoLote: body.telefonoLote || '',
-      correoLote: body.correoLote || '',
+      loteId: selectedLote?.id || null,
+      loteNombre: selectedLote?.nombre || String(body.loteNombre || '').trim().slice(0, 120) || 'Directo / Asesor',
+      asesorLoteContacto: selectedLote?.contacto || String(body.asesorLoteContacto || '').trim().slice(0, 120),
+      telefonoLote: selectedLote?.telefono || String(body.telefonoLote || '').trim().slice(0, 40),
+      correoLote: selectedLote?.correo || String(body.correoLote || '').trim().slice(0, 254),
       autoMarca: body.autoMarca || '',
       autoModelo: body.autoModelo || '',
       autoAno: Number(body.autoAno) || new Date().getFullYear(),
@@ -2675,9 +2837,9 @@ app.post('/api/expedientes', async (req, res) => {
       mensualidadEstimada: calculateCredimovilMonthlyPayment(Number(body.montoFinanciar) || 0, Number(body.plazoMeses) || 48),
       financieraAsignada: body.financieraAsignada || 'CrediMóvil Auto',
       documentosFondeo: docsFondeo,
-      cuentaClabeLote: body.cuentaClabeLote || '',
-      bancoLote: body.bancoLote || '',
-      notasAsesor: body.notasAsesor || 'Expediente registrado en CrediMóvil para análisis.',
+      cuentaClabeLote: selectedLote?.cuenta_clabe_default || '',
+      bancoLote: selectedLote?.banco_default || '',
+      notasAsesor: String(body.notasAsesor || 'Expediente registrado en CrediMóvil para análisis.').trim().slice(0, 2000),
     };
 
     await upsertExpedienteSupabase(newExpediente);
@@ -3069,48 +3231,71 @@ No agregues texto fuera del JSON. No inventes datos.`;
 });
 
 app.get('/api/expedientes/:id/estados-cuenta/excel', async (req, res) => {
-  const session = requireStaff(req, res);
-  if (!session) return;
+  if (!requireStaff(req, res)) return;
   try {
     const expedientes = (await getSupabaseExpedientes()) || [];
     const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
     if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+
     const analysis = exp.estadosCuentaAnalisis;
-    if (!analysis?.movimientos?.length) return res.status(404).json({ success: false, message: 'Primero analiza los estados de cuenta con OCR.' });
+    if (!analysis?.movimientos?.length) {
+      return res.status(404).json({ success: false, message: 'Primero analiza los estados de cuenta con OCR.' });
+    }
+
     const movimientos = analysis.movimientos || [];
     const ingresos = movimientos.filter((m: any) => m.tipo === 'INGRESO');
     const egresos = movimientos.filter((m: any) => m.tipo === 'EGRESO');
-    const wb = XLSX.utils.book_new();
-    const resumen = [['CrediMóvil - Análisis de Estados de Cuenta'],['Folio',exp.folio],['Cliente',exp.ine?.nombreCompleto || exp.ine?.nombre || ''],[],['Resumen','Monto'],['Ingresos',analysis.resumen.ingresos],['Egresos',analysis.resumen.egresos],['Diferencia',analysis.resumen.diferencia],['Movimientos',analysis.resumen.movimientos]];
-    const wsResumen = XLSX.utils.aoa_to_sheet(resumen); wsResumen['!cols'] = [{wch:30},{wch:24}]; XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
-    const makeSheet = (rows: any[], name: string) => {
-      const data = rows.map((m: any) => ({
-        Fecha: m.fecha,
-        Descripcion: m.descripcion,
-        Referencia: m.referencia,
-        Categoria: m.categoria,
-        Tipo: m.tipo,
-        Cargo: m.tipo === 'EGRESO' ? (m.monto || 0) : '',
-        Abono: m.tipo === 'INGRESO' ? (m.monto || 0) : '',
-        Monto: m.monto,
-        Saldo: m.saldo ?? '',
-        Clasificacion: m.clasificacion || '',
-        Mes: m.mes
-      }));
-      const ws = XLSX.utils.json_to_sheet(data);
-      ws['!cols'] = [{wch:14},{wch:48},{wch:24},{wch:18},{wch:12},{wch:15},{wch:15},{wch:15},{wch:15},{wch:18},{wch:20}];
-      XLSX.utils.book_append_sheet(wb, ws, name);
-    };
-    makeSheet(ingresos, 'Ingresos'); makeSheet(egresos, 'Egresos'); makeSheet(movimientos, 'Movimientos');
-    const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
-    res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition','attachment; filename="CrediMovil_' + sanitizeFileName(exp.folio) + '_Ingresos_Egresos.xlsx"');
-    res.send(Buffer.from(buffer));
+    const resumen = [
+      ['CrediMóvil - Análisis de Estados de Cuenta'],
+      ['Folio', exp.folio],
+      ['Cliente', exp.ine?.nombreCompleto || exp.ine?.nombre || ''],
+      [],
+      ['Resumen', 'Monto'],
+      ['Ingresos', analysis.resumen.ingresos],
+      ['Egresos', analysis.resumen.egresos],
+      ['Diferencia', analysis.resumen.diferencia],
+      ['Movimientos', analysis.resumen.movimientos],
+    ];
+
+    const headers = [
+      'Fecha', 'Descripcion', 'Referencia', 'Categoria', 'Tipo', 'Cargo',
+      'Abono', 'Monto', 'Saldo', 'Clasificacion', 'Mes',
+    ];
+    const movementRows = (rows: any[]) => [
+      headers,
+      ...rows.map((m: any) => [
+        m.fecha ?? '',
+        m.descripcion ?? '',
+        m.referencia ?? '',
+        m.categoria ?? '',
+        m.tipo ?? '',
+        m.tipo === 'EGRESO' ? (Number(m.monto) || 0) : '',
+        m.tipo === 'INGRESO' ? (Number(m.monto) || 0) : '',
+        Number.isFinite(Number(m.monto)) && m.monto !== '' && m.monto !== null ? Number(m.monto) : '',
+        m.saldo === null || m.saldo === undefined || m.saldo === '' ? '' :
+          (Number.isFinite(Number(m.saldo)) ? Number(m.saldo) : String(m.saldo)),
+        m.clasificacion || '',
+        m.mes ?? '',
+      ]),
+    ];
+
+    const buffer = await createXlsxBuffer([
+      { name: 'Resumen', rows: resumen, widths: [30, 24] },
+      { name: 'Ingresos', rows: movementRows(ingresos), widths: [14, 48, 24, 18, 12, 15, 15, 15, 15, 20, 14] },
+      { name: 'Egresos', rows: movementRows(egresos), widths: [14, 48, 24, 18, 12, 15, 15, 15, 15, 20, 14] },
+      { name: 'Movimientos', rows: movementRows(movimientos), widths: [14, 48, 24, 18, 12, 15, 15, 15, 15, 20, 14] },
+    ]);
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="CrediMovil_' + sanitizeFileName(exp.folio) + '_Ingresos_Egresos.xlsx"');
+    res.setHeader('Cache-Control', 'no-store, private');
+    res.send(buffer);
   } catch (error: any) {
     console.error('Excel estados de cuenta error:', error);
-    res.status(500).json({ success: false, message: error?.message || 'No se pudo generar el Excel.' });
+    res.status(500).json({ success: false, message: 'No se pudo generar el Excel.' });
   }
 });
+
 app.post('/api/expedientes/:id/documentos', async (req, res) => {
   if (!requireStaff(req, res)) return;
 

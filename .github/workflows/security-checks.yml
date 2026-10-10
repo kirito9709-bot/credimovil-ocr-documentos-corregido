@@ -1,0 +1,43 @@
+name: Security and build checks
+
+on:
+  push:
+    branches:
+      - main
+      - "security/**"
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      # Existing type errors are present across the baseline project; keep this visible
+      # but do not prevent production build and dependency audit from running.
+      - name: Type-check (baseline debt; review output)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Build production frontend
+        run: npm run build
+
+      - name: Verify XLSX export structure and formula safety
+        run: npm run test:xlsx-export
+
+      - name: Audit installed dependencies
+        run: npm audit --audit-level=high

@@ -1427,7 +1427,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   <input
                     type="file"
                     ref={frenteCameraInputRef}
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/webp"
                     capture="environment"
                     className="hidden"
                     onChange={(e) => handleFileInput(e, 'frente')}
@@ -1527,7 +1527,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                   <input
                     type="file"
                     ref={reversoCameraInputRef}
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/webp"
                     capture="environment"
                     className="hidden"
                     onChange={(e) => handleFileInput(e, 'reverso')}
@@ -1772,7 +1772,7 @@ export const PublicIneCapture: React.FC<PublicIneCaptureProps> = ({
                 <input
                   type="file"
                   ref={comprobanteCameraInputRef}
-                  accept="image/*"
+                  accept="image/png,image/jpeg,image/webp"
                   capture="environment"
                   className="hidden"
                   onChange={handleComprobanteFileInput}

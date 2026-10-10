@@ -10,7 +10,8 @@
     "preview": "vite build && tsx server.ts",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "postinstall": "vite build"
+    "postinstall": "vite build",
+    "test:xlsx-export": "tsx scripts/test-xlsx-export.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -24,15 +25,14 @@
     "dotenv": "^17.2.3",
     "motion": "^12.23.24",
     "@supabase/supabase-js": "^2.58.0",
-    "archiver": "^8.0.0",
-    "xlsx": "^0.18.5"
+    "archiver": "^8.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "autoprefixer": "^10.4.21",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.28.2",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2",
