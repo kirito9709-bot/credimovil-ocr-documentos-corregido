@@ -597,14 +597,37 @@ async function uploadDataUriToSupabase(
   if (!supabase) throw new Error('Supabase no está configurado.');
   if (!isDataUri(dataUri)) return null;
 
-  const { mimeType, base64 } = extractMimeAndBase64(dataUri);
-  if (!base64) throw new Error(`Documento vacío para ${tipo}`);
+  const { mimeType: extractedMimeType, base64 } = extractMimeAndBase64(dataUri);
+  const mimeType = extractedMimeType === 'image/jpg' ? 'image/jpeg' : extractedMimeType;
+  const allowedMimeTypes = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp']);
+
+  if (!allowedMimeTypes.has(mimeType)) {
+    throw new Error('Tipo de archivo no permitido. Usa PDF, JPG, PNG o WEBP.');
+  }
+  if (!base64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64) || base64.length % 4 === 1) {
+    throw new Error('El documento no contiene datos Base64 válidos.');
+  }
+
+  const bytes = Buffer.from(base64, 'base64');
+  const maxDocumentBytes = 15 * 1024 * 1024;
+  if (!bytes.length || bytes.length > maxDocumentBytes) {
+    throw new Error('El documento debe pesar como máximo 15 MB.');
+  }
+
+  // Check file signatures as well as the declared MIME type; client-provided MIME can be forged.
+  const signatureValid =
+    (mimeType === 'application/pdf' && bytes.subarray(0, 5).toString('ascii') === '%PDF-') ||
+    (mimeType === 'image/jpeg' && bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) ||
+    (mimeType === 'image/png' && bytes.subarray(0, 8).toString('hex') === '89504e470d0a1a0a') ||
+    (mimeType === 'image/webp' && bytes.subarray(0, 4).toString('ascii') === 'RIFF' && bytes.subarray(8, 12).toString('ascii') === 'WEBP');
+  if (!signatureValid) {
+    throw new Error('El contenido del archivo no coincide con PDF, JPG, PNG o WEBP.');
+  }
 
   const safeTipo = sanitizeFileName(tipo);
   const ext = fileExtensionFromMime(mimeType, originalName);
   const safeOriginal = sanitizeFileName(originalName || `${safeTipo}.${ext}`);
   const storagePath = `expedientes/${dbExpedienteId}/${safeTipo}-${Date.now()}-${safeOriginal}`;
-  const bytes = Buffer.from(base64, 'base64');
 
   const { data: previous, error: previousError } = await supabase
     .from('documentos')
