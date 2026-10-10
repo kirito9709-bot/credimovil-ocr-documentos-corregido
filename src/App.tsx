@@ -229,6 +229,7 @@ export default function App() {
             onLoteUpdated={handleLoteUpdated}
             onLoteDeleted={handleLoteDeleted}
             canManage={isAdminAuth && (authUser?.role === 'admin' || authUser?.role === 'asesor')}
+            canAdministerAdvisors={isAdminAuth && authUser?.role === 'admin'}
           />
         )}
 
