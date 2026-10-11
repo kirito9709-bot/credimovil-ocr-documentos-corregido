@@ -334,13 +334,27 @@ async function supabaseLoteUserList() {
 
 async function findAdvisor(username: string) {
   if (!supabase) return null;
-  const { data, error } = await supabase
+
+  // Read the persisted role, falling back to "asesor" only while the role migration
+  // has not been applied. This keeps the app available during a staged migration.
+  let result = await supabase
     .from('asesores')
-    .select('id,nombre,username,password_hash,activo,created_at')
+    .select('id,nombre,username,password_hash,activo,rol,created_at')
     .eq('username', username)
     .maybeSingle();
-  if (error) throw new Error(`Supabase asesores: ${error.message}`);
-  return data || null;
+
+  if (result.error && /column .*rol.* does not exist|rol.*does not exist/i.test(result.error.message)) {
+    result = await supabase
+      .from('asesores')
+      .select('id,nombre,username,password_hash,activo,created_at')
+      .eq('username', username)
+      .maybeSingle();
+    if (result.error) throw new Error(`Supabase asesores: ${result.error.message}`);
+    return result.data ? { ...result.data, rol: 'asesor' } : null;
+  }
+
+  if (result.error) throw new Error(`Supabase asesores: ${result.error.message}`);
+  return result.data || null;
 }
 
 async function supabaseAdvisorList() {
@@ -365,9 +379,47 @@ function mapSupabaseLote(row: any) {
     ciudad: row.ciudad || 'México',
     cuentaClabeDefault: row.cuenta_clabe_default || '',
     bancoDefault: row.banco_default || '',
+    ownerUsername: normalizeUsername(row.owner_username || ''),
     activo: row.activo !== false,
     created_at: row.created_at,
   };
+}
+
+async function canManageLote(session: any, loteId: string) {
+  if (!session || !loteId) return false;
+  if (session.role === 'admin') return true;
+  if (session.role === 'lote') return session.loteId === loteId;
+  if (session.role !== 'asesor' || !supabase) return false;
+
+  const username = normalizeUsername(session.username);
+  const { data, error } = await supabase
+    .from('lotes')
+    .select('id,parent_lote_id,owner_username')
+    .eq('id', loteId)
+    .maybeSingle();
+
+  if (error) throw new Error(`No se pudo validar el propietario del lote: ${error.message}`);
+  if (!data) return false;
+  if (normalizeUsername(data.owner_username || '') === username) return true;
+
+  // Compatibility for older sublots created before owner_username existed:
+  // inherit access from their parent only when that parent is owned by this advisor.
+  if (data.parent_lote_id) {
+    const { data: parent, error: parentError } = await supabase
+      .from('lotes')
+      .select('owner_username')
+      .eq('id', data.parent_lote_id)
+      .maybeSingle();
+    if (parentError) throw new Error('No se pudo validar el propietario del lote principal.');
+    return Boolean(parent) && normalizeUsername(parent.owner_username || '') === username;
+  }
+  return false;
+}
+
+async function canAccessExpediente(session: any, expediente: any) {
+  if (session?.role === 'admin') return true;
+  const loteId = String(expediente?.loteId || expediente?.lote_id || '').trim();
+  return loteId ? canManageLote(session, loteId) : false;
 }
 
 function extractMimeAndBase64(dataUriOrRaw: string): { mimeType: string; base64: string } {
@@ -1546,21 +1598,22 @@ app.post('/api/auth/login', async (req, res) => {
   const adminUsername = normalizeUsername(process.env.CREDIMOVIL_ADMIN_USER || '');
   const adminPassword = String(process.env.CREDIMOVIL_ADMIN_PASSWORD || '');
 
-  if (!adminUsername || !adminPassword) {
-    return res.status(503).json({
-      success: false,
-      message: 'La cuenta administradora no está configurada. Agrega CREDIMOVIL_ADMIN_USER y CREDIMOVIL_ADMIN_PASSWORD en Render → Environment.',
-    });
-  }
-
+  const hasEnvironmentAdmin = Boolean(adminUsername && adminPassword);
   let account: { role: 'admin' | 'asesor' | 'lote'; nombre: string; loteId?: string } | null = null;
 
-  if (username === adminUsername && safeEqualText(password, adminPassword)) {
+  if (hasEnvironmentAdmin && username === adminUsername) {
+    if (!safeEqualText(password, adminPassword)) {
+      return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
+    }
     account = { role: 'admin', nombre: 'Administrador CrediMóvil' };
   } else {
+    // Database accounts can also be admins through public.asesores.rol.
     const user = await findAdvisor(username);
     if (user && user.activo !== false && verifyPassword(password, user.password_hash)) {
-      account = { role: 'asesor', nombre: user.nombre || username };
+      account = {
+        role: user.rol === 'admin' ? 'admin' : 'asesor',
+        nombre: user.nombre || username,
+      };
     } else if (supabase) {
       const loteUser = await findLoteUser(username);
       if (loteUser && loteUser.activo !== false && verifyPassword(password, loteUser.password_hash)) {
@@ -1702,17 +1755,37 @@ app.delete('/api/asesores/:id', async (req, res) => {
 });
 
 app.get('/api/lote-usuarios', async (req, res) => {
-  if (!requireAdmin(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
   try {
-    const users = await supabaseLoteUserList();
-    res.json({ success: true, usuarios: users });
+    const [users, lotes] = await Promise.all([supabaseLoteUserList(), getSupabaseLotes()]);
+    const lotRows = lotes || [];
+    let allowedLotIds = new Set<string>();
+    if (session.role === 'admin') {
+      allowedLotIds = new Set(lotRows.map((l: any) => l.id));
+    } else if (session.role === 'asesor') {
+      allowedLotIds = new Set(
+        lotRows
+          .filter((l: any) => normalizeUsername(l.ownerUsername || '') === normalizeUsername(session.username))
+          .map((l: any) => l.id)
+      );
+      for (const lote of lotRows) {
+        if (lote.parentLoteId && allowedLotIds.has(lote.parentLoteId)) allowedLotIds.add(lote.id);
+      }
+    }
+    const names = new Map(lotRows.map((l: any) => [l.id, l.nombre]));
+    const visibleUsers = users
+      .filter((user: any) => allowedLotIds.has(user.lote_id))
+      .map((user: any) => ({ ...user, loteNombre: names.get(user.lote_id) || '' }));
+    res.json({ success: true, usuarios: visibleUsers });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error?.message || 'No se pudieron consultar los usuarios de lotes.' });
   }
 });
 
 app.post('/api/lote-usuarios', async (req, res) => {
-  if (!requireAdmin(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
 
   const loteId = String(req.body?.loteId || '').trim();
   const username = normalizeUsername(req.body?.username);
@@ -1740,6 +1813,9 @@ app.post('/api/lote-usuarios', async (req, res) => {
 
     if (loteError) throw new Error(`Supabase lote: ${loteError.message}`);
     if (!lote) return res.status(404).json({ success: false, message: 'El lote seleccionado no existe.' });
+    if (!(await canManageLote(session, loteId))) {
+      return res.status(403).json({ success: false, message: 'Solo puedes crear usuarios para tus propios lotes.' });
+    }
 
     const existing = await findLoteUser(username);
     if (existing) return res.status(409).json({ success: false, message: 'Ese usuario ya existe.' });
@@ -1770,17 +1846,21 @@ app.post('/api/lote-usuarios', async (req, res) => {
 });
 
 app.delete('/api/lote-usuarios/:id', async (req, res) => {
-  if (!requireAdmin(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
   if (!supabase) return res.status(503).json({ success: false, message: 'Supabase no está configurado en el servidor.' });
 
   try {
     const { data: user, error: lookupError } = await supabase
       .from('lote_usuarios')
-      .select('id,username')
+      .select('id,username,lote_id')
       .eq('id', req.params.id)
       .maybeSingle();
     if (lookupError) throw new Error('No se pudo validar el usuario del lote.');
     if (!user) return res.status(404).json({ success: false, message: 'Usuario del lote no encontrado.' });
+    if (!(await canManageLote(session, user.lote_id))) {
+      return res.status(403).json({ success: false, message: 'Solo puedes eliminar usuarios de tus propios lotes.' });
+    }
 
     const { error } = await supabase.from('lote_usuarios').delete().eq('id', req.params.id);
     if (error) throw new Error('No se pudo eliminar el usuario del lote.');
@@ -2244,7 +2324,7 @@ app.get('/api/lotes/:loteId/chat', async (req, res) => {
   if (!session) return res.status(401).json({ success: false, message: 'Debes iniciar sesión.' });
 
   const loteId = session.role === 'lote' ? session.loteId : String(req.params.loteId || '');
-  if (!loteId || !canAccessLote(session, loteId)) {
+  if (!loteId || !(await canManageLote(session, loteId))) {
     return res.status(403).json({ success: false, message: 'No tienes acceso a este chat.' });
   }
 
@@ -2315,7 +2395,7 @@ app.get('/api/expedientes/:id/comentarios', async (req, res) => {
     const exp = await getExpedienteRowByIdOrFolio(req.params.id);
     if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
 
-    if (!canAccessLote(session, exp.lote_id || '')) {
+    if (!(await canManageLote(session, exp.lote_id || ''))) {
       return res.status(403).json({ success: false, message: 'No tienes acceso a los comentarios de este expediente.' });
     }
 
@@ -2461,24 +2541,35 @@ app.get('/api/lotes', async (req, res) => {
     });
 
     if (session.role === 'asesor') {
-      // Advisors need lot contact details to handle cases, but not bank-account defaults
-      // or the list of usernames for the lot portal.
-      const advisorLotes = lotesWithStats.map((l: any) => ({
-        id: l.id,
-        nombre: l.nombre,
-        parentLoteId: l.parentLoteId || null,
-        contacto: l.contacto || '',
-        telefono: l.telefono || '',
-        correo: l.correo || '',
-        direccion: l.direccion || '',
-        ciudad: l.ciudad || 'México',
-        activo: l.activo !== false,
-        created_at: l.created_at,
-        totalExpedientes: l.totalExpedientes,
-        totalFondeados: l.totalFondeados,
-        totalMontoFinanciado: l.totalMontoFinanciado,
-        totalMontoFondeado: l.totalMontoFondeado,
-      }));
+      // An advisor receives only lots owned by their normalized login username.
+      // Include direct children of owned main lots for older rows with no owner value.
+      const allowedIds = new Set<string>(
+        lotes
+          .filter((l: any) => normalizeUsername(l.ownerUsername || '') === normalizeUsername(session.username))
+          .map((l: any) => l.id)
+      );
+      for (const lote of lotes) {
+        if (lote.parentLoteId && allowedIds.has(lote.parentLoteId)) allowedIds.add(lote.id);
+      }
+
+      const advisorLotes = lotesWithStats
+        .filter((l: any) => allowedIds.has(l.id))
+        .map((l: any) => ({
+          id: l.id,
+          nombre: l.nombre,
+          parentLoteId: l.parentLoteId || null,
+          contacto: l.contacto || '',
+          telefono: l.telefono || '',
+          correo: l.correo || '',
+          direccion: l.direccion || '',
+          ciudad: l.ciudad || 'México',
+          activo: l.activo !== false,
+          created_at: l.created_at,
+          totalExpedientes: l.totalExpedientes,
+          totalFondeados: l.totalFondeados,
+          totalMontoFinanciado: l.totalMontoFinanciado,
+          totalMontoFondeado: l.totalMontoFondeado,
+        }));
       return res.json({ success: true, lotes: advisorLotes });
     }
 
@@ -2490,9 +2581,10 @@ app.get('/api/lotes', async (req, res) => {
 });
 
 app.post('/api/lotes', async (req, res) => {
-  if (!requireStaff(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
 
-  const { nombre, contacto, telefono, correo, direccion, ciudad, cuentaClabeDefault, bancoDefault, parentLoteId } = req.body;
+  const { nombre, contacto, telefono, correo, direccion, ciudad, cuentaClabeDefault, bancoDefault, parentLoteId } = req.body || {};
   const nombreLote = String(nombre || '').trim();
 
   if (!nombreLote) {
@@ -2500,6 +2592,24 @@ app.post('/api/lotes', async (req, res) => {
   }
 
   try {
+    let parent: any = null;
+    if (parentLoteId) {
+      const { data: parentRow, error: parentError } = await supabase
+        .from('lotes')
+        .select('id,nombre,parent_lote_id,owner_username')
+        .eq('id', String(parentLoteId))
+        .maybeSingle();
+      if (parentError) throw new Error('No se pudo validar el lote principal.');
+      if (!parentRow || parentRow.parent_lote_id) {
+        return res.status(400).json({ success: false, message: 'Selecciona un lote principal válido para el sublote.' });
+      }
+      if (!(await canManageLote(session, parentRow.id))) {
+        return res.status(403).json({ success: false, message: 'Solo puedes crear sublotes dentro de tus propios lotes.' });
+      }
+      parent = parentRow;
+    }
+    const ownerUsername = normalizeUsername(parent?.owner_username || session.username);
+
     const { data: existing, error: findError } = await supabase
       .from('lotes')
       .select('*')
@@ -2526,7 +2636,8 @@ app.post('/api/lotes', async (req, res) => {
         ciudad: String(ciudad || 'México'),
         cuenta_clabe_default: String(cuentaClabeDefault || ''),
         banco_default: String(bancoDefault || ''),
-        parent_lote_id: parentLoteId || null,
+        parent_lote_id: parent?.id || null,
+        owner_username: ownerUsername,
         activo: true,
       })
       .select('*')
@@ -2546,7 +2657,8 @@ app.post('/api/lotes', async (req, res) => {
 });
 
 app.put('/api/lotes/:id', async (req, res) => {
-  if (!requireStaff(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
 
   try {
     const { data: existing, error: findError } = await supabase
@@ -2557,7 +2669,29 @@ app.put('/api/lotes/:id', async (req, res) => {
 
     if (findError) throw new Error(`Supabase lote: ${findError.message}`);
     if (!existing) return res.status(404).json({ success: false, message: 'Lote no encontrado.' });
+    if (!(await canManageLote(session, existing.id))) {
+      return res.status(403).json({ success: false, message: 'Solo puedes modificar tus propios lotes.' });
+    }
 
+    const requestedParentId = req.body?.parentLoteId !== undefined ? String(req.body.parentLoteId || '') : String(existing.parent_lote_id || '');
+    let requestedParent: any = null;
+    if (requestedParentId) {
+      const { data: parentRow, error: parentError } = await supabase
+        .from('lotes')
+        .select('id,parent_lote_id,owner_username')
+        .eq('id', requestedParentId)
+        .maybeSingle();
+      if (parentError) throw new Error('No se pudo validar el lote principal.');
+      if (!parentRow || parentRow.parent_lote_id || parentRow.id === existing.id) {
+        return res.status(400).json({ success: false, message: 'Selecciona un lote principal válido.' });
+      }
+      if (!(await canManageLote(session, parentRow.id))) {
+        return res.status(403).json({ success: false, message: 'No puedes mover un lote a la estructura de otro asesor.' });
+      }
+      requestedParent = parentRow;
+    }
+
+    const nextOwner = normalizeUsername(requestedParent?.owner_username || existing.owner_username || session.username);
     const nombre = String(req.body?.nombre ?? existing.nombre ?? '').trim();
     if (!nombre) return res.status(400).json({ success: false, message: 'El nombre del lote es obligatorio.' });
 
@@ -2572,7 +2706,8 @@ app.put('/api/lotes/:id', async (req, res) => {
         ciudad: String(req.body?.ciudad ?? existing.ciudad ?? 'México'),
         cuenta_clabe_default: String(req.body?.cuentaClabeDefault ?? existing.cuenta_clabe_default ?? ''),
         banco_default: String(req.body?.bancoDefault ?? existing.banco_default ?? ''),
-        parent_lote_id: req.body?.parentLoteId !== undefined ? (req.body.parentLoteId || null) : (existing.parent_lote_id || null),
+        parent_lote_id: requestedParent?.id || null,
+        owner_username: nextOwner,
       })
       .eq('id', req.params.id)
       .select('*')
@@ -2595,17 +2730,30 @@ app.put('/api/lotes/:id', async (req, res) => {
 });
 
 app.delete('/api/lotes/:id', async (req, res) => {
-  if (!requireStaff(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
 
   try {
     const { data: lote, error: loteError } = await supabase
       .from('lotes')
-      .select('id')
+      .select('id,owner_username')
       .eq('id', req.params.id)
       .maybeSingle();
 
     if (loteError) throw new Error(`Supabase lote: ${loteError.message}`);
     if (!lote) return res.status(404).json({ success: false, message: 'Lote no encontrado.' });
+    if (!(await canManageLote(session, lote.id))) {
+      return res.status(403).json({ success: false, message: 'Solo puedes eliminar tus propios lotes.' });
+    }
+
+    const { count: childCount, error: childError } = await supabase
+      .from('lotes')
+      .select('id', { count: 'exact', head: true })
+      .eq('parent_lote_id', req.params.id);
+    if (childError) throw new Error('No se pudieron validar los sublotes asociados.');
+    if ((childCount || 0) > 0) {
+      return res.status(409).json({ success: false, message: 'No puedes eliminar un lote que todavía tiene sublotes.' });
+    }
 
     const { count, error: countError } = await supabase
       .from('expedientes')
@@ -2615,6 +2763,15 @@ app.delete('/api/lotes/:id', async (req, res) => {
     if (countError) throw new Error(`Supabase expedientes del lote: ${countError.message}`);
     if ((count || 0) > 0) {
       return res.status(409).json({ success: false, message: 'No puedes eliminar un lote que ya tiene expedientes asociados.' });
+    }
+
+    const { count: portalUsersCount, error: portalUsersError } = await supabase
+      .from('lote_usuarios')
+      .select('id', { count: 'exact', head: true })
+      .eq('lote_id', req.params.id);
+    if (portalUsersError) throw new Error('No se pudieron validar los usuarios de portal asociados.');
+    if ((portalUsersCount || 0) > 0) {
+      return res.status(409).json({ success: false, message: 'Este lote tiene usuarios de portal asignados. Elimina primero sus accesos desde “Usuarios de lotes” y vuelve a intentarlo.' });
     }
 
     const { error } = await supabase.from('lotes').delete().eq('id', req.params.id);
@@ -2629,10 +2786,21 @@ app.delete('/api/lotes/:id', async (req, res) => {
 
 // 5. Expedientes (CRUD)
 app.get('/api/expedientes', async (req, res) => {
-  if (!requireStaff(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
 
   try {
     let list = (await getSupabaseExpedientes()) || [];
+    if (session.role === 'asesor') {
+      const lotes = (await getSupabaseLotes()) || [];
+      const allowedIds = new Set<string>(
+        lotes.filter((l: any) => normalizeUsername(l.ownerUsername || '') === normalizeUsername(session.username)).map((l: any) => l.id)
+      );
+      for (const lote of lotes) {
+        if (lote.parentLoteId && allowedIds.has(lote.parentLoteId)) allowedIds.add(lote.id);
+      }
+      list = list.filter((e: any) => allowedIds.has(String(e.loteId || '')));
+    }
     const { q, estatus, loteId } = req.query;
 
     if (estatus && typeof estatus === 'string' && estatus !== 'TODOS') {
@@ -2670,13 +2838,17 @@ app.get('/api/expedientes', async (req, res) => {
 });
 
 app.get('/api/expedientes/:id', async (req, res) => {
-  if (!requireStaff(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
 
   try {
     const list = (await getSupabaseExpedientes()) || [];
     const item = list.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
     if (!item) {
       return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    }
+    if (!(await canAccessExpediente(session, item))) {
+      return res.status(403).json({ success: false, message: 'No tienes acceso a este expediente.' });
     }
     res.json({ success: true, expediente: item });
   } catch (error: any) {
@@ -2857,12 +3029,16 @@ app.post('/api/expedientes', async (req, res) => {
 });
 
 app.put('/api/expedientes/:id', async (req, res) => {
-  if (!requireStaff(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
 
   try {
     const expedientes = (await getSupabaseExpedientes()) || [];
     const existing = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
     if (!existing) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    if (!(await canAccessExpediente(session, existing))) {
+      return res.status(403).json({ success: false, message: 'No tienes permiso para modificar este expediente.' });
+    }
 
     const updated = {
       ...existing,
@@ -2893,12 +3069,16 @@ app.put('/api/expedientes/:id', async (req, res) => {
 });
 
 app.delete('/api/expedientes/:id', async (req, res) => {
-  if (!requireStaff(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
 
   try {
     const expedientes = (await getSupabaseExpedientes()) || [];
     const original = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
     if (!original) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    if (!(await canAccessExpediente(session, original))) {
+      return res.status(403).json({ success: false, message: 'No tienes permiso para eliminar este expediente.' });
+    }
 
     const { data: row, error: rowError } = await supabase
       .from('expedientes')
@@ -2930,6 +3110,9 @@ app.get('/api/expedientes/:id/documentos/zip', async (req, res) => {
     const expedientes = (await getSupabaseExpedientes()) || [];
     const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
     if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    if (!(await canAccessExpediente(session, exp))) {
+      return res.status(403).json({ success: false, message: 'No tienes permiso para descargar los documentos de este expediente.' });
+    }
     const row = await getSupabaseExpedienteRowByFolio(exp.folio);
     if (!row?.id) return res.status(404).json({ success: false, message: 'No se encontró el expediente en Supabase.' });
     const { data: docs, error } = await supabase.from('documentos').select('id,tipo,nombre,storage_path,mime_type,tamano').eq('expediente_id', row.id).order('created_at', { ascending: true });
@@ -3126,6 +3309,9 @@ app.post('/api/expedientes/:id/estados-cuenta/ocr', async (req, res) => {
     const expedientes = (await getSupabaseExpedientes()) || [];
     const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
     if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    if (!(await canAccessExpediente(session, exp))) {
+      return res.status(403).json({ success: false, message: 'No tienes permiso para procesar los estados de cuenta de este expediente.' });
+    }
     const row = await getSupabaseExpedienteRowByFolio(exp.folio);
     if (!row?.id) return res.status(404).json({ success: false, message: 'No se encontró el expediente en Supabase.' });
     const requestedTypes = Array.isArray(req.body?.tipos) && req.body.tipos.length ? req.body.tipos.map((t: any) => String(t)) : ['ESTADO_CUENTA_MES1','ESTADO_CUENTA_MES2','ESTADO_CUENTA_MES3'];
@@ -3231,11 +3417,15 @@ No agregues texto fuera del JSON. No inventes datos.`;
 });
 
 app.get('/api/expedientes/:id/estados-cuenta/excel', async (req, res) => {
-  if (!requireStaff(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
   try {
     const expedientes = (await getSupabaseExpedientes()) || [];
     const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
     if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    if (!(await canAccessExpediente(session, exp))) {
+      return res.status(403).json({ success: false, message: 'No tienes permiso para descargar el análisis de este expediente.' });
+    }
 
     const analysis = exp.estadosCuentaAnalisis;
     if (!analysis?.movimientos?.length) {
@@ -3297,7 +3487,8 @@ app.get('/api/expedientes/:id/estados-cuenta/excel', async (req, res) => {
 });
 
 app.post('/api/expedientes/:id/documentos', async (req, res) => {
-  if (!requireStaff(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
 
   try {
     const { tipo, archivoData, archivoNombre, displayName } = req.body || {};
@@ -3329,6 +3520,9 @@ app.post('/api/expedientes/:id/documentos', async (req, res) => {
     const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
     if (!exp) {
       return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    }
+    if (!(await canAccessExpediente(session, exp))) {
+      return res.status(403).json({ success: false, message: 'No tienes permiso para cargar documentos a este expediente.' });
     }
 
     const row = await getSupabaseExpedienteRowByFolio(exp.folio);
@@ -3365,12 +3559,16 @@ app.post('/api/expedientes/:id/documentos', async (req, res) => {
 });
 
 app.post('/api/expedientes/:id/fondeo-doc', async (req, res) => {
-  if (!requireStaff(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
   try {
     const { docId, archivoUrl, archivoNombre, archivoTamano, subidoPor } = req.body;
     const expedientes = (await getSupabaseExpedientes()) || [];
     const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
     if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    if (!(await canAccessExpediente(session, exp))) {
+      return res.status(403).json({ success: false, message: 'No tienes permiso para cargar documentos de fondeo en este expediente.' });
+    }
 
     if (!exp.documentosFondeo) exp.documentosFondeo = getCredimovilDefaultDocs(Boolean(exp.esVehiculoLegalizado));
     const doc = exp.documentosFondeo.find((d: any) => d.id === docId);
@@ -3407,12 +3605,16 @@ app.post('/api/expedientes/:id/fondeo-doc', async (req, res) => {
 });
 
 app.put('/api/expedientes/:id/fondeo-doc-review', async (req, res) => {
-  if (!requireStaff(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
   try {
     const { docId, estatus, observaciones } = req.body;
     const expedientes = (await getSupabaseExpedientes()) || [];
     const exp = expedientes.find((e: any) => e.id === req.params.id || e.folio === req.params.id);
     if (!exp) return res.status(404).json({ success: false, message: 'Expediente no encontrado.' });
+    if (!(await canAccessExpediente(session, exp))) {
+      return res.status(403).json({ success: false, message: 'No tienes permiso para revisar documentos de este expediente.' });
+    }
 
     const doc = exp.documentosFondeo?.find((d: any) => d.id === docId);
     if (!doc) return res.status(404).json({ success: false, message: 'Documento no encontrado.' });
@@ -3437,10 +3639,21 @@ app.put('/api/expedientes/:id/fondeo-doc-review', async (req, res) => {
 });
 
 app.get('/api/stats', async (req, res) => {
-  if (!requireStaff(req, res)) return;
+  const session = requireStaff(req, res);
+  if (!session) return;
 
   try {
-    const expedientes = (await getSupabaseExpedientes()) || [];
+    let expedientes = (await getSupabaseExpedientes()) || [];
+    if (session.role === 'asesor') {
+      const lotes = (await getSupabaseLotes()) || [];
+      const allowedIds = new Set<string>(
+        lotes.filter((l: any) => normalizeUsername(l.ownerUsername || '') === normalizeUsername(session.username)).map((l: any) => l.id)
+      );
+      for (const lote of lotes) {
+        if (lote.parentLoteId && allowedIds.has(lote.parentLoteId)) allowedIds.add(lote.id);
+      }
+      expedientes = expedientes.filter((e: any) => allowedIds.has(String(e.loteId || '')));
+    }
     const total = expedientes.length;
     const nuevos = expedientes.filter((e: any) => e.estatus === 'NUEVO').length;
     const preAprobados = expedientes.filter((e: any) => e.estatus === 'PRE_APROBADO').length;

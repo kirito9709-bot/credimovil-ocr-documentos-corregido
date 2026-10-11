@@ -270,6 +270,7 @@ export interface LoteAuto {
   id: string;
   nombre: string;
   parentLoteId?: string | null;
+  ownerUsername?: string;
   contacto: string;
   telefono: string;
   correo: string;
