@@ -19,7 +19,6 @@ import {
   ShieldCheck,
   Phone,
   Mail,
-  ExternalLink,
   Sparkles,
   Download,
   Upload,
