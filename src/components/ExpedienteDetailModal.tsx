@@ -88,6 +88,32 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
 
   const isPdfUrl = (url?: string | null) => Boolean(url && (/^data:application\/pdf/i.test(url) || /\.pdf(?:$|[?#])/i.test(url)));
 
+  const downloadPreviewDocument = async () => {
+    if (!previewDocUrl) return;
+    try {
+      const response = await fetch(previewDocUrl);
+      if (!response.ok) throw new Error('La descarga del documento no está disponible.');
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const rawName = (previewDocTitle || 'documento').trim();
+      const safeName = rawName.replace(/[^a-zA-Z0-9._-]+/g, '_');
+      const extension = blob.type.includes('pdf') ? 'pdf'
+        : blob.type.includes('png') ? 'png'
+        : blob.type.includes('webp') ? 'webp'
+        : 'jpg';
+      const filename = /\.(pdf|png|jpe?g|webp)$/i.test(safeName) ? safeName : safeName + '.' + extension;
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+    } catch (error: any) {
+      alert(error?.message || 'No se pudo descargar el documento.');
+    }
+  };
+
   const engancheMinimoPesos = Math.round((Number(precio) || 0) * 0.20);
   const engancheSeguro = Math.min(100, Math.max(20, Number(enganchePorcentaje) || 20));
   const engancheMontoSeguro = Math.min(Number(precio) || 0, Math.max(0, Number(engancheMonto) || 0));
@@ -1562,60 +1588,49 @@ export const ExpedienteDetailModal: React.FC<ExpedienteDetailModalProps> = ({
         </button>
       </div>
 
-      {/* Preview modal for PDF & PNG */}
+      {/* Previsualización dentro del expediente: no abre pestañas externas. */}
       {previewDocUrl && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/90 p-4">
-          <div className="relative w-full max-w-4xl h-[92vh] sm:h-auto max-h-[92vh] bg-[#1C2541] rounded-2xl overflow-hidden p-3 sm:p-4 border border-[#2E3A59] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-2">
-              <h4 className="text-sm font-bold text-white">{previewDocTitle}</h4>
-              <button
-                onClick={() => setPreviewDocUrl(null)}
-                className="text-slate-400 hover:text-white p-1"
-              >
-                Cerrar
-              </button>
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/90 p-3 sm:p-4">
+          <div className="relative w-full max-w-5xl h-[94vh] bg-[#1C2541] rounded-2xl overflow-hidden p-3 sm:p-4 border border-[#2E3A59] flex flex-col">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800 mb-2">
+              <h4 className="text-sm font-bold text-white truncate flex-1">{previewDocTitle}</h4>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void downloadPreviewDocument()}
+                  className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5"
+                >
+                  <Download className="w-4 h-4" /> Descargar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDocUrl(null)}
+                  className="text-slate-300 hover:text-white py-2 px-3 rounded-lg bg-slate-800"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
-            <div className="flex-1 overflow-auto flex items-center justify-center">
+            <div className="flex-1 min-h-0 overflow-auto flex items-center justify-center bg-slate-950 rounded-xl">
               {isPdfUrl(previewDocUrl) ? (
-                <>
-                  <div className="hidden md:flex w-full h-[75vh] items-center justify-center">
-                    <object
-                      data={previewDocUrl}
-                      type="application/pdf"
-                      className="w-full h-full rounded bg-white"
-                    >
-                      <div className="text-center p-6 text-slate-300">
-                        <p className="text-sm mb-3">Tu navegador no previsualiza el PDF directamente.</p>
-                        <a href={previewDocUrl} target="_blank" rel="noopener noreferrer" className="py-2.5 px-4 bg-red-600 text-white rounded-xl text-xs font-bold inline-flex items-center gap-2">
-                          <ExternalLink className="w-4 h-4" /> Abrir PDF
-                        </a>
-                      </div>
-                    </object>
-                  </div>
-                  <div className="md:hidden w-full rounded-2xl border border-[#2E3A59] bg-[#121824] p-6 text-center">
-                    <FileText className="w-12 h-12 text-red-400 mx-auto mb-3" />
-                    <h5 className="text-base font-black text-white">PDF listo para visualizar</h5>
-                    <p className="text-xs text-slate-400 mt-2 mb-5">
-                      En celular, Chrome puede no mostrar PDFs dentro de esta ventana. Ábrelo directamente para verlo completo.
-                    </p>
-                    <div className="grid grid-cols-1 gap-2">
-                      <a href={previewDocUrl} target="_blank" rel="noopener noreferrer" className="py-3 px-4 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2">
-                        <ExternalLink className="w-4 h-4" /> Abrir PDF en el celular
-                      </a>
-                      <a href={previewDocUrl} download={previewDocTitle || 'documento.pdf'} className="py-3 px-4 bg-[#1C2541] hover:bg-[#2E3A59] border border-[#2E3A59] text-white rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2">
-                        <Download className="w-4 h-4" /> Descargar PDF
-                      </a>
-                    </div>
-                  </div>
-                </>
+                <iframe
+                  src={previewDocUrl}
+                  title={previewDocTitle || 'Previsualización PDF'}
+                  className="w-full h-full min-h-[70vh] rounded bg-white"
+                />
               ) : (
                 <img
                   src={previewDocUrl}
-                  alt="Documento"
-                  className="max-h-[75vh] max-w-full object-contain rounded"
+                  alt={previewDocTitle || 'Documento'}
+                  className="max-h-[80vh] max-w-full object-contain rounded"
                 />
               )}
             </div>
+            {isPdfUrl(previewDocUrl) && (
+              <p className="text-[10px] text-slate-400 mt-2">
+                Vista dentro de CrediMóvil. Si tu navegador no dispone de visor integrado, puedes descargar el documento desde aquí.
+              </p>
+            )}
           </div>
         </div>
       )}
