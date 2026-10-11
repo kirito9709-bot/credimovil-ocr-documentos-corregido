@@ -20,7 +20,6 @@ import {
   Send,
   HelpCircle,
   Lock,
-  ExternalLink,
   Download,
 } from 'lucide-react';
 import { CameraCaptureModal } from './CameraCaptureModal';
